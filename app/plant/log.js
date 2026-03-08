@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,7 @@ import {
   TextInput,
   Alert,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
@@ -36,9 +36,11 @@ export default function LogCareScreen() {
   const [photoUri, setPhotoUri] = useState(null);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (plantId) getPlantById(plantId).then(setPlant);
-  }, [plantId]);
+  useFocusEffect(
+    useCallback(() => {
+      if (plantId) getPlantById(plantId).then(setPlant);
+    }, [plantId])
+  );
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -59,7 +61,7 @@ export default function LogCareScreen() {
     setSaving(true);
     const logId = createCareLog({ plantId, type, date, notes: notes.trim() || null });
     if (photoUri) {
-      addPhoto({ plantId, careLogId: logId, uri: photoUri });
+      addPhoto({ plantId, careLogId: logId, uri: photoUri, date });
     }
     setSaving(false);
     router.replace(`/plant/${plantId}`);

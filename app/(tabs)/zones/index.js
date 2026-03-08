@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,33 +6,42 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Image,
+  FlatList,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../../components/GradientHero';
 import { GlassCard } from '../../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../../lib/theme';
-import { getZones, getPlants } from '../../../lib/db';
+import { getZones, getPlants, getPlantsByZoneWithPhotos } from '../../../lib/db';
 
 export default function ZonesScreen() {
   const router = useRouter();
   const [zones, setZones] = useState([]);
   const [counts, setCounts] = useState({});
+  const [plantsPhotos, setPlantsPhotos] = useState({});
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const z = await getZones();
     setZones(z);
     const next = {};
+    const photos = {};
     for (const zone of z) {
-      const plants = await getPlants({ zoneId: zone.id });
-      next[zone.id] = plants.length;
+      const zonePlants = await getPlants({ zoneId: zone.id });
+      next[zone.id] = zonePlants.length;
+      const plantsWithPhotos = await getPlantsByZoneWithPhotos(zone.id);
+      photos[zone.id] = plantsWithPhotos.filter(p => p.photoUri);
     }
     setCounts(next);
+    setPlantsPhotos(photos);
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useFocusEffect(
+    useCallback(() => {
+      load();
+    }, [load])
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -83,9 +92,6 @@ export default function ZonesScreen() {
               >
                 <GlassCard>
                   <View style={styles.row}>
-                    <View style={styles.zoneIcon}>
-                      <Text style={styles.zoneIconText}>🗺️</Text>
-                    </View>
                     <View style={styles.zoneInfo}>
                       <Text style={styles.zoneName}>{zone.name}</Text>
                       {zone.description ? (
@@ -93,6 +99,22 @@ export default function ZonesScreen() {
                           {zone.description}
                         </Text>
                       ) : null}
+                      {(plantsPhotos[zone.id] || []).length > 0 && (
+                        <FlatList
+                          horizontal
+                          showsHorizontalScrollIndicator={false}
+                          data={plantsPhotos[zone.id]}
+                          keyExtractor={(item, idx) => idx.toString()}
+                          renderItem={({ item }) => (
+                            <View style={styles.plantItem}>
+                              <Image source={{ uri: item.photoUri }} style={styles.plantThumb} />
+                              <Text style={styles.plantName} numberOfLines={1}>{item.name}</Text>
+                            </View>
+                          )}
+                          style={styles.photosScroll}
+                          contentContainerStyle={styles.photosContent}
+                        />
+                      )}
                     </View>
                     <View style={styles.countBadge}>
                       <Text style={styles.countText}>{counts[zone.id] ?? 0}</Text>
@@ -148,11 +170,14 @@ const styles = StyleSheet.create({
   addZoneBtnText: { ...typography.label, color: '#fff' },
   cardWrap: { marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center' },
-  zoneIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(107,155,122,0.3)', alignItems: 'center', justifyContent: 'center', marginRight: spacing.md },
-  zoneIconText: { fontSize: 22 },
-  zoneInfo: { flex: 1 },
+  zoneInfo: { flex: 1, marginRight: spacing.sm },
   zoneName: { ...typography.title, color: colors.dark.text },
   zoneDesc: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 2 },
+  photosScroll: { marginTop: spacing.sm, height: 80 },
+  photosContent: { paddingRight: spacing.md },
+  plantItem: { alignItems: 'center', marginRight: spacing.sm, width: 60 },
+  plantThumb: { width: 50, height: 50, borderRadius: radius.sm },
+  plantName: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 4, textAlign: 'center', maxWidth: 60 },
   countBadge: { alignItems: 'center' },
   countText: { ...typography.displaySmall, color: colors.dark.accent },
   countLabel: { ...typography.caption, color: colors.dark.textSecondary },

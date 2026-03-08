@@ -2,6 +2,20 @@
 
 Application mobile **ornementaux uniquement** pour gérer plantes et fleurs : où elles sont, quand elles fleurissent, rappels de soins et historique.
 
+## Installation
+
+1. Copy `.env.model` to `.env`:
+   ```bash
+   cp .env.model .env
+   ```
+
+2. Add your OpenAI API key in `.env`:
+   ```
+   EXPO_PUBLIC_OPENAI_API_KEY=your_api_key_here
+   ```
+
+   Get your API key from [OpenAI Platform](https://platform.openai.com/).
+
 ## Lancer le projet
 
 ```bash

@@ -32,10 +32,15 @@ yarn-error.*
 
 # local env files
 .env*.local
+.env
 
 # typescript
 *.tsbuildinfo
 
+# scripts
+deploy-iphone.sh
+
 # generated native folders
 /ios
 /android
+/dist-release
