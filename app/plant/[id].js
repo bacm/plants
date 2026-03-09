@@ -15,6 +15,8 @@ import {
 } from 'react-native';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import * as ImagePicker from 'expo-image-picker';
@@ -53,10 +55,59 @@ const REMINDER_LABELS = {
 };
 const SUN_LABELS = { full_sun: 'Plein soleil', partial: 'Mi-ombre', shade: 'Ombre' };
 const WATER_LABELS = { low: 'Faible', medium: 'Moyen', high: 'Élevé' };
+const TYPE_LABELS = {
+  perennial: 'Vivace', annual: 'Annuelle', shrub: 'Arbuste', tree: 'Arbre',
+  bulb: 'Bulbe', groundcover: 'Couvre-sol', vine: 'Grimpante',
+};
+const TYPE_ICONS = {
+  perennial: '🌿', annual: '🌻', shrub: '🌳', tree: '🌲',
+  bulb: '🌷', groundcover: '🍀', vine: '🌾',
+};
+
+const SOIL_TYPE_LABELS = { clay: 'Argileux', sandy: 'Sableux', loamy: 'Limoneux', peaty: 'Tourbeux', rocky: 'Caillouteux' };
+const SOIL_PH_LABELS = { acidic: 'Acide', neutral: 'Neutre', alkaline: 'Alcalin' };
+const PROPAGATION_LABELS = { seed: 'Semis', cutting: 'Bouture', division: 'Division', layering: 'Marcotte', grafting: 'Greffe' };
+const TOXICITY_LABELS = { none: 'Aucune', pets: 'Animaux', humans: 'Humains', all: 'Tous' };
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const HERO_HEIGHT = SCREEN_HEIGHT * 0.38;
+const INFO_CARD_WIDTH = (SCREEN_WIDTH - spacing.lg * 2 - spacing.sm * 2) / 3;
+
+function getQuickTags(plant) {
+  const tags = [];
+  if (plant.type && TYPE_LABELS[plant.type]) {
+    tags.push({ icon: TYPE_ICONS[plant.type] || '🌱', label: TYPE_LABELS[plant.type] });
+  }
+  if (plant.minTemperature != null) {
+    if (plant.minTemperature <= -15) tags.push({ icon: '❄️', label: 'Très rustique' });
+    else if (plant.minTemperature <= -5) tags.push({ icon: '❄️', label: 'Rustique' });
+    else tags.push({ icon: '🌡️', label: 'Gélif' });
+  }
+  if (plant.type === 'tree' || plant.type === 'shrub') {
+    tags.push({ icon: '🍎', label: 'Fruitier' });
+  } else if (plant.bloomStartMonth != null) {
+    tags.push({ icon: '🌸', label: 'Florifère' });
+  }
+  return tags.slice(0, 3);
+}
+
+function formatCm(cm) {
+  if (cm >= 100) return `${(cm / 100).toFixed(cm % 100 === 0 ? 0 : 1)} m`;
+  return `${cm} cm`;
+}
+
+function buildDimensionsText(plant) {
+  const parts = [];
+  if (plant.height) parts.push(`Hauteur: ${formatCm(plant.height)}`);
+  if (plant.width) parts.push(`Largeur: ${formatCm(plant.width)}`);
+  if (plant.minTemperature != null) parts.push(`${plant.minTemperature}°C`);
+  return parts.length > 0 ? parts.join('\n') : '—';
+}
 
 export default function PlantDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState('info');
   const [plant, setPlant] = useState(null);
   const [careLogs, setCareLogs] = useState([]);
@@ -228,29 +279,163 @@ export default function PlantDetailScreen() {
           <ScrollView style={styles.tabScroll} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.dark.accent} />}>
             <View style={styles.tabContentInner}>
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Fiche</Text>
-              <GlassCard>
-                <Row label="Exposition" value={SUN_LABELS[plant.sun]} />
-                <Row label="Arrosage" value={WATER_LABELS[plant.water]} />
-                {plant.flowerColor ? <Row label="Couleur" value={plant.flowerColor} /> : null}
-                {plant.bloomStartMonth != null && plant.bloomEndMonth != null ? (
-                  <Row label="Floraison" value={`${MONTHS[plant.bloomStartMonth - 1]} – ${MONTHS[plant.bloomEndMonth - 1]}`} />
-                ) : null}
-                {plant.height ? <Row label="Hauteur" value={`${plant.height} cm`} /> : null}
-                {plant.width ? <Row label="Largeur" value={`${plant.width} cm`} /> : null}
-                {plant.deciduous !== null ? (
-                  <Row label="Feuillage" value={plant.deciduous ? 'Caduque' : 'Persistante'} />
-                ) : null}
-                {plant.minTemperature != null ? (
-                  <Row label="Temp. min" value={`${plant.minTemperature} °C`} />
-                ) : null}
-                {plant.notes ? (
+              <Text style={styles.ficheTechTitle}>FICHE TECHNIQUE</Text>
+              <View style={styles.infoGrid}>
+                <InfoCard icon="☀️" value={SUN_LABELS[plant.sun] || '—'} />
+                <InfoCard icon="💧" value={WATER_LABELS[plant.water] || '—'} />
+                <InfoCard
+                  icon="📅"
+                  value={
+                    plant.bloomStartMonth != null && plant.bloomEndMonth != null
+                      ? `${MONTHS[plant.bloomStartMonth - 1]} — ${MONTHS[plant.bloomEndMonth - 1]}`
+                      : '—'
+                  }
+                />
+                <InfoCard icon="🌡️" value={buildDimensionsText(plant)} />
+                <InfoCard
+                  icon="🍃"
+                  value={
+                    plant.deciduous !== null
+                      ? plant.deciduous ? 'Caduque' : 'Persistant'
+                      : '—'
+                  }
+                />
+                <InfoCard icon="🌸" value={plant.flowerColor || '—'} />
+              </View>
+              {plant.notes ? (
+                <GlassCard style={styles.notesCard}>
                   <View style={styles.notesRow}>
-                    <Text style={styles.rowLabel}>Notes</Text>
-                    <Text style={styles.notesText}>{plant.notes}</Text>
+                    <Text style={styles.notesIcon}>📝</Text>
+                    <Text style={styles.notesLabel}>Notes :</Text>
                   </View>
-                ) : null}
-              </GlassCard>
+                  <Text style={styles.notesTextNew}>{plant.notes}</Text>
+                </GlassCard>
+              ) : null}
+
+              {/* Section Sol */}
+              {(plant.soilType || plant.soilPH) && (
+                <>
+                  <Text style={styles.ficheTechTitle}>SOL</Text>
+                  <View style={styles.infoGrid}>
+                    <InfoCard icon="🪨" value={SOIL_TYPE_LABELS[plant.soilType] || '—'} />
+                    <InfoCard icon="⚗️" value={SOIL_PH_LABELS[plant.soilPH] || '—'} />
+                  </View>
+                </>
+              )}
+
+              {/* Section Entretien */}
+              {(plant.fertilizer || plant.pruning || plant.pruningMonth || plant.winterCare) && (
+                <>
+                  <Text style={styles.ficheTechTitle}>ENTRETIEN</Text>
+                  {plant.fertilizer && (
+                    <GlassCard style={styles.notesCard}>
+                      <View style={styles.notesRow}>
+                        <Text style={styles.notesIcon}>🧪</Text>
+                        <Text style={styles.notesLabel}>Engrais :</Text>
+                      </View>
+                      <Text style={styles.notesTextNew}>{plant.fertilizer}</Text>
+                    </GlassCard>
+                  )}
+                  {plant.pruning && (
+                    <GlassCard style={styles.notesCard}>
+                      <View style={styles.notesRow}>
+                        <Text style={styles.notesIcon}>✂️</Text>
+                        <Text style={styles.notesLabel}>Taille{plant.pruningMonth ? ` (${MONTHS[plant.pruningMonth - 1]})` : ''} :</Text>
+                      </View>
+                      <Text style={styles.notesTextNew}>{plant.pruning}</Text>
+                    </GlassCard>
+                  )}
+                  {plant.winterCare && (
+                    <GlassCard style={styles.notesCard}>
+                      <View style={styles.notesRow}>
+                        <Text style={styles.notesIcon}>❄️</Text>
+                        <Text style={styles.notesLabel}>Entretien hivernal :</Text>
+                      </View>
+                      <Text style={styles.notesTextNew}>{plant.winterCare}</Text>
+                    </GlassCard>
+                  )}
+                </>
+              )}
+
+              {/* Section Santé */}
+              {(plant.pests || plant.toxicity) && (
+                <>
+                  <Text style={styles.ficheTechTitle}>SANTÉ</Text>
+                  <View style={styles.infoGrid}>
+                    {plant.toxicity && plant.toxicity !== 'none' && (
+                      <InfoCard icon="⚠️" value={`Toxique: ${TOXICITY_LABELS[plant.toxicity]}`} />
+                    )}
+                    {plant.toxicity === 'none' && (
+                      <InfoCard icon="✅" value="Non toxique" />
+                    )}
+                  </View>
+                  {plant.pests && (
+                    <GlassCard style={styles.notesCard}>
+                      <View style={styles.notesRow}>
+                        <Text style={styles.notesIcon}>🐛</Text>
+                        <Text style={styles.notesLabel}>Ravageurs / Maladies :</Text>
+                      </View>
+                      <Text style={styles.notesTextNew}>{plant.pests}</Text>
+                    </GlassCard>
+                  )}
+                </>
+              )}
+
+              {/* Section Multiplication */}
+              {plant.propagation && (
+                <>
+                  <Text style={styles.ficheTechTitle}>MULTIPLICATION</Text>
+                  <View style={styles.infoGrid}>
+                    <InfoCard icon="🌱" value={PROPAGATION_LABELS[plant.propagation] || '—'} />
+                  </View>
+                </>
+              )}
+
+              {/* Section Récolte */}
+              {(plant.harvest || plant.harvestMonthStart) && (
+                <>
+                  <Text style={styles.ficheTechTitle}>RÉCOLTE</Text>
+                  <View style={styles.infoGrid}>
+                    {plant.harvestMonthStart != null && plant.harvestMonthEnd != null && (
+                      <InfoCard icon="📅" value={`${MONTHS[plant.harvestMonthStart - 1]} — ${MONTHS[plant.harvestMonthEnd - 1]}`} />
+                    )}
+                  </View>
+                  {plant.harvest && (
+                    <GlassCard style={styles.notesCard}>
+                      <View style={styles.notesRow}>
+                        <Text style={styles.notesIcon}>🍎</Text>
+                        <Text style={styles.notesLabel}>Récolte :</Text>
+                      </View>
+                      <Text style={styles.notesTextNew}>{plant.harvest}</Text>
+                    </GlassCard>
+                  )}
+                </>
+              )}
+
+              {/* Section Autres */}
+              {(plant.companionPlants || plant.origin) && (
+                <>
+                  <Text style={styles.ficheTechTitle}>AUTRES</Text>
+                  {plant.companionPlants && (
+                    <GlassCard style={styles.notesCard}>
+                      <View style={styles.notesRow}>
+                        <Text style={styles.notesIcon}>🤝</Text>
+                        <Text style={styles.notesLabel}>Plantes compagnes :</Text>
+                      </View>
+                      <Text style={styles.notesTextNew}>{plant.companionPlants}</Text>
+                    </GlassCard>
+                  )}
+                  {plant.origin && (
+                    <GlassCard style={styles.notesCard}>
+                      <View style={styles.notesRow}>
+                        <Text style={styles.notesIcon}>🌍</Text>
+                        <Text style={styles.notesLabel}>Origine :</Text>
+                      </View>
+                      <Text style={styles.notesTextNew}>{plant.origin}</Text>
+                    </GlassCard>
+                  )}
+                </>
+              )}
             </View>
             <View style={styles.actions}>
               <TouchableOpacity style={styles.editButton} onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
@@ -380,23 +565,50 @@ export default function PlantDetailScreen() {
   return (
     <GestureHandlerRootView style={styles.container}>
       <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.dark.accent} />}>
-        <View style={styles.heroSection}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Retour</Text>
-          </TouchableOpacity>
+        <View style={styles.heroContainer}>
           {coverPhoto ? (
-            <TouchableOpacity style={styles.coverWrap} onLongPress={() => handleDeletePhoto(coverPhoto)} activeOpacity={1}>
-              <Image source={{ uri: coverPhoto.uri }} style={styles.coverImage} />
+            <TouchableOpacity style={styles.heroImageWrap} onLongPress={() => handleDeletePhoto(coverPhoto)} activeOpacity={1}>
+              <Image source={{ uri: coverPhoto.uri }} style={styles.heroImage} />
+              <LinearGradient
+                colors={['transparent', 'rgba(28,25,23,0.9)']}
+                style={styles.heroGradient}
+              />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.coverPlaceholder} onPress={showAddPhotoOptions} activeOpacity={0.8}>
-              <Text style={styles.coverPlaceholderText}>📷</Text>
-              <Text style={styles.coverPlaceholderHint}>Appuyez pour ajouter une photo</Text>
+            <TouchableOpacity style={styles.heroPlaceholder} onPress={showAddPhotoOptions} activeOpacity={0.8}>
+              <Text style={styles.heroPlaceholderEmoji}>📷</Text>
+              <Text style={styles.heroPlaceholderHint}>Appuyez pour ajouter une photo</Text>
             </TouchableOpacity>
           )}
-          <Text style={styles.plantName}>{plant.name}</Text>
-          {plant.latinName ? <Text style={styles.latinName}>{plant.latinName}</Text> : null}
-          {plant.zoneName ? <Text style={styles.zoneTag}>{plant.zoneName}</Text> : null}
+          <View style={[styles.heroOverlay, { paddingTop: insets.top + 8 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.heroBackBtn}>
+              <Text style={styles.heroBackText}>‹ Retour</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
+              <Text style={styles.heroSettingsIcon}>⚙️</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.nameTagsSection}>
+          <View style={styles.nameColumn}>
+            <Text style={styles.plantNameNew}>{plant.name}</Text>
+            {plant.latinName ? <Text style={styles.latinNameNew}>{plant.latinName}</Text> : null}
+            {plant.zoneName ? <Text style={styles.zoneTagNew}>{plant.zoneName}</Text> : null}
+          </View>
+          {getQuickTags(plant).length > 0 && (
+            <View style={styles.quickTagsColumn}>
+              <Text style={styles.quickTagsHeader}>EN UN COUP D'ŒIL</Text>
+              <View style={styles.quickTagsRow}>
+                {getQuickTags(plant).map((tag, i) => (
+                  <View key={i} style={styles.quickTagBadge}>
+                    <Text style={styles.quickTagIcon}>{tag.icon}</Text>
+                    <Text style={styles.quickTagLabel}>{tag.label}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.tabBar}>
@@ -470,12 +682,14 @@ export default function PlantDetailScreen() {
   );
 }
 
-function Row({ label, value }) {
+function InfoCard({ icon, value }) {
   return (
-    <View style={styles.attrRow}>
-      <Text style={styles.rowLabel}>{label}</Text>
-      <Text style={styles.rowValue}>{value}</Text>
-    </View>
+    <GlassCard style={styles.infoCardOuter} noPadding>
+      <View style={styles.infoCardInner}>
+        <Text style={styles.infoCardIcon}>{icon}</Text>
+        <Text style={styles.infoCardValue}>{value}</Text>
+      </View>
+    </GlassCard>
   );
 }
 
@@ -483,8 +697,6 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark.background },
   placeholder: { ...typography.body, color: colors.dark.textSecondary, padding: spacing.lg },
   scrollContent: { paddingBottom: 24 },
-  heroAnimated: { overflow: 'hidden' },
-  hero: { paddingBottom: 24 },
   tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.dark.border, backgroundColor: colors.dark.surface },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
   tabActive: { borderBottomWidth: 2, borderBottomColor: colors.dark.accent },
@@ -493,29 +705,71 @@ const styles = StyleSheet.create({
   tabScroll: { flex: 1 },
   mainScroll: { flex: 1 },
   mainScrollContent: { paddingBottom: 20 },
-  heroSection: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.lg },
-  tabContent: { flex: 1 },
   tabContentInner: { paddingBottom: 40 },
-  backBtn: { marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.dark.textSecondary },
-  coverWrap: { width: '100%', height: 200, borderRadius: radius.lg, overflow: 'hidden', marginVertical: 12 },
-  coverImage: { width: '100%', height: '100%', resizeMode: 'contain' },
-  coverPlaceholder: {
-    width: '100%',
-    height: 200,
-    borderRadius: radius.lg,
-    backgroundColor: colors.dark.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 12,
+
+  // Hero
+  heroContainer: { width: '100%' },
+  heroImageWrap: { width: '100%', height: HERO_HEIGHT },
+  heroImage: { width: '100%', height: '100%', resizeMode: 'cover' },
+  heroGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%' },
+  heroOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
   },
-  coverPlaceholderText: { fontSize: 48 },
-  coverPlaceholderHint: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 8 },
-  photosScroll: { gap: spacing.sm, paddingVertical: spacing.sm },
-  photoGrid: { gap: spacing.md },
-  photoItemWrap: { width: '100%', aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.dark.surface, marginBottom: spacing.xs },
-  photoItem: { width: '100%', height: '100%' },
-  photoDate: { ...typography.caption, color: colors.dark.textSecondary, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.sm },
+  heroBackBtn: { paddingVertical: spacing.sm, paddingRight: spacing.lg },
+  heroBackText: { ...typography.body, color: '#fff', fontWeight: '600', fontSize: 18 },
+  heroSettingsIcon: { fontSize: 22, paddingVertical: spacing.sm },
+  heroPlaceholder: {
+    width: '100%', height: HERO_HEIGHT,
+    backgroundColor: colors.dark.surface,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heroPlaceholderEmoji: { fontSize: 48 },
+  heroPlaceholderHint: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 8 },
+
+  // Name + Quick Tags
+  nameTagsSection: {
+    flexDirection: 'row', paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md, alignItems: 'flex-start',
+  },
+  nameColumn: { flex: 1 },
+  plantNameNew: { ...typography.display, color: colors.dark.text },
+  latinNameNew: { ...typography.bodySmall, color: colors.dark.textSecondary, fontStyle: 'italic', marginTop: 2 },
+  zoneTagNew: { ...typography.caption, color: colors.dark.accent, marginTop: 4 },
+  quickTagsColumn: { alignItems: 'flex-end', marginLeft: spacing.sm },
+  quickTagsHeader: {
+    ...typography.caption, color: colors.dark.textSecondary,
+    textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, fontSize: 10,
+  },
+  quickTagsRow: { flexDirection: 'row', gap: spacing.md },
+  quickTagBadge: { alignItems: 'center', width: 56 },
+  quickTagIcon: { fontSize: 22, marginBottom: 2 },
+  quickTagLabel: { ...typography.caption, color: colors.dark.textSecondary, fontSize: 10, textAlign: 'center' },
+
+  // Info grid
+  ficheTechTitle: {
+    ...typography.title, color: colors.dark.text,
+    textTransform: 'uppercase', letterSpacing: 1, marginBottom: spacing.md,
+  },
+  infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  infoCardOuter: { width: INFO_CARD_WIDTH },
+  infoCardInner: {
+    padding: 12, alignItems: 'center', justifyContent: 'center', minHeight: 100,
+  },
+  infoCardIcon: { fontSize: 28, marginBottom: 8 },
+  infoCardValue: {
+    ...typography.bodySmall, color: colors.dark.text, textAlign: 'center', lineHeight: 18,
+  },
+
+  // Notes
+  notesCard: { marginTop: spacing.md },
+  notesRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
+  notesIcon: { fontSize: 18, marginRight: 8 },
+  notesLabel: { ...typography.label, color: colors.dark.text, fontWeight: '600' },
+  notesTextNew: { ...typography.bodySmall, color: colors.dark.textSecondary },
+
+  // Photos
   timeline: { paddingLeft: spacing.sm },
   timelineItem: { flexDirection: 'row', marginBottom: spacing.md },
   timelineLeft: { alignItems: 'center', width: 24 },
@@ -526,30 +780,18 @@ const styles = StyleSheet.create({
   timelinePhotoWrap: { width: '100%', aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.dark.surface },
   timelinePhoto: { width: '100%', height: '100%' },
   addPhotoItem: {
-    width: '100%',
-    aspectRatio: 1,
-    borderRadius: radius.md,
-    borderWidth: 2,
-    borderColor: colors.dark.border,
-    borderStyle: 'dashed',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
+    width: '100%', aspectRatio: 1, borderRadius: radius.md,
+    borderWidth: 2, borderColor: colors.dark.border, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
   },
   addPhotoItemText: { fontSize: 48, color: colors.dark.textSecondary, lineHeight: 56 },
   addPhotoItemLabel: { ...typography.body, color: colors.dark.textSecondary, marginTop: spacing.xs },
-  plantName: { ...typography.display, color: colors.dark.text, marginTop: 8 },
-  latinName: { ...typography.bodySmall, color: colors.dark.textSecondary, fontStyle: 'italic' },
-  zoneTag: { ...typography.caption, color: colors.dark.accent, marginTop: 4 },
+
+  // Sections
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
   sectionTitle: { ...typography.title, color: colors.dark.text },
   sectionLink: { ...typography.caption, color: colors.dark.accent },
-  attrRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.dark.border },
-  rowLabel: { ...typography.caption, color: colors.dark.textSecondary },
-  rowValue: { ...typography.body, color: colors.dark.text },
-  notesRow: { paddingVertical: 8 },
-  notesText: { ...typography.bodySmall, color: colors.dark.text },
   emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
   emptyPhotos: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
   emptyPhotosText: { fontSize: 48, marginBottom: 8 },

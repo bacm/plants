@@ -16,7 +16,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
-import { createPlant, getZones, createReminder, PLANT_TYPES, SUN, WATER } from '../../lib/db';
+import { createPlant, getZones, createReminder, PLANT_TYPES, SUN, WATER, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY } from '../../lib/db';
 import { searchPlants, normalizeToForm } from '../../lib/plantSearch';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -37,6 +37,12 @@ const TYPE_LABELS = {
 
 const SUN_ICONS = { full_sun: '\u2600', partial: '\u26C5', shade: '\u2601' };
 const WATER_ICONS = { low: '\uD83D\uDCA7', medium: '\uD83D\uDCA7\uD83D\uDCA7', high: '\uD83D\uDCA7\uD83D\uDCA7\uD83D\uDCA7' };
+
+const SOIL_TYPE_LABELS = { clay: 'Argileux', sandy: 'Sableux', loamy: 'Limoneux', peaty: 'Tourbeux', rocky: 'Caillouteux' };
+const SOIL_PH_LABELS = { acidic: 'Acide', neutral: 'Neutre', alkaline: 'Alcalin' };
+const PROPAGATION_LABELS = { seed: 'Semis', cutting: 'Bouture', division: 'Division', layering: 'Marcotte', grafting: 'Greffe' };
+const TOXICITY_LABELS = { none: 'Aucune', pets: 'Animaux', humans: 'Humains', all: 'Tous' };
+const MONTHS_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
 export default function NewPlantScreen() {
   const router = useRouter();
@@ -59,6 +65,22 @@ export default function NewPlantScreen() {
   const [createdAt, setCreatedAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [showMore, setShowMore] = useState(false);
+
+  // Nouveaux champs
+  const [soilType, setSoilType] = useState('loamy');
+  const [soilPH, setSoilPH] = useState('neutral');
+  const [fertilizer, setFertilizer] = useState('');
+  const [pruning, setPruning] = useState('');
+  const [pruningMonth, setPruningMonth] = useState(null);
+  const [propagation, setPropagation] = useState(null);
+  const [pests, setPests] = useState('');
+  const [toxicity, setToxicity] = useState('none');
+  const [companionPlants, setCompanionPlants] = useState('');
+  const [harvest, setHarvest] = useState('');
+  const [harvestMonthStart, setHarvestMonthStart] = useState('');
+  const [harvestMonthEnd, setHarvestMonthEnd] = useState('');
+  const [origin, setOrigin] = useState('');
+  const [winterCare, setWinterCare] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -104,6 +126,21 @@ export default function NewPlantScreen() {
     setDeciduous(formData.deciduous);
     setMinTemperature(formData.minTemperature || '');
     setNotes(formData.notes);
+    // Nouveaux champs
+    setSoilType(formData.soilType || 'loamy');
+    setSoilPH(formData.soilPH || 'neutral');
+    setFertilizer(formData.fertilizer || '');
+    setPruning(formData.pruning || '');
+    setPruningMonth(formData.pruningMonth || null);
+    setPropagation(formData.propagation || null);
+    setPests(formData.pests || '');
+    setToxicity(formData.toxicity || 'none');
+    setCompanionPlants(formData.companionPlants || '');
+    setHarvest(formData.harvest || '');
+    setHarvestMonthStart(formData.harvestMonthStart?.toString() || '');
+    setHarvestMonthEnd(formData.harvestMonthEnd?.toString() || '');
+    setOrigin(formData.origin || '');
+    setWinterCare(formData.winterCare || '');
     setShowSuggestions(false);
     setSuggestions([]);
   };
@@ -126,6 +163,8 @@ export default function NewPlantScreen() {
     const h = height ? parseInt(height, 10) : null;
     const w = width ? parseInt(width, 10) : null;
     const minTemp = minTemperature ? parseInt(minTemperature, 10) : null;
+    const harvestStart = harvestMonthStart ? parseInt(harvestMonthStart, 10) : null;
+    const harvestEnd = harvestMonthEnd ? parseInt(harvestMonthEnd, 10) : null;
     const plantId = createPlant({
       name: name.trim(),
       latinName: latinName.trim() || null,
@@ -142,6 +181,20 @@ export default function NewPlantScreen() {
       zoneId,
       notes: notes.trim() || null,
       createdAt: createdAt ? new Date(createdAt).toISOString() : null,
+      soilType,
+      soilPH,
+      fertilizer: fertilizer.trim() || null,
+      pruning: pruning.trim() || null,
+      pruningMonth,
+      propagation,
+      pests: pests.trim() || null,
+      toxicity,
+      companionPlants: companionPlants.trim() || null,
+      harvest: harvest.trim() || null,
+      harvestMonthStart: harvestStart,
+      harvestMonthEnd: harvestEnd,
+      origin: origin.trim() || null,
+      winterCare: winterCare.trim() || null,
     });
     createReminder({
       plantId,
@@ -439,6 +492,200 @@ export default function NewPlantScreen() {
                 keyboardType="numbers-and-punctuation"
               />
               <Text style={styles.dateHint}>Laissez vide pour la date du jour</Text>
+
+              {/* --- Section Sol --- */}
+              <Text style={styles.sectionTitle}>Sol</Text>
+
+              <Text style={styles.label}>Type de sol</Text>
+              <View style={styles.pills}>
+                {SOIL_TYPES.map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    onPress={() => setSoilType(s)}
+                    style={[styles.pill, soilType === s && styles.pillActive]}
+                  >
+                    <Text style={[styles.pillText, soilType === s && styles.pillTextActive]}>
+                      {SOIL_TYPE_LABELS[s]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.label}>pH du sol</Text>
+              <View style={styles.pills}>
+                {SOIL_PH.map((p) => (
+                  <TouchableOpacity
+                    key={p}
+                    onPress={() => setSoilPH(p)}
+                    style={[styles.pill, soilPH === p && styles.pillActive]}
+                  >
+                    <Text style={[styles.pillText, soilPH === p && styles.pillTextActive]}>
+                      {SOIL_PH_LABELS[p]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* --- Section Entretien --- */}
+              <Text style={styles.sectionTitle}>Entretien</Text>
+
+              <Text style={styles.label}>Engrais</Text>
+              <TextInput
+                style={styles.input}
+                value={fertilizer}
+                onChangeText={setFertilizer}
+                placeholder="ex. NPK 10-10-10 au printemps"
+                placeholderTextColor={colors.dark.textSecondary}
+              />
+
+              <Text style={styles.label}>Taille</Text>
+              <TextInput
+                style={styles.input}
+                value={pruning}
+                onChangeText={setPruning}
+                placeholder="ex. Taille de formation en fin d'hiver"
+                placeholderTextColor={colors.dark.textSecondary}
+              />
+
+              <Text style={styles.label}>Mois de taille</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.pills}>
+                  <TouchableOpacity
+                    onPress={() => setPruningMonth(null)}
+                    style={[styles.pill, pruningMonth === null && styles.pillActive]}
+                  >
+                    <Text style={[styles.pillText, pruningMonth === null && styles.pillTextActive]}>—</Text>
+                  </TouchableOpacity>
+                  {MONTHS_LABELS.map((m, i) => (
+                    <TouchableOpacity
+                      key={i}
+                      onPress={() => setPruningMonth(i + 1)}
+                      style={[styles.pill, pruningMonth === i + 1 && styles.pillActive]}
+                    >
+                      <Text style={[styles.pillText, pruningMonth === i + 1 && styles.pillTextActive]}>{m}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+
+              <Text style={styles.label}>Entretien hivernal</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={winterCare}
+                onChangeText={setWinterCare}
+                placeholder="ex. Paillage, protection hivernale..."
+                placeholderTextColor={colors.dark.textSecondary}
+                multiline
+              />
+
+              {/* --- Section Multiplication --- */}
+              <Text style={styles.sectionTitle}>Multiplication</Text>
+
+              <Text style={styles.label}>Méthode</Text>
+              <View style={styles.pills}>
+                <TouchableOpacity
+                  onPress={() => setPropagation(null)}
+                  style={[styles.pill, propagation === null && styles.pillActive]}
+                >
+                  <Text style={[styles.pillText, propagation === null && styles.pillTextActive]}>—</Text>
+                </TouchableOpacity>
+                {PROPAGATION.map((p) => (
+                  <TouchableOpacity
+                    key={p}
+                    onPress={() => setPropagation(p)}
+                    style={[styles.pill, propagation === p && styles.pillActive]}
+                  >
+                    <Text style={[styles.pillText, propagation === p && styles.pillTextActive]}>
+                      {PROPAGATION_LABELS[p]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* --- Section Santé --- */}
+              <Text style={styles.sectionTitle}>Santé</Text>
+
+              <Text style={styles.label}>Ravageurs / Maladies</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={pests}
+                onChangeText={setPests}
+                placeholder="ex. Pucerons, oïdium..."
+                placeholderTextColor={colors.dark.textSecondary}
+                multiline
+              />
+
+              <Text style={styles.label}>Toxicité</Text>
+              <View style={styles.pills}>
+                {TOXICITY.map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    onPress={() => setToxicity(t)}
+                    style={[styles.pill, toxicity === t && styles.pillActive]}
+                  >
+                    <Text style={[styles.pillText, toxicity === t && styles.pillTextActive]}>
+                      {TOXICITY_LABELS[t]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* --- Section Récolte (pour comestibles) --- */}
+              <Text style={styles.sectionTitle}>Récolte</Text>
+
+              <Text style={styles.label}>Informations de récolte</Text>
+              <TextInput
+                style={styles.input}
+                value={harvest}
+                onChangeText={setHarvest}
+                placeholder="ex. Fruits mûrs en été"
+                placeholderTextColor={colors.dark.textSecondary}
+              />
+
+              <Text style={styles.label}>Période de récolte (mois)</Text>
+              <View style={styles.bloomRow}>
+                <TextInput
+                  style={[styles.input, styles.inputSmall]}
+                  value={harvestMonthStart}
+                  onChangeText={setHarvestMonthStart}
+                  placeholder="Début"
+                  placeholderTextColor={colors.dark.textSecondary}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+                <Text style={styles.dash}>{'\u2013'}</Text>
+                <TextInput
+                  style={[styles.input, styles.inputSmall]}
+                  value={harvestMonthEnd}
+                  onChangeText={setHarvestMonthEnd}
+                  placeholder="Fin"
+                  placeholderTextColor={colors.dark.textSecondary}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+
+              {/* --- Section Autres --- */}
+              <Text style={styles.sectionTitle}>Autres informations</Text>
+
+              <Text style={styles.label}>Plantes compagnes</Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={companionPlants}
+                onChangeText={setCompanionPlants}
+                placeholder="ex. Tomates, basilic..."
+                placeholderTextColor={colors.dark.textSecondary}
+                multiline
+              />
+
+              <Text style={styles.label}>Région d'origine</Text>
+              <TextInput
+                style={styles.input}
+                value={origin}
+                onChangeText={setOrigin}
+                placeholder="ex. Méditerranée, Asie..."
+                placeholderTextColor={colors.dark.textSecondary}
+              />
             </GlassCard>
           )}
         </View>
@@ -663,6 +910,13 @@ const styles = StyleSheet.create({
     ...typography.caption,
     color: colors.dark.textSecondary,
     marginTop: 4,
+  },
+  sectionTitle: {
+    ...typography.label,
+    color: colors.dark.accent,
+    marginTop: 24,
+    marginBottom: 8,
+    fontWeight: '600',
   },
 
   saveBtn: {

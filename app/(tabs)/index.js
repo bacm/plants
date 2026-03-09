@@ -6,8 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import {
@@ -24,7 +26,12 @@ import {
   createCareLog,
 } from '../../lib/db';
 
-const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
+const MONTHS_FULL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
+const HEADER_SUBTITLE = 'En ce moment : La floraison de printemps bat son plein.';
+const SETTINGS_BLUE = '#3B82F6';
+const CARD_WIDTH = 168;
+const TASK_PHOTO_SIZE = 48;
+const BLOOM_IMAGE_SIZE = CARD_WIDTH;
 
 export default function Dashboard() {
   const router = useRouter();
@@ -78,6 +85,13 @@ export default function Dashboard() {
 
   const tasks = [...overdue, ...dueToday];
 
+  const periodLabel = (p) => {
+    if (!p.bloomStartMonth || !p.bloomEndMonth) return '';
+    const start = MONTHS_FULL[p.bloomStartMonth - 1];
+    const end = MONTHS_FULL[p.bloomEndMonth - 1];
+    return start === end ? start : `${start} - ${end}`;
+  };
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -92,17 +106,35 @@ export default function Dashboard() {
         }
       >
         <GradientHero>
-          <Text style={styles.heroTitle}>Votre jardin</Text>
-          <Text style={styles.heroSubtitle}>
-            {MONTHS[currentMonth - 1]} — Ce qui fleurit maintenant
-          </Text>
+          <View style={styles.heroRow}>
+            <View style={styles.heroTextWrap}>
+              <Text style={styles.heroTitle}>Votre jardin</Text>
+              <Text style={styles.heroSubtitle}>{HEADER_SUBTITLE}</Text>
+            </View>
+            <View style={styles.heroIcons}>
+              <TouchableOpacity
+                style={[styles.heroIconBtn, styles.heroIconBtnBlue]}
+                onPress={() => {}}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="settings" size={20} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.heroIconBtn, styles.heroIconBtnGray]}
+                onPress={() => {}}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="person-outline" size={20} color={colors.dark.text} />
+              </TouchableOpacity>
+            </View>
+          </View>
         </GradientHero>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>À faire</Text>
+            <Text style={styles.sectionTitle}>Tâches du jour</Text>
             {tasks.length > 0 && (
-              <Text style={styles.sectionCount}>{tasks.length}</Text>
+              <Text style={styles.sectionCount}>({tasks.length})</Text>
             )}
           </View>
           {tasks.length === 0 ? (
@@ -119,12 +151,24 @@ export default function Dashboard() {
               >
                 <GlassCard>
                   <View style={styles.taskRow}>
-                    <View style={styles.taskBullet} />
+                    {r.photoUri ? (
+                      <Image source={{ uri: r.photoUri }} style={styles.taskPhoto} />
+                    ) : (
+                      <View style={[styles.taskPhoto, styles.taskPhotoPlaceholder]}>
+                        <Ionicons name="leaf-outline" size={24} color={colors.dark.textSecondary} />
+                      </View>
+                    )}
                     <View style={styles.taskContent}>
-                      <Text style={styles.taskKind}>{reminderLabel(r.kind)}</Text>
-                      <Text style={styles.taskPlant}>{r.plantName}</Text>
+                      <Text style={styles.taskTitle} numberOfLines={1}>
+                        {reminderLabel(r.kind)} {r.plantName}
+                      </Text>
+                      <Text style={styles.taskSubtitle}>
+                        Fréquence : tous les {r.frequencyDays} jours
+                      </Text>
                     </View>
-                    <Text style={styles.doneLabel}>Marquer fait</Text>
+                    <View style={styles.doneButton}>
+                      <Ionicons name="checkmark" size={22} color="#fff" />
+                    </View>
                   </View>
                 </GlassCard>
               </TouchableOpacity>
@@ -143,42 +187,52 @@ export default function Dashboard() {
               </Text>
             </GlassCard>
           ) : (
-            blooming.slice(0, 6).map((p) => (
-              <TouchableOpacity
-                key={p.id}
-                activeOpacity={0.9}
-                onPress={() => router.push(`/plant/${p.id}`)}
-                style={styles.plantCardWrap}
+            <>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.bloomScrollContent}
               >
-                <GlassCard>
-                  <View style={styles.plantRow}>
-                    <View style={[styles.colorDot, { backgroundColor: colorHex(p.flowerColor) }]} />
-                    <Text style={styles.plantName}>{p.name}</Text>
-                    {p.zoneName ? (
-                      <Text style={styles.zoneTag}>{p.zoneName}</Text>
-                    ) : null}
-                  </View>
-                </GlassCard>
-              </TouchableOpacity>
-            ))
+                {blooming.map((p) => (
+                  <TouchableOpacity
+                    key={p.id}
+                    activeOpacity={0.9}
+                    onPress={() => router.push(`/plant/${p.id}`)}
+                    style={styles.bloomCardWrap}
+                  >
+                    <GlassCard style={styles.bloomCard} noPadding>
+                      <View style={styles.bloomImageWrap}>
+                        {p.photoUri ? (
+                          <Image source={{ uri: p.photoUri }} style={styles.bloomImage} />
+                        ) : (
+                          <View style={[styles.bloomImage, styles.bloomImagePlaceholder]}>
+                            <Ionicons name="flower-outline" size={40} color={colors.dark.textSecondary} />
+                          </View>
+                        )}
+                        <TouchableOpacity
+                          style={styles.bloomInfoBadge}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            router.push(`/plant/${p.id}`);
+                          }}
+                        >
+                          <Ionicons name="information-circle" size={20} color={colors.dark.text} />
+                        </TouchableOpacity>
+                      </View>
+                      <Text style={styles.bloomName} numberOfLines={1}>{p.name}</Text>
+                      {periodLabel(p) ? (
+                        <Text style={styles.bloomPeriod}>Période : {periodLabel(p)}</Text>
+                      ) : null}
+                      <Text style={styles.bloomVoir}>Voir</Text>
+                    </GlassCard>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <Text style={styles.bloomHint}>
+                Toutes vos plantes en fleurs sont listées ici ! Ajoutez-en plus.
+              </Text>
+            </>
           )}
-        </View>
-
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.push('/plant/new')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.primaryButtonText}>+ Ajouter une plante</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.secondaryButton}
-            onPress={() => router.push('/library')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.secondaryButtonText}>Voir la bibliothèque</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={{ height: 100 }} />
@@ -199,29 +253,16 @@ function reminderLabel(kind) {
   return labels[kind] || kind;
 }
 
-function colorHex(color) {
-  if (!color) return colors.dark.sage;
-  const c = (color || '').toLowerCase();
-  const map = {
-    rose: '#C9A9A6',
-    rouge: '#B85450',
-    blanc: '#E8E4DF',
-    jaune: '#D4B854',
-    bleu: '#6B8BAA',
-    violet: '#B8A9C9',
-    vert: '#6B9B7A',
-    orange: '#C98B5A',
-  };
-  for (const [k, v] of Object.entries(map)) {
-    if (c.includes(k)) return v;
-  }
-  return colors.dark.accentSoft;
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  heroTextWrap: { flex: 1, paddingRight: spacing.md },
   heroTitle: {
     ...typography.display,
     color: colors.dark.text,
@@ -231,6 +272,16 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.dark.textSecondary,
   },
+  heroIcons: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
+  heroIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroIconBtnBlue: { backgroundColor: SETTINGS_BLUE },
+  heroIconBtnGray: { backgroundColor: colors.dark.surface },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   sectionHeader: {
     flexDirection: 'row',
@@ -244,49 +295,60 @@ const styles = StyleSheet.create({
   sectionCount: {
     ...typography.caption,
     color: colors.dark.accent,
-    marginLeft: spacing.sm,
+    marginLeft: spacing.xs,
   },
   taskWrap: { marginBottom: spacing.sm },
   taskRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  taskBullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: colors.dark.accent,
+  taskPhoto: {
+    width: TASK_PHOTO_SIZE,
+    height: TASK_PHOTO_SIZE,
+    borderRadius: TASK_PHOTO_SIZE / 2,
     marginRight: spacing.md,
   },
-  taskContent: { flex: 1 },
-  taskKind: { ...typography.label, color: colors.dark.text },
-  taskPlant: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 2 },
-  doneLabel: { ...typography.caption, color: colors.dark.accent },
+  taskPhotoPlaceholder: {
+    backgroundColor: colors.dark.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  taskContent: { flex: 1, minWidth: 0 },
+  taskTitle: { ...typography.label, color: colors.dark.text },
+  taskSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 2 },
+  doneButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.dark.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.sm,
+  },
   emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
-  plantCardWrap: { marginBottom: spacing.sm },
-  plantRow: { flexDirection: 'row', alignItems: 'center' },
-  colorDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginRight: spacing.md,
-  },
-  plantName: { ...typography.title, color: colors.dark.text, flex: 1 },
-  zoneTag: { ...typography.caption, color: colors.dark.textSecondary },
-  actions: { paddingHorizontal: spacing.lg, marginTop: spacing.xxl, gap: spacing.md },
-  primaryButton: {
-    backgroundColor: colors.dark.accent,
-    paddingVertical: 16,
-    borderRadius: radius.lg,
+  bloomScrollContent: { paddingRight: spacing.lg },
+  bloomCardWrap: { marginRight: spacing.md },
+  bloomCard: { width: CARD_WIDTH, padding: 0, overflow: 'hidden' },
+  bloomImageWrap: { position: 'relative', width: CARD_WIDTH, height: BLOOM_IMAGE_SIZE },
+  bloomImage: { width: CARD_WIDTH, height: BLOOM_IMAGE_SIZE },
+  bloomImagePlaceholder: {
+    backgroundColor: colors.dark.surface,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  primaryButtonText: { ...typography.label, color: '#fff' },
-  secondaryButton: {
-    paddingVertical: 16,
-    borderRadius: radius.lg,
+  bloomInfoBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    right: spacing.sm,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.9)',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.dark.border,
+    justifyContent: 'center',
   },
-  secondaryButtonText: { ...typography.label, color: colors.dark.textSecondary },
+  bloomName: { ...typography.title, color: colors.dark.text, paddingHorizontal: spacing.md, paddingTop: spacing.sm },
+  bloomPeriod: { ...typography.bodySmall, color: colors.dark.textSecondary, paddingHorizontal: spacing.md, paddingTop: 2 },
+  bloomVoir: { ...typography.caption, color: colors.dark.text, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  bloomHint: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: spacing.md },
 });

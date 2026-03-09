@@ -13,16 +13,26 @@ import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { createZone } from '../../lib/db';
 
+const ZONE_ICONS = [
+  '🌱', '🌳', '🌿', '🪴', '🌺', '🌻', '🌹', '🍅',
+  '🥕', '🌾', '🍃', '🪻', '🌵', '🎋', '🍀', '☘️',
+];
+
 export default function NewZoneScreen() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [icon, setIcon] = useState('🌱');
   const [saving, setSaving] = useState(false);
 
   const save = () => {
     if (!name.trim()) return;
     setSaving(true);
-    createZone({ name: name.trim(), description: description.trim() || null });
+    createZone({
+      name: name.trim(),
+      description: description.trim() || null,
+      icon,
+    });
     setSaving(false);
     router.back();
   };
@@ -40,6 +50,23 @@ export default function NewZoneScreen() {
 
         <View style={styles.section}>
           <GlassCard>
+            <Text style={styles.label}>Icône</Text>
+            <View style={styles.iconGrid}>
+              {ZONE_ICONS.map((emoji) => (
+                <TouchableOpacity
+                  key={emoji}
+                  style={[
+                    styles.iconOption,
+                    icon === emoji && styles.iconOptionSelected,
+                  ]}
+                  onPress={() => setIcon(emoji)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.iconEmoji}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <Text style={styles.label}>Nom *</Text>
             <TextInput
               style={styles.input}
@@ -53,7 +80,7 @@ export default function NewZoneScreen() {
               style={[styles.input, styles.textArea]}
               value={description}
               onChangeText={setDescription}
-              placeholder="Description..."
+              placeholder="ex. Potager Carré, Plein Sud-Est…"
               placeholderTextColor={colors.dark.textSecondary}
               multiline
             />
@@ -83,9 +110,45 @@ const styles = StyleSheet.create({
   heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 4 },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   label: { ...typography.label, color: colors.dark.textSecondary, marginBottom: 6, marginTop: 12 },
-  input: { ...typography.body, color: colors.dark.text, backgroundColor: colors.dark.surface, borderRadius: radius.sm, padding: 14, borderWidth: 1, borderColor: colors.dark.border },
+  input: {
+    ...typography.body,
+    color: colors.dark.text,
+    backgroundColor: colors.dark.surface,
+    borderRadius: radius.sm,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
   textArea: { minHeight: 80 },
-  saveBtn: { marginHorizontal: spacing.lg, marginTop: spacing.xxl, backgroundColor: colors.dark.accent, paddingVertical: 16, borderRadius: radius.lg, alignItems: 'center' },
+  iconGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  iconOption: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.sm,
+    backgroundColor: colors.dark.surface,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconOptionSelected: {
+    borderColor: colors.dark.accent,
+    borderWidth: 2,
+    backgroundColor: 'rgba(107,155,122,0.15)',
+  },
+  iconEmoji: { fontSize: 24 },
+  saveBtn: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xxl,
+    backgroundColor: colors.dark.accent,
+    paddingVertical: 16,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+  },
   saveBtnDisabled: { opacity: 0.5 },
   saveBtnText: { ...typography.label, color: '#fff' },
 });

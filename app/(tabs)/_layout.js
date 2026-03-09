@@ -65,6 +65,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.dark.surface,
     borderTopColor: colors.dark.border,
     borderTopWidth: 1,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     paddingTop: 8,
     height: Platform.OS === 'ios' ? 88 : 64,
   },

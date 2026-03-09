@@ -7,34 +7,92 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
-  FlatList,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { GradientHero } from '../../../components/GradientHero';
 import { GlassCard } from '../../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../../lib/theme';
-import { getZones, getPlants, getPlantsByZoneWithPhotos } from '../../../lib/db';
+import { getZones, getPlantsByZoneWithImages, getZoneContextInfo } from '../../../lib/db';
+
+const SUN_LABELS = {
+  full_sun: 'Plein Soleil',
+  partial: 'Mi-Ombre',
+  shade: 'Ombre',
+};
+
+const REMINDER_LABELS = {
+  water: 'arrosage',
+  prune: 'taille',
+  fertilize: 'fertilisation',
+  deadhead: 'défloraison',
+  winter_prep: 'préparation hivernale',
+  custom: 'rappel',
+};
+
+function getContextLine(info) {
+  if (!info) return null;
+  const { lastWatering, nextReminder, sunInfo } = info;
+
+  if (lastWatering?.date) {
+    const days = Math.floor(
+      (Date.now() - new Date(lastWatering.date).getTime()) / 86400000
+    );
+    if (days <= 14) {
+      const label =
+        days === 0
+          ? "aujourd'hui"
+          : days === 1
+          ? 'il y a 1 jour'
+          : `il y a ${days} jours`;
+      return `Dernier arrosage : ${label}`;
+    }
+  }
+
+  if (nextReminder?.nextDueDate) {
+    const days = Math.floor(
+      (new Date(nextReminder.nextDueDate).getTime() - Date.now()) / 86400000
+    );
+    const kind = REMINDER_LABELS[nextReminder.kind] || nextReminder.kind;
+    if (days <= 0)
+      return `${kind.charAt(0).toUpperCase() + kind.slice(1)} : aujourd'hui`;
+    return `Prochain ${kind} : ${days} jour${days > 1 ? 's' : ''}`;
+  }
+
+  if (sunInfo?.sun) {
+    return `Exposition : ${SUN_LABELS[sunInfo.sun] || sunInfo.sun}`;
+  }
+
+  return null;
+}
+
+function getPlantImage(plant) {
+  if (plant.photoUri) return plant.photoUri;
+  if (plant.imageUrls) {
+    try {
+      const urls = JSON.parse(plant.imageUrls);
+      if (urls.length > 0) return urls[0];
+    } catch {}
+  }
+  return null;
+}
 
 export default function ZonesScreen() {
   const router = useRouter();
   const [zones, setZones] = useState([]);
-  const [counts, setCounts] = useState({});
-  const [plantsPhotos, setPlantsPhotos] = useState({});
+  const [zonePlants, setZonePlants] = useState({});
+  const [zoneContexts, setZoneContexts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
     const z = await getZones();
     setZones(z);
-    const next = {};
-    const photos = {};
+    const plants = {};
+    const contexts = {};
     for (const zone of z) {
-      const zonePlants = await getPlants({ zoneId: zone.id });
-      next[zone.id] = zonePlants.length;
-      const plantsWithPhotos = await getPlantsByZoneWithPhotos(zone.id);
-      photos[zone.id] = plantsWithPhotos.filter(p => p.photoUri);
+      plants[zone.id] = await getPlantsByZoneWithImages(zone.id);
+      contexts[zone.id] = await getZoneContextInfo(zone.id);
     }
-    setCounts(next);
-    setPlantsPhotos(photos);
+    setZonePlants(plants);
+    setZoneContexts(contexts);
   }, []);
 
   useFocusEffect(
@@ -62,81 +120,134 @@ export default function ZonesScreen() {
           />
         }
       >
-        <GradientHero>
-          <Text style={styles.heroTitle}>Zones</Text>
-          <Text style={styles.heroSubtitle}>
-            Bacs, massifs et emplacements
-          </Text>
-        </GradientHero>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerLeft}>
+            <Text style={styles.heroTitle}>Mes Zones de Jardin</Text>
+            <Text style={styles.heroSubtitle}>
+              Organisez les zones de votre jardin
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.settingsBtn}
+            onPress={() => {}}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.settingsIcon}>⚙️</Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.section}>
           {zones.length === 0 ? (
             <GlassCard>
               <Text style={styles.emptyText}>
-                Aucune zone. Créez une zone (ex. « Balcon », « Massif nord ») puis assignez-y des plantes.
+                Aucune zone. Créez une zone (ex. « Balcon », « Potager ») puis
+                assignez-y des plantes.
               </Text>
               <TouchableOpacity
-                style={styles.addZoneBtn}
+                style={styles.primaryBtn}
                 onPress={() => router.push('/zone/new')}
               >
-                <Text style={styles.addZoneBtnText}>+ Créer une zone</Text>
+                <Text style={styles.primaryBtnText}>+ Créer une zone</Text>
               </TouchableOpacity>
             </GlassCard>
           ) : (
-            zones.map((zone) => (
-              <TouchableOpacity
-                key={zone.id}
-                activeOpacity={0.9}
-                onPress={() => router.push(`/zones/${zone.id}`)}
-                style={styles.cardWrap}
-              >
-                <GlassCard>
-                  <View style={styles.row}>
-                    <View style={styles.zoneInfo}>
-                      <Text style={styles.zoneName}>{zone.name}</Text>
-                      {zone.description ? (
-                        <Text style={styles.zoneDesc} numberOfLines={1}>
-                          {zone.description}
-                        </Text>
-                      ) : null}
-                      {(plantsPhotos[zone.id] || []).length > 0 && (
-                        <FlatList
-                          horizontal
-                          showsHorizontalScrollIndicator={false}
-                          data={plantsPhotos[zone.id]}
-                          keyExtractor={(item, idx) => idx.toString()}
-                          renderItem={({ item }) => (
-                            <View style={styles.plantItem}>
-                              <Image source={{ uri: item.photoUri }} style={styles.plantThumb} />
-                              <Text style={styles.plantName} numberOfLines={1}>{item.name}</Text>
+            zones.map((zone) => {
+              const plants = zonePlants[zone.id] || [];
+              const context = getContextLine(zoneContexts[zone.id]);
+              return (
+                <TouchableOpacity
+                  key={zone.id}
+                  activeOpacity={0.85}
+                  onPress={() => router.push(`/zones/${zone.id}`)}
+                  style={styles.cardWrap}
+                >
+                  <GlassCard>
+                    {/* Zone header: icon + name + count */}
+                    <View style={styles.cardHeader}>
+                      <View style={styles.zoneInfo}>
+                        <View style={styles.zoneNameRow}>
+                          <Text style={styles.zoneIcon}>
+                            {zone.icon || '🌱'}
+                          </Text>
+                          <Text style={styles.zoneName}>{zone.name}</Text>
+                        </View>
+                        {zone.description ? (
+                          <Text style={styles.zoneDesc}>
+                            ({zone.description})
+                          </Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.countBadge}>
+                        <Text style={styles.countText}>{plants.length}</Text>
+                        <Text style={styles.countLabel}>plantes</Text>
+                      </View>
+                    </View>
+
+                    {/* Plant thumbnails */}
+                    {plants.length > 0 && (
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.plantsScroll}
+                        contentContainerStyle={styles.plantsRow}
+                      >
+                        {plants.map((plant, idx) => {
+                          const img = getPlantImage(plant);
+                          return (
+                            <View key={plant.id || idx} style={styles.plantItem}>
+                              {img ? (
+                                <Image
+                                  source={{ uri: img }}
+                                  style={styles.plantThumb}
+                                />
+                              ) : (
+                                <View
+                                  style={[
+                                    styles.plantThumb,
+                                    styles.plantPlaceholder,
+                                  ]}
+                                >
+                                  <Text style={styles.plantPlaceholderText}>
+                                    🌿
+                                  </Text>
+                                </View>
+                              )}
+                              <Text
+                                style={styles.plantName}
+                                numberOfLines={1}
+                              >
+                                {plant.name}
+                              </Text>
                             </View>
-                          )}
-                          style={styles.photosScroll}
-                          contentContainerStyle={styles.photosContent}
-                        />
-                      )}
-                    </View>
-                    <View style={styles.countBadge}>
-                      <Text style={styles.countText}>{counts[zone.id] ?? 0}</Text>
-                      <Text style={styles.countLabel}>plantes</Text>
-                    </View>
-                  </View>
-                </GlassCard>
-              </TouchableOpacity>
-            ))
+                          );
+                        })}
+                      </ScrollView>
+                    )}
+
+                    {/* Context info line */}
+                    {context && (
+                      <Text style={styles.contextLine}>{context}</Text>
+                    )}
+                  </GlassCard>
+                </TouchableOpacity>
+              );
+            })
           )}
         </View>
 
-        {zones.length > 0 && (
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={() => router.push('/zone/new')}
-            >
-              <Text style={styles.secondaryButtonText}>+ Nouvelle zone</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Add zone button */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => router.push('/zone/new')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.addButtonText}>
+              + AJOUTER UNE NOUVELLE ZONE
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <View style={{ height: 100 }} />
       </ScrollView>
@@ -148,46 +259,139 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingTop: 60,
+    paddingBottom: spacing.lg,
+  },
+  headerLeft: { flex: 1, marginRight: spacing.md },
   heroTitle: {
     ...typography.display,
     color: colors.dark.text,
     marginBottom: 4,
   },
-  heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary },
-  section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
+  heroSubtitle: {
+    ...typography.bodySmall,
+    color: colors.dark.textSecondary,
+  },
+  settingsBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#2196F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  settingsIcon: { fontSize: 20 },
+
+  // Section
+  section: { paddingHorizontal: spacing.lg },
+
+  // Empty state
   emptyText: {
     ...typography.bodySmall,
     color: colors.dark.textSecondary,
     marginBottom: spacing.md,
   },
-  addZoneBtn: {
+  primaryBtn: {
     alignSelf: 'flex-start',
     paddingVertical: 10,
     paddingHorizontal: 16,
     backgroundColor: colors.dark.accent,
     borderRadius: radius.md,
   },
-  addZoneBtnText: { ...typography.label, color: '#fff' },
-  cardWrap: { marginBottom: spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center' },
+  primaryBtnText: { ...typography.label, color: '#fff' },
+
+  // Card
+  cardWrap: { marginBottom: spacing.md },
+
+  // Card header
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
   zoneInfo: { flex: 1, marginRight: spacing.sm },
-  zoneName: { ...typography.title, color: colors.dark.text },
-  zoneDesc: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 2 },
-  photosScroll: { marginTop: spacing.sm, height: 80 },
-  photosContent: { paddingRight: spacing.md },
-  plantItem: { alignItems: 'center', marginRight: spacing.sm, width: 60 },
-  plantThumb: { width: 50, height: 50, borderRadius: radius.sm },
-  plantName: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 4, textAlign: 'center', maxWidth: 60 },
-  countBadge: { alignItems: 'center' },
-  countText: { ...typography.displaySmall, color: colors.dark.accent },
+  zoneNameRow: { flexDirection: 'row', alignItems: 'center' },
+  zoneIcon: { fontSize: 22, marginRight: 8 },
+  zoneName: {
+    ...typography.title,
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.dark.text,
+  },
+  zoneDesc: {
+    ...typography.bodySmall,
+    color: colors.dark.textSecondary,
+    marginTop: 2,
+    marginLeft: 30,
+  },
+  countBadge: { alignItems: 'center', marginLeft: spacing.sm },
+  countText: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: colors.dark.accent,
+  },
   countLabel: { ...typography.caption, color: colors.dark.textSecondary },
-  footer: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  secondaryButton: {
+
+  // Plant thumbnails
+  plantsScroll: { marginTop: spacing.md },
+  plantsRow: { paddingRight: spacing.sm },
+  plantItem: {
+    alignItems: 'center',
+    marginRight: spacing.md,
+    width: 68,
+  },
+  plantThumb: {
+    width: 60,
+    height: 60,
+    borderRadius: radius.sm,
+  },
+  plantPlaceholder: {
+    backgroundColor: colors.dark.surface,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  plantPlaceholderText: { fontSize: 24 },
+  plantName: {
+    ...typography.caption,
+    color: colors.dark.textSecondary,
+    marginTop: 6,
+    textAlign: 'center',
+    maxWidth: 68,
+  },
+
+  // Context line
+  contextLine: {
+    ...typography.bodySmall,
+    color: colors.dark.textSecondary,
+    marginTop: spacing.md,
+  },
+
+  // Footer
+  footer: {
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xl,
+  },
+  addButton: {
     paddingVertical: 16,
     borderRadius: radius.lg,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: colors.dark.border,
+    borderStyle: 'dashed',
   },
-  secondaryButtonText: { ...typography.label, color: colors.dark.textSecondary },
+  addButtonText: {
+    ...typography.label,
+    color: colors.dark.textSecondary,
+    letterSpacing: 0.5,
+  },
 });
