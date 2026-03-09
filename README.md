@@ -1,6 +1,6 @@
-# Garden Manager — Ornementaux
+# Garden Manager — Ornamentals
 
-Application mobile **ornementaux uniquement** pour gérer plantes et fleurs : où elles sont, quand elles fleurissent, rappels de soins et historique.
+Mobile app **for ornamental plants and flowers only** to manage: location, flowering periods, care reminders, and history.
 
 ## Installation
 
@@ -16,36 +16,36 @@ Application mobile **ornementaux uniquement** pour gérer plantes et fleurs : o�
 
    Get your API key from [OpenAI Platform](https://platform.openai.com/).
 
-## Lancer le projet
+## Running the Project
 
 ```bash
 npm install
 npx expo start
 ```
 
-- **iOS / Android** : scanner le QR code avec Expo Go (recommandé, expérience mobile native).
-- **Web** : `npx expo start --web` (stockage SQLite non disponible sur web en l’état).
+- **iOS / Android**: Scan the QR code with Expo Go (recommended, native mobile experience).
+- **Web**: `npx expo start --web` (SQLite storage not available on web as is).
 
-## Fonctionnalités MVP
+## MVP Features
 
-- **Catalogue plantes** : ajout/édition, photo, notes, soleil, eau, floraison, couleur, type.
-- **Zones** : créer des zones (massifs, bacs…) et y assigner les plantes.
-- **Rappels** : rappels récurrents par plante (arrosage, taille, etc.) ; liste « Aujourd’hui / En retard ».
-- **Floraison** : mois de floraison ; vue « Ce qui fleurt ce mois ».
-- **Historique** : logs de soins et photos par plante.
+- **Plant Catalog**: Add/edit, photo, notes, sun, water, flowering, color, type.
+- **Zones**: Create zones (beds, containers…) and assign plants to them.
+- **Reminders**: Recurring reminders per plant (watering, pruning, etc.); "Today / Overdue" list.
+- **Flowering**: Flowering months; "What's blooming this month" view.
+- **History**: Care logs and photos per plant.
 
-## Écrans
+## Screens
 
-- **Accueil** : tâches dues, en fleurs ce mois, actions rapides.
-- **Zones** : liste des zones, détail avec les plantes.
-- **Floraison** : calendrier par mois.
-- **Bibliothèque** : recherche et filtres (zone, exposition).
-- **Fiche plante** : photos, attributs, rappels, historique, « Enregistrer un soin ».
+- **Home**: Due tasks, blooming this month, quick actions.
+- **Zones**: List of zones, detail with plants.
+- **Flowering**: Calendar by month.
+- **Library**: Search and filters (zone, exposure).
+- **Plant Detail**: Photos, attributes, reminders, history, "Log Care".
 
 ## Design
 
-- Mode sombre, cartes type glassmorphism, dégradés discrets, typographie lisible.
-- Mobile-first, pensé pour une utilisation tactile.
+- Dark mode, glassmorphism cards, subtle gradients, readable typography.
+- Mobile-first, designed for touch use.
 
 ## Stack
 
