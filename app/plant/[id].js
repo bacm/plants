@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   Image,
   RefreshControl,
-  Alert,
   Modal,
   TextInput,
   Dimensions,
@@ -19,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
+import { showMessage, confirm, choose } from '../../lib/dialogs';
 import * as ImagePicker from 'expo-image-picker';
 import {
   getPlantById,
@@ -153,7 +153,7 @@ export default function PlantDetailScreen() {
     if (source === 'camera') {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission refusée', 'Autorisez l’accès à la caméra pour prendre une photo.');
+        showMessage('Permission refusée', 'Autorisez l’accès à la caméra pour prendre une photo.');
         return;
       }
       const result = await ImagePicker.launchCameraAsync({
@@ -169,7 +169,7 @@ export default function PlantDetailScreen() {
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission refusée', "Autorisez l'accès aux photos pour en ajouter une.");
+        showMessage('Permission refusée', "Autorisez l'accès aux photos pour en ajouter une.");
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -207,54 +207,53 @@ export default function PlantDetailScreen() {
     setPhotoDateError('');
   };
 
-  const showAddPhotoOptions = () => {
-    Alert.alert('Ajouter une photo', 'Prendre une photo ou choisir depuis la galerie ?', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Prendre une photo', onPress: () => handleAddPhoto('camera') },
-      { text: 'Galerie', onPress: () => handleAddPhoto('gallery') },
-    ]);
+  const showAddPhotoOptions = async () => {
+    const key = await choose({
+      title: 'Ajouter une photo',
+      message: 'Prendre une photo ou choisir depuis la galerie ?',
+      options: [
+        { key: 'camera', label: 'Prendre une photo' },
+        { key: 'gallery', label: 'Galerie' },
+      ],
+      webKey: 'gallery',
+    });
+    if (key) await handleAddPhoto(key);
   };
 
-  const handleDeletePhoto = (photo) => {
-    Alert.alert('Supprimer la photo', 'Cette photo sera supprimée.', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: async () => {
-          await deletePhoto(photo.id);
-          await load();
-        },
-      },
-    ]);
+  const handleDeletePhoto = async (photo) => {
+    const ok = await confirm({
+      title: 'Supprimer la photo',
+      message: 'Cette photo sera supprimée.',
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    });
+    if (!ok) return;
+    await deletePhoto(photo.id);
+    await load();
   };
 
-  const handleDelete = () => {
-    Alert.alert('Supprimer la plante', 'Cette plante et tout son historique seront supprimés.', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: async () => {
-          deletePlant(id);
-          router.replace('/(tabs)');
-        },
-      },
-    ]);
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: 'Supprimer la plante',
+      message: 'Cette plante et tout son historique seront supprimés.',
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    });
+    if (!ok) return;
+    deletePlant(id);
+    router.replace('/(tabs)');
   };
 
-  const handleDeleteCareLog = (log) => {
-    Alert.alert('Supprimer le soin', 'Ce soin sera supprimé.', [
-      { text: 'Annuler', style: 'cancel' },
-      {
-        text: 'Supprimer',
-        style: 'destructive',
-        onPress: async () => {
-          deleteCareLog(log.id);
-          await load();
-        },
-      },
-    ]);
+  const handleDeleteCareLog = async (log) => {
+    const ok = await confirm({
+      title: 'Supprimer le soin',
+      message: 'Ce soin sera supprimé.',
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    });
+    if (!ok) return;
+    deleteCareLog(log.id);
+    await load();
   };
 
   if (id === 'new') {

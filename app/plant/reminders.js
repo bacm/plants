@@ -1,13 +1,6 @@
 import { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { showMessage } from '../../lib/dialogs';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
@@ -55,7 +48,7 @@ export default function RemindersScreen() {
       });
       await load();
     } catch (e) {
-      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
     }
   };
 
@@ -64,7 +57,7 @@ export default function RemindersScreen() {
       deleteReminder(id);
       await load();
     } catch (e) {
-      Alert.alert('Erreur', `Impossible de supprimer : ${e.message}`);
+      showMessage('Erreur', `Impossible de supprimer : ${e.message}`);
     }
   };
 
@@ -73,7 +66,7 @@ export default function RemindersScreen() {
       await markReminderDone(r.id);
       await load();
     } catch (e) {
-      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
     }
   };
 

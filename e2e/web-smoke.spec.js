@@ -124,6 +124,13 @@ test.describe('web smoke', () => {
     await visibleText(page, zoneName).click();
     await expect(visibleText(page, plantName)).toBeVisible();
 
+    // --- Delete the zone: a confirmation-driven deletion (ticket 042) ---
+    // window.confirm() on web; accept the browser-native dialog.
+    page.once('dialog', (d) => d.accept());
+    await visibleText(page, 'Supprimer la zone').click();
+    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(visibleText(page, zoneName)).toHaveCount(0);
+
     // No console errors or uncaught exceptions anywhere in the flow.
     expect(consoleErrors, `console errors: ${JSON.stringify(consoleErrors)}`).toEqual([]);
     expect(pageErrors, `page errors: ${JSON.stringify(pageErrors)}`).toEqual([]);

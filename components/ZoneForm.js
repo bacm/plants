@@ -1,13 +1,6 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { showMessage } from '../lib/dialogs';
 import { useRouter } from 'expo-router';
 import { GradientHero } from './GradientHero';
 import { GlassCard } from './GlassCard';
@@ -63,7 +56,7 @@ export function ZoneForm({
       });
       router.back();
     } catch (e) {
-      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
     } finally {
       setSaving(false);
     }

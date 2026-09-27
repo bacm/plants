@@ -11,8 +11,8 @@ import {
   LayoutAnimation,
   UIManager,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
+import { showMessage } from '../../lib/dialogs';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
@@ -123,7 +123,7 @@ export default function NewPlantScreen() {
       });
       router.replace(`/plant/${plantId}`);
     } catch (e) {
-      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
     } finally {
       setSaving(false);
     }

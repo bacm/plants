@@ -50,6 +50,29 @@ module.exports = [
             'Missing await: db.*Async() returns a Promise. Await it, or return it if the caller awaits.',
         },
       ],
+
+      // Alert.alert is a no-op on react-native-web (ticket 042). lib/dialogs.js
+      // is the one place allowed to import it; every screen goes through its
+      // showMessage/confirm/choose instead.
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'react-native',
+              importNames: ['Alert'],
+              message:
+                'Alert.alert is a no-op on web. Use showMessage/confirm/choose from lib/dialogs.js instead.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['lib/dialogs.js'],
+    rules: {
+      'no-restricted-imports': 'off',
     },
   },
   {

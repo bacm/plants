@@ -11,8 +11,8 @@ import {
   LayoutAnimation,
   UIManager,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
+import { showMessage } from '../../lib/dialogs';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
@@ -155,7 +155,7 @@ export default function EditPlantScreen() {
       // on focus. replace() stacked a second copy of it, which broke "Retour".
       router.back();
     } catch (e) {
-      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
     } finally {
       setSaving(false);
     }

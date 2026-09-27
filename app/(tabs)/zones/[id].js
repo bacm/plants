@@ -1,17 +1,10 @@
 import { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../../components/GradientHero';
 import { GlassCard } from '../../../components/GlassCard';
 import { colors, spacing, typography, radius, colorHex } from '../../../lib/theme';
+import { showMessage, confirm } from '../../../lib/dialogs';
 import { getZones, getPlants, deleteZone, countPlantsInZone } from '../../../lib/db';
 
 export default function ZoneDetailScreen() {
@@ -46,28 +39,22 @@ export default function ZoneDetailScreen() {
   const confirmDelete = useCallback(async () => {
     const count = await countPlantsInZone(id);
     const plural = count !== 1 ? 's' : '';
-    Alert.alert(
-      'Supprimer la zone',
-      `Les ${count} plante${plural} de cette zone resteront dans votre jardin, sans zone.`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              deleteZone(id);
-              // back(), not replace(): the list underneath reloads on focus, and
-              // replace() would stack a second copy of it (see ticket 035).
-              if (router.canGoBack()) router.back();
-              else router.replace('/zones');
-            } catch (e) {
-              Alert.alert('Erreur', `Impossible de supprimer : ${e.message}`);
-            }
-          },
-        },
-      ]
-    );
+    const ok = await confirm({
+      title: 'Supprimer la zone',
+      message: `Les ${count} plante${plural} de cette zone resteront dans votre jardin, sans zone.`,
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      deleteZone(id);
+      // back(), not replace(): the list underneath reloads on focus, and
+      // replace() would stack a second copy of it (see ticket 035).
+      if (router.canGoBack()) router.back();
+      else router.replace('/zones');
+    } catch (e) {
+      showMessage('Erreur', `Impossible de supprimer : ${e.message}`);
+    }
   }, [id, router]);
 
   if (!zone) {

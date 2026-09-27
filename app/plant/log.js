@@ -1,18 +1,11 @@
 import { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
+import { showMessage } from '../../lib/dialogs';
 import { getPlantById, createCareLog, addPhoto } from '../../lib/db';
 import { CARE_TYPES } from '../../lib/enums';
 import { parseISODate } from '../../lib/validation';
@@ -37,7 +30,7 @@ export default function LogCareScreen() {
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission refusée', 'Autorisez l’accès aux photos pour joindre une image.');
+      showMessage('Permission refusée', 'Autorisez l’accès aux photos pour joindre une image.');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -64,7 +57,7 @@ export default function LogCareScreen() {
       }
       router.back();
     } catch (e) {
-      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
     } finally {
       setSaving(false);
     }
