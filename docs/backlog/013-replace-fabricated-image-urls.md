@@ -1,7 +1,7 @@
 ---
 id: 013
 title: Plant image URLs are fabricated and mostly do not resolve
-status: open
+status: done
 priority: P2
 type: bug
 ---
@@ -29,11 +29,11 @@ picture: it looks like data.
 
 ## Acceptance criteria
 
-- [ ] No image URL is constructed by string template or produced by the model
-- [ ] Images come from an API that returns URLs it actually holds, or the feature
+- [x] No image URL is constructed by string template or produced by the model
+- [x] Images come from an API that returns URLs it actually holds, or the feature
       shows no image at all
-- [ ] The `image_urls` instruction is removed from the prompt
-- [ ] A missing image renders the existing placeholder rather than a broken
+- [x] The `image_urls` instruction is removed from the prompt
+- [x] A missing image renders the existing placeholder rather than a broken
       `<Image>`
 
 ## Notes
@@ -48,3 +48,7 @@ Real options, all keyed on the scientific name:
 
 Sequenced after 001, since that decides whether `lib/plantSearch.js` survives at
 all. Blocks 012.
+
+Resolved by having `server/` look up each plant's scientific name in the Wikipedia
+summary API and return the scaled thumbnail (only Wikimedia hosts accepted,
+results cached). Model-supplied URLs are always discarded.

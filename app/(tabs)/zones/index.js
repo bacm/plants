@@ -68,6 +68,11 @@ export default function ZonesScreen() {
   const [zonePlants, setZonePlants] = useState({});
   const [zoneContexts, setZoneContexts] = useState({});
   const [refreshing, setRefreshing] = useState(false);
+  const [imageLoadErrors, setImageLoadErrors] = useState({});
+
+  const markImageLoadError = useCallback((plantId) => {
+    setImageLoadErrors((prev) => (prev[plantId] ? prev : { ...prev, [plantId]: true }));
+  }, []);
 
   const load = useCallback(async () => {
     const z = await getZones();
@@ -180,13 +185,14 @@ export default function ZonesScreen() {
                         contentContainerStyle={styles.plantsRow}
                       >
                         {plants.map((plant, idx) => {
-                          const img = getPlantImage(plant);
+                          const img = imageLoadErrors[plant.id] ? null : getPlantImage(plant);
                           return (
                             <View key={plant.id || idx} style={styles.plantItem}>
                               {img ? (
                                 <Image
                                   source={{ uri: img }}
                                   style={styles.plantThumb}
+                                  onError={() => markImageLoadError(plant.id)}
                                 />
                               ) : (
                                 <View

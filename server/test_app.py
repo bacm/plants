@@ -1,7 +1,9 @@
+import asyncio
 import os
 
 os.environ.setdefault("OPENAI_API_KEY", "test-key-not-real")
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -23,6 +25,24 @@ def _set_call_openai(monkeypatch, result=None, exc=None):
     monkeypatch.setattr(app_module, "call_openai", fake_call_openai)
 
 
+@pytest.fixture(autouse=True)
+def _no_wikipedia_by_default(monkeypatch):
+    """Every test gets a stubbed, no-op image lookup unless it opts in.
+
+    This keeps existing tests (which assert exact response bodies) working
+    without reaching the real Wikipedia API, and keeps the module-level
+    image cache from leaking state between tests.
+    """
+    app_module._image_cache.clear()
+
+    async def fake_fetch_wikipedia_image(client, scientific_name):
+        return None
+
+    monkeypatch.setattr(app_module, "fetch_wikipedia_image", fake_fetch_wikipedia_image)
+    yield
+    app_module._image_cache.clear()
+
+
 def test_health(client):
     res = client.get("/health")
     assert res.status_code == 200
@@ -37,7 +57,9 @@ def test_valid_query_returns_parsed_plants(client, monkeypatch):
 
     assert res.status_code == 200
     body = res.json()
-    assert body["plants"] == [{"id": "rose-1", "common_name": "Rose", "scientific_name": "Rosa"}]
+    assert body["plants"] == [
+        {"id": "rose-1", "common_name": "Rose", "scientific_name": "Rosa", "image_urls": []}
+    ]
 
 
 def test_prose_around_array_still_parses(monkeypatch, client):
@@ -47,7 +69,10 @@ def test_prose_around_array_still_parses(monkeypatch, client):
     res = client.post("/search", json={"query": "tulipe"})
 
     assert res.status_code == 200
-    assert res.json()["plants"] == [{"id": "a"}, {"id": "b"}]
+    assert res.json()["plants"] == [
+        {"id": "a", "image_urls": []},
+        {"id": "b", "image_urls": []},
+    ]
 
 
 def test_garbage_response_returns_empty_list(monkeypatch, client):
@@ -115,9 +140,128 @@ def test_rate_limit_then_recovers_after_window(monkeypatch, client):
     assert res.status_code == 200
 
 
-def test_upstream_error_returns_502_without_leaking_details(monkeypatch, client):
-    import httpx
+def test_prompt_no_longer_asks_for_image_urls():
+    prompt = app_module.build_prompt("rose")
+    assert "image_urls" not in prompt
 
+
+def test_image_found_is_attached(monkeypatch, client):
+    text = '[{"id": "rose-1", "scientific_name": "Rosa canina"}]'
+    _set_call_openai(monkeypatch, result=text)
+
+    async def fake_fetch(client_, scientific_name):
+        assert scientific_name == "Rosa canina"
+        return "https://upload.wikimedia.org/wikipedia/commons/rosa-canina.jpg"
+
+    monkeypatch.setattr(app_module, "fetch_wikipedia_image", fake_fetch)
+
+    res = client.post("/search", json={"query": "rosa canina"})
+
+    assert res.status_code == 200
+    assert res.json()["plants"][0]["image_urls"] == [
+        "https://upload.wikimedia.org/wikipedia/commons/rosa-canina.jpg"
+    ]
+
+
+def test_image_not_found_yields_empty_list(monkeypatch, client):
+    text = '[{"id": "rose-1", "scientific_name": "Rosa canina"}]'
+    _set_call_openai(monkeypatch, result=text)
+    # The autouse fixture already stubs fetch_wikipedia_image to return None.
+
+    res = client.post("/search", json={"query": "rosa canina"})
+
+    assert res.status_code == 200
+    assert res.json()["plants"][0]["image_urls"] == []
+
+
+def test_model_supplied_image_urls_are_discarded(monkeypatch, client):
+    text = '[{"id": "rose-1", "scientific_name": "Rosa canina", "image_urls": ["https://evil.example/x.jpg"]}]'
+    _set_call_openai(monkeypatch, result=text)
+
+    async def fake_fetch(client_, scientific_name):
+        return "https://upload.wikimedia.org/wikipedia/commons/real.jpg"
+
+    monkeypatch.setattr(app_module, "fetch_wikipedia_image", fake_fetch)
+
+    res = client.post("/search", json={"query": "rosa canina"})
+
+    assert res.status_code == 200
+    assert res.json()["plants"][0]["image_urls"] == [
+        "https://upload.wikimedia.org/wikipedia/commons/real.jpg"
+    ]
+
+
+def test_image_lookup_exception_does_not_fail_request(monkeypatch, client):
+    text = '[{"id": "rose-1", "scientific_name": "Rosa canina"}]'
+    _set_call_openai(monkeypatch, result=text)
+
+    async def fake_fetch(client_, scientific_name):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(app_module, "fetch_wikipedia_image", fake_fetch)
+
+    res = client.post("/search", json={"query": "rosa canina"})
+
+    assert res.status_code == 200
+    assert res.json()["plants"][0]["image_urls"] == []
+
+
+def test_repeated_lookup_uses_cache(monkeypatch):
+    # The autouse fixture stubs fetch_wikipedia_image itself; undo that so
+    # this test exercises the real function, stubbing the HTTP transport
+    # instead (same shared monkeypatch instance as the autouse fixture).
+    monkeypatch.undo()
+    app_module._image_cache.clear()
+    calls = []
+
+    async def counting_get(self, url, **kwargs):
+        calls.append(url)
+        request = httpx.Request("GET", url)
+        return httpx.Response(
+            200,
+            request=request,
+            json={"originalimage": {"source": "https://upload.wikimedia.org/wikipedia/commons/real.jpg"}},
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", counting_get)
+
+    async def run():
+        async with httpx.AsyncClient() as http_client:
+            first = await app_module.fetch_wikipedia_image(http_client, "Rosa canina")
+            second = await app_module.fetch_wikipedia_image(http_client, "rosa canina")
+            return first, second
+
+    first, second = asyncio.run(run())
+
+    assert first == "https://upload.wikimedia.org/wikipedia/commons/real.jpg"
+    assert second == first
+    assert len(calls) == 1
+
+
+def test_non_wikimedia_upload_url_is_rejected(monkeypatch):
+    monkeypatch.undo()  # exercise the real fetch_wikipedia_image, not the autouse stub
+    app_module._image_cache.clear()
+
+    async def fake_get(self, url, **kwargs):
+        request = httpx.Request("GET", url)
+        return httpx.Response(
+            200,
+            request=request,
+            json={"originalimage": {"source": "https://not-wikimedia.example/image.jpg"}},
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    async def run():
+        async with httpx.AsyncClient() as http_client:
+            return await app_module.fetch_wikipedia_image(http_client, "Rosa canina")
+
+    result = asyncio.run(run())
+
+    assert result is None
+
+
+def test_upstream_error_returns_502_without_leaking_details(monkeypatch, client):
     request = httpx.Request("POST", app_module.OPENAI_URL)
     response = httpx.Response(500, request=request, text="super secret upstream body sk-leaked-key")
     exc = httpx.HTTPStatusError("upstream failed", request=request, response=response)
@@ -130,3 +274,26 @@ def test_upstream_error_returns_502_without_leaking_details(monkeypatch, client)
     assert "sk-leaked-key" not in body_text
     assert os.environ["OPENAI_API_KEY"] not in body_text
     assert res.json() == {"detail": "Plant search is temporarily unavailable"}
+
+
+def test_wikipedia_lookup_prefers_the_thumbnail(monkeypatch):
+    monkeypatch.undo()  # exercise the real fetch_wikipedia_image, not the autouse stub
+    app_module._image_cache.clear()
+
+    async def fake_get(self, url, **kwargs):
+        return httpx.Response(
+            200,
+            request=httpx.Request("GET", url),
+            json={
+                "thumbnail": {"source": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/330px-a.jpg"},
+                "originalimage": {"source": "https://upload.wikimedia.org/wikipedia/commons/a.jpg"},
+            },
+        )
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", fake_get)
+
+    async def run():
+        async with httpx.AsyncClient() as http_client:
+            return await app_module.fetch_wikipedia_image(http_client, "Thumbnail preferred")
+
+    assert asyncio.run(run()) == "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/330px-a.jpg"

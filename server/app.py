@@ -5,11 +5,13 @@ client never sees a credential and can never send an arbitrary prompt to
 OpenAI (this is not a generic relay).
 """
 
+import asyncio
 import json
 import logging
 import os
 import time
-from collections import deque
+import urllib.parse
+from collections import OrderedDict, deque
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -22,6 +24,33 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 RATE_LIMIT_MAX_REQUESTS = 20
 RATE_LIMIT_WINDOW_SECONDS = 60
+
+WIKIPEDIA_SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
+WIKIPEDIA_USER_AGENT = "PlantsApp/1.0 (https://github.com/bacm/plants)"
+# Wikimedia serves originals from upload. and scaled thumbnails from thumb.
+WIKIPEDIA_IMAGE_PREFIXES = ("https://upload.wikimedia.org/", "https://thumb.wikimedia.org/")
+IMAGE_CACHE_MAX_ENTRIES = 512
+
+_MISSING = object()
+_image_cache = OrderedDict()
+
+
+def _cache_get(key):
+    if key in _image_cache:
+        _image_cache.move_to_end(key)
+        return _image_cache[key]
+    return _MISSING
+
+
+def _cache_set(key, value):
+    _image_cache[key] = value
+    _image_cache.move_to_end(key)
+    while len(_image_cache) > IMAGE_CACHE_MAX_ENTRIES:
+        _image_cache.popitem(last=False)
+
+
+def _valid_wikimedia_url(url):
+    return isinstance(url, str) and url.startswith(WIKIPEDIA_IMAGE_PREFIXES)
 
 
 class SearchRequest(BaseModel):
@@ -95,7 +124,6 @@ Tu es une base de données botanique. Pour la recherche "{query}", fournis une l
     "harvest_end": 1-12,
     "origin": "région d'origine",
     "winter_care": "conseils d'entretien hivernal",
-    "image_urls": ["url1", "url2", "url3"],
     "description": "courte description"
   }}
 ]
@@ -107,7 +135,6 @@ RÈGLES:
 - soil_ph: pH du sol (acidic=acide, neutral=neutre, alkaline=alcalin)
 - propagation: méthode de multiplication (seed=semis, cutting=bouture, division=division, layering=marcotte, grafting=greffe)
 - toxicity: toxicité (none=aucune, pets=animaux, humans=humains, all=tous)
-- image_urls: 3 URLs valides d'images (OBLIGATOIRE, ne pas laisser de tableau vide)
 - Respecte exactement ce format JSON
 - Laisse null pour les champs inconnus
 """
@@ -132,6 +159,82 @@ async def call_openai(prompt):
         response.raise_for_status()
         data = response.json()
         return data["choices"][0]["message"]["content"] or ""
+
+
+async def fetch_wikipedia_image(client, scientific_name):
+    """Look up a real image URL for a plant on Wikipedia.
+
+    Returns None on any failure (network error, timeout, non-200 response,
+    or missing image field) so a lookup problem never fails the search.
+    Results (including negative ones) are cached by lowercased scientific
+    name to avoid repeat lookups.
+    """
+    if not scientific_name:
+        return None
+    cache_key = scientific_name.strip().lower()
+    if not cache_key:
+        return None
+
+    cached = _cache_get(cache_key)
+    if cached is not _MISSING:
+        return cached
+
+    title = urllib.parse.quote(scientific_name.strip().replace(" ", "_"))
+    url = WIKIPEDIA_SUMMARY_URL.format(title=title)
+    result = None
+    try:
+        response = await client.get(
+            url,
+            headers={"User-Agent": WIKIPEDIA_USER_AGENT},
+            timeout=5,
+            follow_redirects=True,
+        )
+        if response.status_code == 200:
+            data = response.json()
+            # Prefer the scaled thumbnail: the original can be several MB and the
+            # app only shows it as a small picture.
+            for field in ("thumbnail", "originalimage"):
+                image = data.get(field)
+                candidate = image.get("source") if isinstance(image, dict) else None
+                if _valid_wikimedia_url(candidate):
+                    result = candidate
+                    break
+        else:
+            logger.debug(
+                "Wikipedia image lookup for %s returned status %s", scientific_name, response.status_code
+            )
+    except httpx.HTTPError as exc:
+        logger.debug("Wikipedia image lookup failed for %s: %s", scientific_name, exc)
+    except (ValueError, KeyError) as exc:
+        logger.debug("Wikipedia image lookup returned unexpected payload for %s: %s", scientific_name, exc)
+
+    _cache_set(cache_key, result)
+    return result
+
+
+async def attach_images(plants):
+    """Fetch real images for parsed plants, overwriting any model output.
+
+    The model is never asked for image URLs anymore, but even if it invents
+    an `image_urls` key it is discarded here in favor of a real lookup (or
+    an empty list). A failing lookup never fails the whole request.
+    """
+    candidates = [p for p in plants if p.get("scientific_name")]
+    if candidates:
+        async with httpx.AsyncClient() as client:
+            results = await asyncio.gather(
+                *(fetch_wikipedia_image(client, p["scientific_name"]) for p in candidates),
+                return_exceptions=True,
+            )
+        for plant, result in zip(candidates, results):
+            if isinstance(result, Exception):
+                logger.debug(
+                    "Wikipedia image lookup raised for %s: %s", plant.get("scientific_name"), result
+                )
+                result = None
+            plant["image_urls"] = [result] if result else []
+    for plant in plants:
+        plant.setdefault("image_urls", [])
 
 
 def parse_plants(text):
@@ -197,7 +300,15 @@ def create_app():
             logger.warning("Upstream OpenAI request failed: %s", type(exc).__name__)
             raise HTTPException(status_code=502, detail="Plant search is temporarily unavailable")
 
-        return {"plants": parse_plants(text)}
+        plants = parse_plants(text)
+        try:
+            await attach_images(plants)
+        except Exception as exc:  # noqa: BLE001 - a lookup failure must never fail the search
+            logger.debug("Attaching plant images failed: %s", exc)
+            for plant in plants:
+                plant.setdefault("image_urls", [])
+
+        return {"plants": plants}
 
     return app
 
