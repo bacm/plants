@@ -7,3 +7,6 @@ ios/
 android/
 package-lock.json
 docs/backlog/INDEX.md
+server/.venv/
+test-results/
+playwright-report/
