@@ -61,7 +61,7 @@ export default function Dashboard() {
   }, [load]);
 
   const handleDone = async (reminder) => {
-    markReminderDone(reminder.id);
+    await markReminderDone(reminder.id);
     const kindMap = {
       water: 'watered',
       prune: 'pruned',

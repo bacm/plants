@@ -154,7 +154,7 @@ export default function PlantDetailScreen() {
       winter_prep: 'treated',
       custom: 'treated',
     };
-    markReminderDone(reminder.id);
+    await markReminderDone(reminder.id);
     await createCareLog({
       plantId: id,
       type: kindMap[reminder.kind] || 'watered',

@@ -62,7 +62,7 @@ export default function RemindersScreen() {
   };
 
   const doNow = async (r) => {
-    markReminderDone(r.id);
+    await markReminderDone(r.id);
     await load();
   };
 

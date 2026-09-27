@@ -1,7 +1,7 @@
 ---
 id: 002
 title: markReminderDone never advances nextDueDate on native
-status: open
+status: done
 priority: P0
 type: bug
 ---
@@ -32,15 +32,15 @@ moves the due date, so:
 
 ## Acceptance criteria
 
-- [ ] `markReminderDone` is `async` and awaits its read
-- [ ] The three call sites await it: `app/(tabs)/index.js:69`,
+- [x] `markReminderDone` is `async` and awaits its read
+- [x] The three call sites await it: `app/(tabs)/index.js:69`,
       `app/plant/[id].js:158`, `app/plant/reminders.js:65` — all are already
       inside `async` functions
-- [ ] The `eslint-disable-next-line` in `lib/db.js` is deleted and `npm run lint`
+- [x] The `eslint-disable-next-line` in `lib/db.js` is deleted and `npm run lint`
       passes without it
-- [ ] `nextDueDate` advances by exactly `frequencyDays` from the previous
+- [x] `nextDueDate` advances by exactly `frequencyDays` from the previous
       `nextDueDate`, not from today, so a reminder done late does not drift
-- [ ] `lastDoneDate` records the date the reminder was due
+- [x] `lastDoneDate` records the date the reminder was due
 
 ## Notes
 
