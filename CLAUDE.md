@@ -15,6 +15,7 @@ TypeScript), file-based routing via expo-router.
 | `npm run backlog` | Regenerate `docs/backlog/INDEX.md` after touching a ticket. |
 | `npm run bundle` | `expo export` for iOS + Android + web into `.bundle-check/`. |
 | `cd server && .venv/bin/python -m pytest -q` | Server tests. Not in `verify`; CI runs them. |
+| `npm run e2e:web` | Playwright smoke test of the web build (`e2e/`). Slow; not in `verify` or CI. |
 | `npm run setup` | One-time: enable the versioned git hooks. |
 
 A `PostToolUse` hook lints every `.js` file right after you edit it and blocks on
@@ -30,10 +31,16 @@ app/plant/            [id] (detail, 3 tabs) · new · edit · log · reminders
 app/zone/new.js
 lib/db.js             SQLite — every platform except web
 lib/db.web.js         localStorage shim — web only, resolved by Metro
+lib/plantFields.js    the plant field list: columns, defaults, form <-> DB mapping
+lib/enums.js          enum values and their French labels (type, sun, care kinds…)
+lib/months.js         month names, isMonthInRange (handles year wrap)
+lib/dates.js          date arithmetic on 'YYYY-MM-DD' strings, in UTC
+lib/validation.js     month and date parsing for forms
 lib/plantSearch.js    plant lookup via the search server
-lib/theme.js          colors, spacing, typography, radius, shadow
+lib/theme.js          colors, spacing, typography, radius, shadow, colorHex
 components/           GlassCard · GradientHero
 server/               FastAPI proxy holding the OpenAI key (see server/README.md)
+e2e/                  Playwright tests against the web build
 ```
 
 ### Invariants
@@ -42,8 +49,8 @@ server/               FastAPI proxy holding the OpenAI key (see server/README.md
    import named functions; they never build a query. Keep it that way.
 2. **`lib/db.js` and `lib/db.web.js` must export the same names.** Metro picks one
    per platform, so a name present in only one is a runtime crash on the other.
-   `lib/__tests__/db-parity.test.js` enforces this; `KNOWN_WEB_GAPS` in that file
-   is the current debt and must only ever shrink.
+   `lib/__tests__/db-parity.test.js` enforces this. `KNOWN_WEB_GAPS` in that file
+   is empty; an entry is debt and needs a ticket.
 3. **All styling goes through `lib/theme.js`.** No raw hex in a component except
    `#fff` on an accent background.
 4. `App.js` and `index.js` are leftover Expo template files. `main` is
@@ -62,25 +69,25 @@ Each of these exists because it was violated and cost something.
    the shipped bundle, where anyone can read them. Secrets belong behind a server.
    `npm run secrets` enforces this, with per-file debt tracked in
    `scripts/secret-exceptions.txt`.
-3. **One source of truth for the plant field list.** The ~30 plant columns are
-   currently written out by hand in `createPlant`, `normalizeToForm`, `new.js` and
-   `edit.js`. Adding a field means touching all of them, which is how `imageUrls`
-   ended up written nowhere. When you touch this area, extend the shared
-   definition rather than adding a fifth copy.
-4. **Labels belong next to the enum they describe, not in the screen.** Month
-   names, `SUN_LABELS`, `CARE_LABELS`, `colorHex` and friends are currently
-   duplicated across 5–7 files with inconsistent values. Do not add a copy; move
-   the set you need into a shared module and import it.
+3. **The plant field list lives only in `lib/plantFields.js`.** The ~30 columns
+   used to be written out by hand in five places, which is how `imageUrls` ended
+   up written nowhere. To add a field: one entry in `PLANT_FIELDS` plus a
+   migration in `lib/db.js`. `plantFields.test.js` fails if the two disagree. Never
+   list field names in a screen.
+4. **Labels belong next to the enum they describe, not in the screen.** Enum
+   labels are in `lib/enums.js`, month names in `lib/months.js`, `colorHex` in
+   `lib/theme.js`. They used to be copied across seven files with diverging
+   values. Import them; never declare a label map or month array in a screen.
 5. **Never interpolate a caller-supplied key into SQL.** `updatePlant` builds its
-   `SET` clause from the keys of an object. If you extend it, validate keys
-   against an explicit field list — the interpolation is the whole reason that
-   list has to exist.
-6. **Wrap a DB write that can fail in a `try`/`catch` and surface the error.**
-   There is currently no error handling around any write, so a constraint
-   violation is swallowed and the user sees a silent no-op.
-7. **Month values are 1–12 and ranges can wrap the year.** Queries of the shape
-   `start <= m AND end >= m` silently miss a November-to-February bloom. Validate
-   month inputs on entry; handle wrap in the query.
+   `SET` clause from object keys; `pickPlantUpdates` checks each against
+   `PLANT_COLUMNS` and throws on an unknown one. Anything else that builds SQL
+   from keys needs the same guard.
+6. **Wrap a DB write that can fail in a `try`/`catch` and surface the error.** A
+   swallowed constraint violation looks like a silent no-op to the user. The
+   save handlers show `Alert.alert('Erreur', …)` and keep the user on the form.
+7. **Month values are 1–12 and ranges can wrap the year.** `start <= m AND end >= m`
+   silently misses a November-to-February bloom. Use `isMonthInRange`; never
+   compare months in SQL. Validate input with `lib/validation.js`.
 8. **No new dependency without declaring it in `package.json`.** `@expo/vector-icons`
    worked for a while only because it sat in Expo's nested `node_modules`.
 
@@ -113,7 +120,9 @@ decisions.
 5. **Review (Opus).** Read `git diff`, not the whole files. If it is wrong, send
    the corrections back to `implementer` rather than re-editing in the main
    session. Check by eye what lint cannot: un-awaited async helpers (rule 1).
-6. `npm run verify`, then set `status: done` and run `npm run backlog`.
+6. `npm run verify`. Check each acceptance criterion one by one against the
+   code before ticking it — never tick the list in bulk. Then set `status: done`
+   and run `npm run backlog`.
 7. Commit. The pre-commit hook re-runs `verify`.
 
 Skip the delegation for a change of a few lines — writing the plan would cost
