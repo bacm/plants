@@ -37,6 +37,8 @@ install, so the migrations run on real data):
 - [ ] Photos taken before 043 still display after the first launch (migrated
       into the app's `photos/` folder); a new photo survives clearing the app's
       cache; deleting a photo works (043)
+- [ ] Réglages: export shares a file; importing it on a second device (or after
+      reinstalling) restores plants, zones, reminders, logs and photos (020)
 - [ ] Any defect becomes its own ticket
 
 ## Notes

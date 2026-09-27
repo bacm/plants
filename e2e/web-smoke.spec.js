@@ -11,6 +11,8 @@
 // that Playwright can drive with `filechooser` + `setFiles` -- see that
 // test for what it actually found.
 const path = require('node:path');
+const os = require('node:os');
+const fs = require('node:fs');
 const { test, expect } = require('@playwright/test');
 
 // expo-router keeps previous stack screens (the tabs navigator, a zone's
@@ -197,5 +199,125 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, plantName)).toBeVisible();
     await visibleText(page, 'Photos').click();
     await expect(visibleText(page, photoDate)).toBeVisible();
+  });
+
+  // Ticket 020: export the garden, delete a plant, then restore it (photo
+  // included) by importing the file just downloaded.
+  test('export -> delete a plant -> import the backup restores it', async ({ page }) => {
+    const zoneName = `E2E Backup Zone ${Date.now()}`;
+    const plantName = `E2E Backup Plant ${Date.now()}`;
+
+    // showMessage/confirm (lib/dialogs.js) use window.alert/window.confirm on
+    // web, which are native browser dialogs -- not part of the DOM, so their
+    // text can't be asserted with a locator. This test only needs every one
+    // of them accepted (confirm to replace the garden, delete confirmations,
+    // and the final result alert); record the messages instead, so the
+    // import result can still be asserted on.
+    const dialogMessages = [];
+    page.on('dialog', async (d) => {
+      dialogMessages.push(d.message());
+      await d.accept();
+    });
+
+    await page.goto('/');
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+
+    // --- Zone + plant + photo, same as the earlier tests ---
+    await visibleText(page, 'Zones').click();
+    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await visibleText(page, '+ Créer une zone').click();
+    await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
+    await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
+    await visibleText(page, 'Créer la zone').click();
+    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+
+    await visibleText(page, zoneName).click();
+    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
+    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
+    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await visibleText(page, zoneName).click();
+    await visibleText(page, 'Enregistrer').click();
+    await expect(visibleText(page, plantName)).toBeVisible();
+
+    await visibleText(page, 'Photos').click();
+    await expect(visibleText(page, 'Mes photos')).toBeVisible();
+    const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
+    await visibleText(page, '+ Ajouter').click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles(path.join(__dirname, 'fixtures', 'test-photo.png'));
+    await expect(visibleText(page, 'Date de la photo')).toBeVisible();
+    const photoDate = new Date().toISOString().slice(0, 10);
+    await visibleText(page, 'Ajouter').click();
+    // Wait for the photo to actually be persisted before exporting -- addPhoto
+    // is async, and navigating away too soon would export a garden that
+    // still has zero photos in it.
+    await expect(visibleText(page, photoDate)).toBeVisible();
+
+    // --- Réglages: export the whole garden ---
+    //
+    // expo-image-picker's web implementation hands back a `blob:` object URL
+    // (no `base64: true` is passed anywhere the app calls it), and a `blob:`
+    // URL is only valid for the document that created it -- a hard
+    // navigation (page.goto) tears it down. exportGarden fetches it while
+    // it's still live, so getting there has to stay client-side routing
+    // (clicks / router pushes), same as a real user would, rather than
+    // page.goto() straight to '/'.
+    await visibleText(page, '‹ Retour').click(); // plant detail -> zone detail
+    await expect(visibleText(page, '1 plante')).toBeVisible();
+    await visibleText(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+    await page.locator('[aria-label="Réglages"]:visible').click();
+    await expect(visibleText(page, 'Réglages')).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await visibleText(page, 'Exporter mon jardin').click();
+    const download = await downloadPromise;
+    const backupPath = path.join(os.tmpdir(), `e2e-backup-${Date.now()}.json`);
+    await download.saveAs(backupPath);
+    expect(fs.existsSync(backupPath)).toBe(true);
+
+    // --- Delete the plant through its confirmation (ticket 042) ---
+    await visibleText(page, '← Retour').click(); // settings -> dashboard
+    await visibleText(page, 'Zones').click();
+    await visibleText(page, zoneName).click();
+    await visibleText(page, plantName).click();
+    await expect(visibleText(page, plantName)).toBeVisible();
+    await visibleText(page, 'Actions').click();
+    await visibleText(page, 'Supprimer la plante').click();
+    // handleDelete navigates to router.replace('/(tabs)'), i.e. the dashboard.
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+
+    // --- Réglages: import the file just downloaded, accepting the
+    // replace-my-garden confirmation ---
+    await page.locator('[aria-label="Réglages"]:visible').click();
+    await expect(visibleText(page, 'Réglages')).toBeVisible();
+
+    const importChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
+    await visibleText(page, 'Importer une sauvegarde').click();
+    const importChooser = await importChooserPromise;
+    await importChooser.setFiles(backupPath);
+    await expect
+      .poll(() => dialogMessages.some((m) => m.includes('restauré')), { timeout: 10000 })
+      .toBe(true);
+
+    // --- The plant and its photo are back after a reload ---
+    // The imported photo now holds a real `data:` URL (importGarden rebuilt
+    // it from the archive's base64), not a `blob:` one, so a hard navigation
+    // from here on is safe. (After a reload, expo-router's history is empty,
+    // so '← Retour' -- router.back() -- would be a no-op here; go straight
+    // to '/' instead.)
+    await page.reload();
+    await expect(visibleText(page, 'Réglages')).toBeVisible();
+    await page.goto('/');
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+    await visibleText(page, 'Zones').click();
+    await expect(visibleText(page, zoneName)).toBeVisible();
+    await visibleText(page, zoneName).click();
+    await expect(visibleText(page, plantName)).toBeVisible();
+    await visibleText(page, plantName).click();
+    await visibleText(page, 'Photos').click();
+    await expect(visibleText(page, 'Mes photos')).toBeVisible();
+    await expect(page.locator('img:visible').first()).toBeVisible();
   });
 });

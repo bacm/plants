@@ -50,3 +50,8 @@ already broken on devices. `migratePhotosToAppStorage()` runs after `initDb()`,
 is idempotent, and reports missing photos once (ids kept in an `app_meta` table).
 Web photos live in IndexedDB behind `idb:<id>` refs. The native paths are unit-
 and bundle-tested only; the on-device check is in 040.
+
+Correction (2026-09-27): the web criterion was ticked wrongly. The picker hands
+web a `blob:` URL, and that string — not the image bytes — is what went into
+IndexedDB, so a web photo still dies on reload. The e2e test only checked the
+date text. Fixed in 044.

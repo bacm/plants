@@ -21,7 +21,8 @@
             "Cross-Origin-Opener-Policy": "same-origin"
           }
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "ios": {
       "supportsTablet": true,

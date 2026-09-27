@@ -100,9 +100,17 @@ export default function Dashboard() {
           />
         }>
         <GradientHero>
-          <View style={styles.heroTextWrap}>
-            <Text style={styles.heroTitle}>Votre jardin</Text>
-            <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
+          <View style={styles.heroRow}>
+            <View style={styles.heroTextWrap}>
+              <Text style={styles.heroTitle}>Votre jardin</Text>
+              <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => router.push('/settings')}
+              accessibilityLabel="Réglages"
+              style={styles.settingsButton}>
+              <Ionicons name="settings-outline" size={22} color={colors.dark.text} />
+            </TouchableOpacity>
           </View>
         </GradientHero>
 
@@ -233,7 +241,17 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  heroTextWrap: {},
+  heroRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  heroTextWrap: { flex: 1 },
+  settingsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.dark.surfaceGlass,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: spacing.md,
+  },
   heroTitle: {
     ...typography.display,
     color: colors.dark.text,
