@@ -801,8 +801,6 @@ const styles = StyleSheet.create({
   logInfo: { flex: 1 },
   logType: { ...typography.label, color: colors.dark.text },
   logDate: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 2 },
-  logNotes: { ...typography.bodySmall, color: colors.dark.text, marginTop: 4 },
-  logDeleteBtn: { paddingVertical: 4, paddingHorizontal: 8 },
   logDeleteText: { ...typography.caption, color: colors.dark.accent },
   actions: { paddingHorizontal: spacing.lg, marginTop: spacing.xxl, gap: spacing.md },
   primaryButton: {
@@ -837,8 +835,6 @@ const styles = StyleSheet.create({
   lightboxHeader: { position: 'absolute', top: 50, left: 0, right: 0, paddingHorizontal: spacing.lg, zIndex: 10 },
   lightboxBackBtn: { paddingVertical: spacing.sm, paddingRight: spacing.lg },
   lightboxBackText: { ...typography.body, color: '#fff' },
-  lightboxCloseBtn: { position: 'absolute', top: 60, right: 20, zIndex: 10, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  lightboxCloseText: { fontSize: 24, color: '#fff' },
   lightboxImageContainer: { width: Dimensions.get('window').width, height: Dimensions.get('window').height * 0.7, justifyContent: 'center', alignItems: 'center' },
   lightboxImage: { width: '100%', height: '100%' },
   lightboxDate: { position: 'absolute', bottom: 50, ...typography.body, color: '#fff', textAlign: 'center' },

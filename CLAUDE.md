@@ -53,8 +53,6 @@ e2e/                  Playwright tests against the web build
    is empty; an entry is debt and needs a ticket.
 3. **All styling goes through `lib/theme.js`.** No raw hex in a component except
    `#fff` on an accent background.
-4. `App.js` and `index.js` are leftover Expo template files. `main` is
-   `expo-router/entry`, so they are never loaded. Do not edit them.
 
 ## Coding rules
 

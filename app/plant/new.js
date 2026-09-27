@@ -632,10 +632,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  searchLoader: {
-    position: 'absolute',
-    right: 0,
-  },
   searchButton: {
     backgroundColor: colors.dark.accent,
     paddingHorizontal: 14,
@@ -661,26 +657,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
-  },
-  suggestionsContainer: {
-    position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.dark.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.dark.border,
-    maxHeight: 200,
-    zIndex: 100,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  suggestionsList: {
-    maxHeight: 200,
   },
   suggestionItem: {
     paddingVertical: 12,

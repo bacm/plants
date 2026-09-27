@@ -31,7 +31,6 @@
     "expo-blur": "^55.0.8",
     "expo-constants": "^55.0.7",
     "expo-file-system": "~55.0.10",
-    "expo-font": "^55.0.4",
     "expo-image-picker": "^55.0.10",
     "expo-linear-gradient": "^55.0.8",
     "expo-linking": "^55.0.7",

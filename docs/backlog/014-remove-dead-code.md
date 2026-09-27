@@ -1,7 +1,7 @@
 ---
 id: 014
 title: Remove dead files, unused exports and unused styles
-status: open
+status: done
 priority: P3
 type: chore
 ---
@@ -32,13 +32,13 @@ eslint ignore entry for it is a workaround for a file that should not exist.
 
 ## Acceptance criteria
 
-- [ ] `App.js` and `index.js` are deleted, along with their `eslint.config.js`
+- [x] `App.js` and `index.js` are deleted, along with their `eslint.config.js`
       ignore entry
-- [ ] Unused exports are either deleted or wired to the UI that needs them — see
+- [x] Unused exports are either deleted or wired to the UI that needs them — see
       Notes on the zone ones
-- [ ] Unused styles are deleted
-- [ ] `expo-font` is removed from `package.json`, or actually used
-- [ ] `npm run verify` passes and `npm run bundle` still succeeds
+- [x] Unused styles are deleted
+- [x] `expo-font` is removed from `package.json`, or actually used
+- [x] `npm run verify` passes and `npm run bundle` still succeeds
 
 ## Notes
 
@@ -49,3 +49,6 @@ deleting working functions.
 `expo-constants`, `expo-linking`, `react-native-screens` and
 `react-native-safe-area-context` also have no direct import but are required by
 expo-router — do not remove them.
+
+`updateZone`/`deleteZone` are kept for 023. Also removed `getPlantDetails` from
+`lib/plantSearch.js` (no caller).
