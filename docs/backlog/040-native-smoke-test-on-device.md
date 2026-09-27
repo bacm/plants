@@ -34,6 +34,9 @@ install, so the migrations run on real data):
 - [ ] Every screen is readable in the dark theme (003)
 - [ ] With the search server running, a plant created from a suggestion shows
       its Wikipedia image in the zones list and on its detail screen (012)
+- [ ] Photos taken before 043 still display after the first launch (migrated
+      into the app's `photos/` folder); a new photo survives clearing the app's
+      cache; deleting a photo works (043)
 - [ ] Any defect becomes its own ticket
 
 ## Notes

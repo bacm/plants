@@ -53,7 +53,7 @@ export default function LogCareScreen() {
     try {
       const logId = createCareLog({ plantId, type, date: value, notes: notes.trim() || null });
       if (photoUri) {
-        addPhoto({ plantId, careLogId: logId, uri: photoUri, date: value });
+        await addPhoto({ plantId, careLogId: logId, uri: photoUri, date: value });
       }
       router.back();
     } catch (e) {

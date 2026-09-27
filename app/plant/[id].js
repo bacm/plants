@@ -192,7 +192,12 @@ export default function PlantDetailScreen() {
       setPhotoDateError(error || 'Date requise');
       return;
     }
-    addPhoto({ plantId: id, uri: pendingPhotoUri, date: value });
+    try {
+      await addPhoto({ plantId: id, uri: pendingPhotoUri, date: value });
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'ajouter la photo : ${e.message}`);
+      return;
+    }
     setShowDatePicker(false);
     setPendingPhotoUri(null);
     setPhotoDate('');

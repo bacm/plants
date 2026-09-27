@@ -1,7 +1,7 @@
 ---
 id: 043
 title: Photos live in the image picker's cache and can disappear
-status: open
+status: done
 priority: P1
 type: bug
 ---
@@ -25,17 +25,17 @@ Losing it silently is the worst failure this app can have.
 
 ## Acceptance criteria
 
-- [ ] Native: a picked photo is copied into a `photos/` directory under the app's
+- [x] Native: a picked photo is copied into a `photos/` directory under the app's
       document directory before its row is written; the row stores a path
       relative to that directory
-- [ ] Existing rows pointing into the cache are migrated once: files that still
+- [x] Existing rows pointing into the cache are migrated once: files that still
       exist are copied in, rows whose file is gone are reported (count) and kept
       so the user sees a placeholder rather than losing the entry silently
-- [ ] Deleting a photo deletes the owned copy
-- [ ] Web: photo data is stored in IndexedDB (or another store without the
+- [x] Deleting a photo deletes the owned copy
+- [x] Web: photo data is stored in IndexedDB (or another store without the
       `localStorage` quota); the store row keeps only a key
-- [ ] Displaying a photo resolves the stored reference in one place (`lib/db.*`)
-- [ ] Tests cover path resolution and the migration decision logic; web storage
+- [x] Displaying a photo resolves the stored reference in one place (`lib/db.*`)
+- [x] Tests cover path resolution and the migration decision logic; web storage
       is covered by the e2e photo test (036)
 
 ## Notes
@@ -43,3 +43,10 @@ Losing it silently is the worst failure this app can have.
 Prerequisite for 020: a backup must know where photos live. Found while
 preparing 020 on 2026-09-27; not yet reproduced on a device — 040 should check
 that existing photos still display after this change.
+
+Native uses the new `expo-file-system` API (`File`, `Directory`, `Paths`); the
+legacy `deleteAsync` it replaced throws in SDK 55, so deleting a photo was
+already broken on devices. `migratePhotosToAppStorage()` runs after `initDb()`,
+is idempotent, and reports missing photos once (ids kept in an `app_meta` table).
+Web photos live in IndexedDB behind `idb:<id>` refs. The native paths are unit-
+and bundle-tested only; the on-device check is in 040.
