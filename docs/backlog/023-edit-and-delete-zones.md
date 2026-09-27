@@ -1,7 +1,7 @@
 ---
 id: 023
 title: Let the user rename, edit and delete a zone
-status: open
+status: done
 priority: P3
 type: feature
 ---
@@ -17,13 +17,16 @@ A typo in a zone name, or a bed that no longer exists, is permanent.
 
 ## Acceptance criteria
 
-- [ ] A zone's name, icon and description can be edited from the zone screen
-- [ ] Deleting a zone asks for confirmation, says how many plants it holds, and
+- [x] A zone's name, icon and description can be edited from the zone screen
+- [x] Deleting a zone asks for confirmation, says how many plants it holds, and
       leaves those plants in the garden with no zone rather than deleting them
-- [ ] Both functions exist in `lib/db.web.js` with the same behaviour
-- [ ] Write failures are surfaced to the user (CLAUDE.md rule 6)
+- [x] Both functions exist in `lib/db.web.js` with the same behaviour
+- [x] Write failures are surfaced to the user (CLAUDE.md rule 6)
 
 ## Notes
 
 014 lists `updateZone`/`deleteZone` as unused exports; this ticket is the
 "wire them" answer, so 014 must not delete them.
+
+`updateZone` now goes through `pickZoneUpdates` (`lib/zoneFields.js`), the same
+allowlist guard as plants. Create and edit share `components/ZoneForm.js`.

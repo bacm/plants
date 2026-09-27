@@ -1,10 +1,18 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+  Alert,
+} from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../../components/GradientHero';
 import { GlassCard } from '../../../components/GlassCard';
 import { colors, spacing, typography, radius, colorHex } from '../../../lib/theme';
-import { getZones, getPlants } from '../../../lib/db';
+import { getZones, getPlants, deleteZone, countPlantsInZone } from '../../../lib/db';
 
 export default function ZoneDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -35,6 +43,33 @@ export default function ZoneDetailScreen() {
     setRefreshing(false);
   }, [load]);
 
+  const confirmDelete = useCallback(async () => {
+    const count = await countPlantsInZone(id);
+    const plural = count !== 1 ? 's' : '';
+    Alert.alert(
+      'Supprimer la zone',
+      `Les ${count} plante${plural} de cette zone resteront dans votre jardin, sans zone.`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        {
+          text: 'Supprimer',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              deleteZone(id);
+              // back(), not replace(): the list underneath reloads on focus, and
+              // replace() would stack a second copy of it (see ticket 035).
+              if (router.canGoBack()) router.back();
+              else router.replace('/zones');
+            } catch (e) {
+              Alert.alert('Erreur', `Impossible de supprimer : ${e.message}`);
+            }
+          },
+        },
+      ]
+    );
+  }, [id, router]);
+
   if (!zone) {
     return (
       <View style={styles.container}>
@@ -64,6 +99,20 @@ export default function ZoneDetailScreen() {
           <Text style={styles.plantCount}>
             {plants.length} plante{plants.length !== 1 ? 's' : ''}
           </Text>
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.actionBtn}
+              onPress={() => router.push(`/zone/edit?id=${zone.id}`)}
+              accessibilityLabel="Modifier la zone">
+              <Text style={styles.actionBtnText}>Modifier</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.deleteBtn]}
+              onPress={confirmDelete}
+              accessibilityLabel="Supprimer la zone">
+              <Text style={[styles.actionBtnText, styles.deleteBtnText]}>Supprimer la zone</Text>
+            </TouchableOpacity>
+          </View>
         </GradientHero>
 
         <View style={styles.section}>
@@ -114,6 +163,17 @@ const styles = StyleSheet.create({
   heroTitle: { ...typography.display, color: colors.dark.text, marginBottom: 4 },
   heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary },
   plantCount: { ...typography.caption, color: colors.dark.accent, marginTop: 8 },
+  actionRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
+  actionBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  actionBtnText: { ...typography.bodySmall, color: colors.dark.text },
+  deleteBtn: { borderColor: colors.dark.danger },
+  deleteBtnText: { color: colors.dark.danger },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   emptyText: {
     ...typography.bodySmall,
