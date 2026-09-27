@@ -6,10 +6,11 @@
 // add a care log -> see it all from the zones tab -> reload and confirm it
 // survived (lib/db.web.js persists to localStorage).
 //
-// Out of scope: photo upload. That opens the native file/camera picker,
-// which Playwright cannot drive without either mocking expo-image-picker or
-// adding a testID to app code (ticket 027's territory) -- neither of which
-// this ticket asks for. See the report for details.
+// Ticket 036 adds a second test below covering the photo flow: on web,
+// expo-image-picker's gallery option opens a hidden `<input type="file">`
+// that Playwright can drive with `filechooser` + `setFiles` -- see that
+// test for what it actually found.
+const path = require('node:path');
 const { test, expect } = require('@playwright/test');
 
 // expo-router keeps previous stack screens (the tabs navigator, a zone's
@@ -134,5 +135,67 @@ test.describe('web smoke', () => {
     // No console errors or uncaught exceptions anywhere in the flow.
     expect(consoleErrors, `console errors: ${JSON.stringify(consoleErrors)}`).toEqual([]);
     expect(pageErrors, `page errors: ${JSON.stringify(pageErrors)}`).toEqual([]);
+  });
+
+  // Ticket 036: add a photo with a chosen date and confirm it survives a
+  // reload. Sets up its own zone/plant rather than reusing the test above so
+  // this one can be run in isolation.
+  test('add a photo with a chosen date -> photos tab -> reload survives', async ({ page }) => {
+    const zoneName = `E2E Photo Zone ${Date.now()}`;
+    const plantName = `E2E Photo Plant ${Date.now()}`;
+    const photoDate = '2026-05-01';
+
+    await page.goto('/');
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+
+    await visibleText(page, 'Zones').click();
+    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await visibleText(page, '+ Créer une zone').click();
+    await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
+    await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
+    await visibleText(page, 'Créer la zone').click();
+    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+
+    await visibleText(page, zoneName).click();
+    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
+    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
+    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await visibleText(page, zoneName).click();
+    await visibleText(page, 'Enregistrer').click();
+    await expect(visibleText(page, plantName)).toBeVisible();
+
+    // --- Photos tab: add a photo from the gallery, with a chosen date ---
+    await visibleText(page, 'Photos').click();
+    await expect(visibleText(page, 'Mes photos')).toBeVisible();
+
+    // showAddPhotoOptions() (app/plant/[id].js) calls lib/dialogs.js's
+    // choose(), which on web resolves `webKey` ('gallery') directly with no
+    // dialog (ticket 042) and goes straight into
+    // ImagePicker.launchImageLibraryAsync(), which opens a hidden
+    // `<input type="file">` -- Playwright sees this as a `filechooser` event.
+    const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
+    await visibleText(page, '+ Ajouter').click();
+    const fileChooser = await fileChooserPromise;
+    await fileChooser.setFiles(path.join(__dirname, 'fixtures', 'test-photo.png'));
+
+    // Photo date modal: clear the prefilled today's date, set a specific one.
+    await expect(visibleText(page, 'Date de la photo')).toBeVisible();
+    const dateInput = page.getByPlaceholder('AAAA-MM-JJ');
+    await dateInput.fill(photoDate);
+    await visibleText(page, 'Ajouter').click();
+
+    // The photo now shows in the timeline with the chosen date.
+    await expect(visibleText(page, photoDate)).toBeVisible();
+
+    // --- Reload: the photo (and its date) survived ---
+    // plant/[id] is a full-screen route outside the (tabs) group (see the
+    // comment on the first test above), so reloading lands back on this
+    // same detail screen directly -- no need to navigate from the zones
+    // list again, just reselect the Photos tab.
+    await page.reload();
+    await expect(visibleText(page, plantName)).toBeVisible();
+    await visibleText(page, 'Photos').click();
+    await expect(visibleText(page, photoDate)).toBeVisible();
   });
 });

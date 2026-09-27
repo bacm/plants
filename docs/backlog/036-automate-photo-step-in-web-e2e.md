@@ -1,7 +1,7 @@
 ---
 id: 036
 title: Cover adding a photo in the web end-to-end test
-status: open
+status: done
 priority: P3
 type: chore
 ---
@@ -19,11 +19,15 @@ Photos are a core feature and the web shim changed how photo dates are stored
 
 ## Acceptance criteria
 
-- [ ] The e2e test adds a photo to the plant, with a chosen date, and sees it in
+- [x] The e2e test adds a photo to the plant, with a chosen date, and sees it in
       the photos tab after a reload
-- [ ] No test-only code path in the app beyond accessibility labels or testIDs
+- [x] No test-only code path in the app beyond accessibility labels or testIDs
 
 ## Notes
 
 On web the picker is a file input; Playwright's `setInputFiles` may be enough
 once the control is reachable. Pairs with 027 (accessibility labels).
+
+The step first revealed 042 (Alert is a no-op on web). With 042 fixed, the test
+adds a photo dated 2026-05-01 through the file chooser and finds it after a
+reload. The fixture is tiny, so it does not exercise the storage quota (043).
