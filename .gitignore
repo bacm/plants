@@ -51,3 +51,8 @@ deploy-iphone.sh
 /ios
 /android
 /dist-release
+
+# Plant search server (server/)
+server/.venv/
+__pycache__/
+.pytest_cache/

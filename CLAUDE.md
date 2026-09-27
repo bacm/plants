@@ -14,6 +14,7 @@ TypeScript), file-based routing via expo-router.
 | `npm run test` | Jest. Tests are in `lib/__tests__/`. |
 | `npm run backlog` | Regenerate `docs/backlog/INDEX.md` after touching a ticket. |
 | `npm run bundle` | `expo export` for iOS + Android + web into `.bundle-check/`. |
+| `cd server && .venv/bin/python -m pytest -q` | Server tests. Not in `verify`; CI runs them. |
 | `npm run setup` | One-time: enable the versioned git hooks. |
 
 A `PostToolUse` hook lints every `.js` file right after you edit it and blocks on
@@ -29,9 +30,10 @@ app/plant/            [id] (detail, 3 tabs) · new · edit · log · reminders
 app/zone/new.js
 lib/db.js             SQLite — every platform except web
 lib/db.web.js         localStorage shim — web only, resolved by Metro
-lib/plantSearch.js    plant lookup via the OpenAI API
+lib/plantSearch.js    plant lookup via the search server
 lib/theme.js          colors, spacing, typography, radius, shadow
 components/           GlassCard · GradientHero
+server/               FastAPI proxy holding the OpenAI key (see server/README.md)
 ```
 
 ### Invariants

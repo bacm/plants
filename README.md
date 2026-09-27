@@ -9,12 +9,10 @@ Mobile app **for ornamental plants and flowers only** to manage: location, flowe
    cp .env.model .env
    ```
 
-2. Add your OpenAI API key in `.env`:
-   ```
-   EXPO_PUBLIC_OPENAI_API_KEY=your_api_key_here
-   ```
-
-   Get your API key from [OpenAI Platform](https://platform.openai.com/).
+2. Set `EXPO_PUBLIC_PLANT_API_URL` in `.env` to point at the plant search
+   server, then start that server — see [`server/README.md`](server/README.md)
+   for setup and how to run it. The OpenAI key goes only in the server's
+   environment, never in the app's `.env`.
 
 ## Running the Project
 

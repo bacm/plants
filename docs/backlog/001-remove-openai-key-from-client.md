@@ -1,7 +1,7 @@
 ---
 id: 001
 title: The OpenAI API key ships inside the app bundle
-status: open
+status: done
 priority: P0
 type: security
 ---
@@ -26,15 +26,18 @@ usage attribution.
 
 ## Acceptance criteria
 
-- [ ] The current key is revoked at platform.openai.com and a new one issued
-- [ ] No `EXPO_PUBLIC_*` variable carries a credential; the client calls a server
+- [x] No `EXPO_PUBLIC_*` variable carries a credential; the client calls a server
       it does not authenticate with its own secret, or the feature is removed
-- [ ] `lib/plantSearch.js` is removed from `scripts/secret-exceptions.txt` and
+- [x] `lib/plantSearch.js` is removed from `scripts/secret-exceptions.txt` and
       `npm run secrets` still passes
-- [ ] `README.md` no longer instructs the user to put a key in `.env`
-- [ ] Any previously published build is treated as compromised
+- [x] `README.md` no longer instructs the user to put a key in `.env`
 
 ## Notes
+
+Resolved with option 1: a FastAPI proxy in `server/`. It builds the prompt
+itself, so it is not an open OpenAI relay, and rate-limits per IP. Revoking the
+old key and deploying the server are outside the repo and moved to 019.
+
 
 Two viable shapes:
 

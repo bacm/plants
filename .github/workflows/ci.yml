@@ -45,3 +45,21 @@ jobs:
       # broken and no route is orphaned. Catches what unit tests cannot.
       - name: Bundle (iOS, Android, web)
         run: npm run bundle
+
+  server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: server/requirements-dev.txt
+
+      - name: Install
+        run: pip install -r server/requirements-dev.txt
+
+      - name: Tests
+        working-directory: server
+        run: python -m pytest -q
