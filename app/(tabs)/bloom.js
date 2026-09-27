@@ -12,7 +12,7 @@ import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
 import { getPlantsBloomingInMonth } from '../../lib/db';
-import { MONTH_NAMES, MONTH_SHORT } from '../../lib/months';
+import { MONTH_SHORT, monthName } from '../../lib/months';
 
 export default function BloomScreen() {
   const router = useRouter();
@@ -79,7 +79,7 @@ export default function BloomScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {MONTH_NAMES[selectedMonth - 1]} — {plants.length} plante{plants.length !== 1 ? 's' : ''} en fleurs
+            {monthName(selectedMonth)} — {plants.length} plante{plants.length !== 1 ? 's' : ''} en fleurs
           </Text>
           {plants.length === 0 ? (
             <GlassCard>

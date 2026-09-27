@@ -15,6 +15,7 @@ import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { getPlantById, createCareLog, addPhoto } from '../../lib/db';
 import { CARE_TYPES } from '../../lib/enums';
+import { parseISODate } from '../../lib/validation';
 
 export default function LogCareScreen() {
   const { plantId } = useLocalSearchParams();
@@ -22,6 +23,7 @@ export default function LogCareScreen() {
   const [plant, setPlant] = useState(null);
   const [type, setType] = useState('watered');
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [dateError, setDateError] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -48,11 +50,17 @@ export default function LogCareScreen() {
 
   const save = async () => {
     if (!plantId) return;
+    const { value, error } = parseISODate(date);
+    if (error || value == null) {
+      setDateError(error || 'Date requise');
+      return;
+    }
+    setDateError('');
     setSaving(true);
     try {
-      const logId = createCareLog({ plantId, type, date, notes: notes.trim() || null });
+      const logId = createCareLog({ plantId, type, date: value, notes: notes.trim() || null });
       if (photoUri) {
-        addPhoto({ plantId, careLogId: logId, uri: photoUri, date });
+        addPhoto({ plantId, careLogId: logId, uri: photoUri, date: value });
       }
       router.replace(`/plant/${plantId}`);
     } catch (e) {
@@ -99,10 +107,11 @@ export default function LogCareScreen() {
             <TextInput
               style={styles.input}
               value={date}
-              onChangeText={setDate}
+              onChangeText={(v) => { setDate(v); setDateError(''); }}
               placeholder="AAAA-MM-JJ"
               placeholderTextColor={colors.dark.textSecondary}
             />
+            {dateError ? <Text style={styles.fieldError}>{dateError}</Text> : null}
             <Text style={styles.label}>Notes (optionnel)</Text>
             <TextInput
               style={[styles.input, styles.textArea]}
@@ -149,6 +158,7 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   label: { ...typography.label, color: colors.dark.textSecondary, marginBottom: 6, marginTop: 12 },
   input: { ...typography.body, color: colors.dark.text, backgroundColor: colors.dark.surface, borderRadius: radius.sm, padding: 14, borderWidth: 1, borderColor: colors.dark.border },
+  fieldError: { ...typography.caption, color: colors.dark.danger, marginTop: 6 },
   textArea: { minHeight: 80 },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.full, backgroundColor: colors.dark.surface },

@@ -20,7 +20,7 @@ import {
   markReminderDone,
   createCareLog,
 } from '../../lib/db';
-import { MONTH_NAMES } from '../../lib/months';
+import { monthName } from '../../lib/months';
 
 const HEADER_SUBTITLE = 'En ce moment : La floraison de printemps bat son plein.';
 const SETTINGS_BLUE = '#3B82F6';
@@ -82,8 +82,8 @@ export default function Dashboard() {
 
   const periodLabel = (p) => {
     if (!p.bloomStartMonth || !p.bloomEndMonth) return '';
-    const start = MONTH_NAMES[p.bloomStartMonth - 1];
-    const end = MONTH_NAMES[p.bloomEndMonth - 1];
+    const start = monthName(p.bloomStartMonth);
+    const end = monthName(p.bloomEndMonth);
     return start === end ? start : `${start} - ${end}`;
   };
 

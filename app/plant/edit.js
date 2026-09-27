@@ -22,6 +22,7 @@ import { PLANT_TYPES, SUN, WATER, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY } f
 import { MONTH_SHORT } from '../../lib/months';
 import { searchPlants, normalizeToForm } from '../../lib/plantSearch';
 import { emptyPlantForm, plantRowToForm, formToPlantValues } from '../../lib/plantFields';
+import { validatePlantForm } from '../../lib/validation';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -34,6 +35,7 @@ export default function EditPlantScreen() {
   const [zones, setZones] = useState([]);
   const [plant, setPlant] = useState(null);
   const [form, setForm] = useState(emptyPlantForm);
+  const [errors, setErrors] = useState({});
   const [noFlowering, setNoFlowering] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showMore, setShowMore] = useState(false);
@@ -43,7 +45,10 @@ export default function EditPlantScreen() {
   const [searching, setSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
+  const setField = (key, value) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    setErrors((e) => (e[key] ? { ...e, [key]: undefined } : e));
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -104,6 +109,12 @@ export default function EditPlantScreen() {
 
   const save = async () => {
     if (!id || !form.name.trim()) return;
+    const validationErrors = validatePlantForm(form);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+    setErrors({});
     setSaving(true);
     try {
       await updatePlant(id, formToPlantValues(form));
@@ -337,6 +348,8 @@ export default function EditPlantScreen() {
                   />
                 </View>
               )}
+              {errors.bloomStartMonth ? <Text style={styles.fieldError}>{errors.bloomStartMonth}</Text> : null}
+              {errors.bloomEndMonth ? <Text style={styles.fieldError}>{errors.bloomEndMonth}</Text> : null}
 
               <Text style={styles.label}>Hauteur (cm)</Text>
               <TextInput
@@ -410,6 +423,7 @@ export default function EditPlantScreen() {
                 keyboardType="numbers-and-punctuation"
               />
               <Text style={styles.dateHint}>Laissez vide pour la date du jour</Text>
+              {errors.createdAt ? <Text style={styles.fieldError}>{errors.createdAt}</Text> : null}
 
               {/* --- Section Sol --- */}
               <Text style={styles.sectionTitle}>Sol</Text>
@@ -582,6 +596,8 @@ export default function EditPlantScreen() {
                   maxLength={2}
                 />
               </View>
+              {errors.harvestMonthStart ? <Text style={styles.fieldError}>{errors.harvestMonthStart}</Text> : null}
+              {errors.harvestMonthEnd ? <Text style={styles.fieldError}>{errors.harvestMonthEnd}</Text> : null}
 
               {/* --- Section Autres --- */}
               <Text style={styles.sectionTitle}>Autres informations</Text>
@@ -810,6 +826,11 @@ const styles = StyleSheet.create({
   dateHint: {
     ...typography.caption,
     color: colors.dark.textSecondary,
+    marginTop: 4,
+  },
+  fieldError: {
+    ...typography.caption,
+    color: colors.dark.danger,
     marginTop: 4,
   },
   sectionTitle: {

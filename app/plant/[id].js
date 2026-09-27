@@ -34,6 +34,7 @@ import {
 } from '../../lib/db';
 import { CARE_TYPES, REMINDER_KINDS, SUN, WATER, PLANT_TYPES, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY, labelFor, iconFor } from '../../lib/enums';
 import { monthShort } from '../../lib/months';
+import { parseISODate } from '../../lib/validation';
 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -84,6 +85,7 @@ export default function PlantDetailScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [pendingPhotoUri, setPendingPhotoUri] = useState(null);
   const [photoDate, setPhotoDate] = useState('');
+  const [photoDateError, setPhotoDateError] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [zoomScale, setZoomScale] = useState(1);
   
@@ -169,12 +171,16 @@ export default function PlantDetailScreen() {
 
   const confirmPhoto = async () => {
     if (!pendingPhotoUri) return;
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    const validDate = dateRegex.test(photoDate) ? photoDate : new Date().toISOString().slice(0, 10);
-    addPhoto({ plantId: id, uri: pendingPhotoUri, date: validDate });
+    const { value, error } = parseISODate(photoDate);
+    if (error || value == null) {
+      setPhotoDateError(error || 'Date requise');
+      return;
+    }
+    addPhoto({ plantId: id, uri: pendingPhotoUri, date: value });
     setShowDatePicker(false);
     setPendingPhotoUri(null);
     setPhotoDate('');
+    setPhotoDateError('');
     await load();
   };
 
@@ -182,6 +188,7 @@ export default function PlantDetailScreen() {
     setShowDatePicker(false);
     setPendingPhotoUri(null);
     setPhotoDate('');
+    setPhotoDateError('');
   };
 
   const showAddPhotoOptions = () => {
@@ -600,12 +607,13 @@ export default function PlantDetailScreen() {
             <TextInput
               style={styles.dateInput}
               value={photoDate}
-              onChangeText={setPhotoDate}
+              onChangeText={(v) => { setPhotoDate(v); setPhotoDateError(''); }}
               placeholder="AAAA-MM-JJ"
               placeholderTextColor={colors.dark.textSecondary}
               keyboardType="numbers-and-punctuation"
             />
             <Text style={styles.dateHint}>Format: AAAA-MM-JJ (ex: 2024-05-15)</Text>
+            {photoDateError ? <Text style={styles.fieldError}>{photoDateError}</Text> : null}
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalCancelBtn} onPress={cancelPhoto}>
                 <Text style={styles.modalCancelText}>Annuler</Text>
@@ -801,6 +809,7 @@ const styles = StyleSheet.create({
   modalTitle: { ...typography.title, color: colors.dark.text, textAlign: 'center', marginBottom: spacing.md },
   dateInput: { ...typography.body, color: colors.dark.text, backgroundColor: colors.dark.background, borderRadius: radius.sm, padding: 14, borderWidth: 1, borderColor: colors.dark.border, textAlign: 'center' },
   dateHint: { ...typography.caption, color: colors.dark.textSecondary, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.md },
+  fieldError: { ...typography.caption, color: colors.dark.danger, textAlign: 'center', marginBottom: spacing.md },
   modalButtons: { flexDirection: 'row', gap: spacing.sm },
   modalCancelBtn: { flex: 1, paddingVertical: 14, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.dark.border, alignItems: 'center' },
   modalCancelText: { ...typography.label, color: colors.dark.textSecondary },

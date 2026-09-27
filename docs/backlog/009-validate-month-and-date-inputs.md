@@ -1,7 +1,7 @@
 ---
 id: 009
 title: Month and date fields accept any text and render undefined
-status: open
+status: done
 priority: P2
 type: bug
 ---
@@ -25,12 +25,12 @@ history list, since ordering is a string comparison.
 
 ## Acceptance criteria
 
-- [ ] A month outside 1–12 cannot be saved; the field shows why
-- [ ] A malformed date cannot be saved; the same validation is used by the care-log
+- [x] A month outside 1–12 cannot be saved; the field shows why
+- [x] A malformed date cannot be saved; the same validation is used by the care-log
       form and the photo-date modal rather than one having its own regex
-- [ ] `MONTHS[...]` lookups cannot render `undefined` even if a bad row already
+- [x] `MONTHS[...]` lookups cannot render `undefined` even if a bad row already
       exists in the database
-- [ ] Validation lives in a pure module and is covered by tests
+- [x] Validation lives in a pure module and is covered by tests
 
 ## Notes
 
