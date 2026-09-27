@@ -11,6 +11,7 @@ import {
   LayoutAnimation,
   UIManager,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
@@ -158,52 +159,57 @@ export default function NewPlantScreen() {
   const save = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    const start = bloomStartMonth ? parseInt(bloomStartMonth, 10) : null;
-    const end = bloomEndMonth ? parseInt(bloomEndMonth, 10) : null;
-    const h = height ? parseInt(height, 10) : null;
-    const w = width ? parseInt(width, 10) : null;
-    const minTemp = minTemperature ? parseInt(minTemperature, 10) : null;
-    const harvestStart = harvestMonthStart ? parseInt(harvestMonthStart, 10) : null;
-    const harvestEnd = harvestMonthEnd ? parseInt(harvestMonthEnd, 10) : null;
-    const plantId = createPlant({
-      name: name.trim(),
-      latinName: latinName.trim() || null,
-      type,
-      flowerColor: flowerColor.trim() || null,
-      sun,
-      water,
-      bloomStartMonth: start,
-      bloomEndMonth: end,
-      height: h,
-      width: w,
-      deciduous: deciduous,
-      minTemperature: minTemp,
-      zoneId,
-      notes: notes.trim() || null,
-      createdAt: createdAt ? new Date(createdAt).toISOString() : null,
-      soilType,
-      soilPH,
-      fertilizer: fertilizer.trim() || null,
-      pruning: pruning.trim() || null,
-      pruningMonth,
-      propagation,
-      pests: pests.trim() || null,
-      toxicity,
-      companionPlants: companionPlants.trim() || null,
-      harvest: harvest.trim() || null,
-      harvestMonthStart: harvestStart,
-      harvestMonthEnd: harvestEnd,
-      origin: origin.trim() || null,
-      winterCare: winterCare.trim() || null,
-    });
-    createReminder({
-      plantId,
-      kind: 'water',
-      frequencyDays: 7,
-      nextDueDate: new Date().toISOString().slice(0, 10),
-    });
-    setSaving(false);
-    router.replace(`/plant/${plantId}`);
+    try {
+      const start = bloomStartMonth ? parseInt(bloomStartMonth, 10) : null;
+      const end = bloomEndMonth ? parseInt(bloomEndMonth, 10) : null;
+      const h = height ? parseInt(height, 10) : null;
+      const w = width ? parseInt(width, 10) : null;
+      const minTemp = minTemperature ? parseInt(minTemperature, 10) : null;
+      const harvestStart = harvestMonthStart ? parseInt(harvestMonthStart, 10) : null;
+      const harvestEnd = harvestMonthEnd ? parseInt(harvestMonthEnd, 10) : null;
+      const plantId = createPlant({
+        name: name.trim(),
+        latinName: latinName.trim() || null,
+        type,
+        flowerColor: flowerColor.trim() || null,
+        sun,
+        water,
+        bloomStartMonth: start,
+        bloomEndMonth: end,
+        height: h,
+        width: w,
+        deciduous: deciduous,
+        minTemperature: minTemp,
+        zoneId,
+        notes: notes.trim() || null,
+        createdAt: createdAt.trim() ? new Date(createdAt.trim()).toISOString() : null,
+        soilType,
+        soilPH,
+        fertilizer: fertilizer.trim() || null,
+        pruning: pruning.trim() || null,
+        pruningMonth,
+        propagation,
+        pests: pests.trim() || null,
+        toxicity,
+        companionPlants: companionPlants.trim() || null,
+        harvest: harvest.trim() || null,
+        harvestMonthStart: harvestStart,
+        harvestMonthEnd: harvestEnd,
+        origin: origin.trim() || null,
+        winterCare: winterCare.trim() || null,
+      });
+      createReminder({
+        plantId,
+        kind: 'water',
+        frequencyDays: 7,
+        nextDueDate: new Date().toISOString().slice(0, 10),
+      });
+      router.replace(`/plant/${plantId}`);
+    } catch (e) {
+      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

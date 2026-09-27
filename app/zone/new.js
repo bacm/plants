@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
@@ -25,16 +26,21 @@ export default function NewZoneScreen() {
   const [icon, setIcon] = useState('🌱');
   const [saving, setSaving] = useState(false);
 
-  const save = () => {
+  const save = async () => {
     if (!name.trim()) return;
     setSaving(true);
-    createZone({
-      name: name.trim(),
-      description: description.trim() || null,
-      icon,
-    });
-    setSaving(false);
-    router.back();
+    try {
+      createZone({
+        name: name.trim(),
+        description: description.trim() || null,
+        icon,
+      });
+      router.back();
+    } catch (e) {
+      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

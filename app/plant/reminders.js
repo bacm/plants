@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
@@ -47,23 +48,35 @@ export default function RemindersScreen() {
   const addReminder = async () => {
     const days = parseInt(frequencyDays, 10);
     if (!plantId || !days || days < 1) return;
-    createReminder({
-      plantId,
-      kind,
-      frequencyDays: days,
-      nextDueDate: nextDueDate || new Date().toISOString().slice(0, 10),
-    });
-    await load();
+    try {
+      createReminder({
+        plantId,
+        kind,
+        frequencyDays: days,
+        nextDueDate: nextDueDate || new Date().toISOString().slice(0, 10),
+      });
+      await load();
+    } catch (e) {
+      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    }
   };
 
-  const removeReminder = (id) => {
-    deleteReminder(id);
-    load();
+  const removeReminder = async (id) => {
+    try {
+      deleteReminder(id);
+      await load();
+    } catch (e) {
+      Alert.alert('Erreur', `Impossible de supprimer : ${e.message}`);
+    }
   };
 
   const doNow = async (r) => {
-    await markReminderDone(r.id);
-    await load();
+    try {
+      await markReminderDone(r.id);
+      await load();
+    } catch (e) {
+      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    }
   };
 
   if (!plant) {

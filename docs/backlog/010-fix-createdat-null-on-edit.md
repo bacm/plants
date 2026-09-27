@@ -1,7 +1,7 @@
 ---
 id: 010
 title: Clearing the "date d'ajout" field makes saving a plant fail silently
-status: open
+status: done
 priority: P2
 type: bug
 ---
@@ -23,11 +23,11 @@ navigation, no saved change. Every other edit on the form is lost with it.
 
 ## Acceptance criteria
 
-- [ ] An empty "date d'ajout" either keeps the existing value or is rejected with a
+- [x] An empty "date d'ajout" either keeps the existing value or is rejected with a
       visible message; it never reaches the database as `NULL`
-- [ ] Writes in `save` are wrapped so a failure surfaces to the user instead of
+- [x] Writes in `save` are wrapped so a failure surfaces to the user instead of
       disappearing
-- [ ] The same treatment is applied to the other write paths in `app/plant/new.js`,
+- [x] The same treatment is applied to the other write paths in `app/plant/new.js`,
       `app/plant/log.js`, `app/plant/reminders.js` and `app/zone/new.js`
 
 ## Notes

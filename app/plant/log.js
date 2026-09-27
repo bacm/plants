@@ -59,12 +59,17 @@ export default function LogCareScreen() {
   const save = async () => {
     if (!plantId) return;
     setSaving(true);
-    const logId = createCareLog({ plantId, type, date, notes: notes.trim() || null });
-    if (photoUri) {
-      addPhoto({ plantId, careLogId: logId, uri: photoUri, date });
+    try {
+      const logId = createCareLog({ plantId, type, date, notes: notes.trim() || null });
+      if (photoUri) {
+        addPhoto({ plantId, careLogId: logId, uri: photoUri, date });
+      }
+      router.replace(`/plant/${plantId}`);
+    } catch (e) {
+      Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
-    router.replace(`/plant/${plantId}`);
   };
 
   if (!plant) {
