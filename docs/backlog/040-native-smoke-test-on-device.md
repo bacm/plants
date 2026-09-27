@@ -31,6 +31,8 @@ install, so the migrations run on real data):
 - [ ] Enter month 13 and date 2026-02-30: both refused with a message (009)
 - [ ] Delete a photo: it disappears immediately (006)
 - [ ] Every screen is readable in the dark theme (003)
+- [ ] With the search server running, a plant created from a suggestion shows
+      its Wikipedia image in the zones list and on its detail screen (012)
 - [ ] Any defect becomes its own ticket
 
 ## Notes

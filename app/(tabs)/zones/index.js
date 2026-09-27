@@ -13,6 +13,7 @@ import { GlassCard } from '../../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../../lib/theme';
 import { getZones, getPlantsByZoneWithImages, getZoneContextInfo } from '../../../lib/db';
 import { SUN, REMINDER_KINDS, labelFor } from '../../../lib/enums';
+import { parseImageUrls } from '../../../lib/plantFields';
 
 function getContextLine(info) {
   if (!info) return null;
@@ -53,13 +54,7 @@ function getContextLine(info) {
 
 function getPlantImage(plant) {
   if (plant.photoUri) return plant.photoUri;
-  if (plant.imageUrls) {
-    try {
-      const urls = JSON.parse(plant.imageUrls);
-      if (urls.length > 0) return urls[0];
-    } catch {}
-  }
-  return null;
+  return parseImageUrls(plant.imageUrls)[0] || null;
 }
 
 export default function ZonesScreen() {

@@ -1,7 +1,7 @@
 ---
 id: 012
 title: The imageUrls column is read but never written
-status: open
+status: done
 priority: P2
 type: bug
 ---
@@ -29,10 +29,11 @@ emoji for every plant that has no user-taken photo, and the reader at
 One of the two:
 
 **Option A — persist them**
-- [ ] `normalizeToForm` keeps `image_urls`
-- [ ] `createPlant` and `updatePlant` write `imageUrls` as JSON
-- [ ] The zones thumbnail actually renders a remote image
-- [ ] Depends on 013: today's URLs are fabricated and would mostly 404
+- [x] `normalizeToForm` keeps `image_urls`
+- [x] `createPlant` and `updatePlant` write `imageUrls` as JSON
+- [x] The zones thumbnail actually renders a remote image — code path in place;
+      the on-screen check needs the search server and moves to 040
+- [x] Depends on 013: today's URLs are fabricated and would mostly 404
 
 **Option B — remove the column**
 - [ ] `imageUrls` is dropped from the migration and from every `SELECT`
@@ -44,3 +45,7 @@ One of the two:
 Option A only makes sense after 013 supplies real image URLs, and both depend on
 the outcome of 001 (whether the AI lookup survives at all). Sequence:
 001 → 013 → this.
+
+Resolved with option A. `imageUrls` is an ordinary field in `lib/plantFields.js`
+(stored as JSON, https only, parsed once by `parseImageUrls`). The zones
+thumbnail and the plant hero show it when the user has no photo of their own.

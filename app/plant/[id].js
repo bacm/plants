@@ -35,6 +35,7 @@ import {
 import { CARE_TYPES, REMINDER_KINDS, SUN, WATER, PLANT_TYPES, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY, labelFor, iconFor } from '../../lib/enums';
 import { monthShort } from '../../lib/months';
 import { parseISODate } from '../../lib/validation';
+import { parseImageUrls } from '../../lib/plantFields';
 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -88,6 +89,7 @@ export default function PlantDetailScreen() {
   const [photoDateError, setPhotoDateError] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [zoomScale, setZoomScale] = useState(1);
+  const [remoteImageError, setRemoteImageError] = useState(false);
   
   const load = useCallback(async () => {
     if (id === 'new') return;
@@ -245,6 +247,7 @@ export default function PlantDetailScreen() {
   }
 
   const coverPhoto = photos[0];
+  const remoteImageUrl = !coverPhoto && !remoteImageError ? parseImageUrls(plant.imageUrls)[0] : null;
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -543,6 +546,18 @@ export default function PlantDetailScreen() {
           {coverPhoto ? (
             <TouchableOpacity style={styles.heroImageWrap} onLongPress={() => handleDeletePhoto(coverPhoto)} activeOpacity={1}>
               <Image source={{ uri: coverPhoto.uri }} style={styles.heroImage} />
+              <LinearGradient
+                colors={['transparent', 'rgba(28,25,23,0.9)']}
+                style={styles.heroGradient}
+              />
+            </TouchableOpacity>
+          ) : remoteImageUrl ? (
+            <TouchableOpacity style={styles.heroImageWrap} onPress={showAddPhotoOptions} activeOpacity={0.8}>
+              <Image
+                source={{ uri: remoteImageUrl }}
+                style={styles.heroImage}
+                onError={() => setRemoteImageError(true)}
+              />
               <LinearGradient
                 colors={['transparent', 'rgba(28,25,23,0.9)']}
                 style={styles.heroGradient}
