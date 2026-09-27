@@ -26,3 +26,5 @@ colour dot instead of the plant's photo.
 
 Do together with 052 and 046's tile labels; 027 (accessibility) fits in the same
 pass.
+
+The dashboard part is superseded by 058; this ticket keeps lists and detail.

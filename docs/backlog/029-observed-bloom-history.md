@@ -2,7 +2,7 @@
 id: 029
 title: Record when plants actually bloom and compare year over year
 status: open
-priority: P2
+priority: P1
 type: feature
 ---
 
@@ -37,3 +37,6 @@ than last year" is a reason to open the app that competitors do not offer.
 Optionally, after two seasons, offer to update the declared months from
 observations — never automatically. Pairs with 024 (year overview) and 030
 (photos of the bloom).
+
+Raised with 056: "En fleur" is a one-tap tag on quick capture, and memories
+feed the home screen (058). Together they are the core of the return loop.

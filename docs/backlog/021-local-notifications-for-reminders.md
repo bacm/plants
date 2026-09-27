@@ -33,3 +33,6 @@ not remind anyone.
 Needs a development build for iOS; Expo Go is limited for notifications. Several
 reminders due the same morning should be one grouped notification rather than a
 burst. Prerequisite for 025.
+
+Notification budget: at most one app notification per day, grouped; 057 adds
+the weekend digest on top of this plumbing.
