@@ -1,5 +1,6 @@
 import asyncio
 import os
+from datetime import datetime, timezone
 
 os.environ.setdefault("OPENAI_API_KEY", "test-key-not-real")
 
@@ -297,3 +298,102 @@ def test_wikipedia_lookup_prefers_the_thumbnail(monkeypatch):
             return await app_module.fetch_wikipedia_image(http_client, "Thumbnail preferred")
 
     assert asyncio.run(run()) == "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/330px-a.jpg"
+
+
+def test_daily_budget_under_limit_passes(monkeypatch, client):
+    _set_call_openai(monkeypatch, result="[]")
+    client.app.state.budget = app_module.DailyBudget(2, clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc))
+
+    for _ in range(2):
+        res = client.post("/search", json={"query": "rose"})
+        assert res.status_code == 200
+
+
+def test_daily_budget_exceeded_returns_503_without_calling_openai(monkeypatch, client):
+    calls = []
+
+    async def fake_call_openai(prompt):
+        calls.append(prompt)
+        return "[]"
+
+    monkeypatch.setattr(app_module, "call_openai", fake_call_openai)
+    client.app.state.budget = app_module.DailyBudget(1, clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc))
+
+    res = client.post("/search", json={"query": "rose"})
+    assert res.status_code == 200
+    assert len(calls) == 1
+
+    res = client.post("/search", json={"query": "rose"})
+    assert res.status_code == 503
+    assert res.json() == {"detail": "Plant search daily limit reached"}
+    assert len(calls) == 1
+
+
+def test_daily_budget_warns_once_per_day(monkeypatch, client, caplog):
+    _set_call_openai(monkeypatch, result="[]")
+    client.app.state.budget = app_module.DailyBudget(0, clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc))
+
+    with caplog.at_level("WARNING"):
+        for _ in range(3):
+            res = client.post("/search", json={"query": "rose"})
+            assert res.status_code == 503
+
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert len(warnings) == 1
+
+
+def test_daily_budget_resets_on_next_utc_day(monkeypatch, client):
+    _set_call_openai(monkeypatch, result="[]")
+    current = [datetime(2026, 1, 1, 23, 59, tzinfo=timezone.utc)]
+    client.app.state.budget = app_module.DailyBudget(1, clock=lambda: current[0])
+
+    res = client.post("/search", json={"query": "rose"})
+    assert res.status_code == 200
+
+    res = client.post("/search", json={"query": "rose"})
+    assert res.status_code == 503
+
+    current[0] = datetime(2026, 1, 2, 0, 1, tzinfo=timezone.utc)
+
+    res = client.post("/search", json={"query": "rose"})
+    assert res.status_code == 200
+
+
+def test_validation_error_does_not_consume_budget(monkeypatch, client):
+    _set_call_openai(monkeypatch, result="[]")
+    budget = app_module.DailyBudget(1, clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc))
+    client.app.state.budget = budget
+
+    res = client.post("/search", json={"query": "a"})
+    assert res.status_code == 422
+
+    res = client.post("/search", json={"query": "rose"})
+    assert res.status_code == 200
+
+
+def test_rate_limited_request_does_not_consume_budget(monkeypatch, client):
+    _set_call_openai(monkeypatch, result="[]")
+    budget = app_module.DailyBudget(1, clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc))
+    client.app.state.budget = budget
+    client.app.state.limiter.allow = lambda key: False
+
+    res = client.post("/search", json={"query": "rose"})
+    assert res.status_code == 429
+
+    client.app.state.limiter.allow = lambda key: True
+    res = client.post("/search", json={"query": "rose"})
+    assert res.status_code == 200
+
+
+def test_invalid_search_daily_budget_fails_fast(monkeypatch):
+    monkeypatch.setenv("SEARCH_DAILY_BUDGET", "not-a-number")
+    with pytest.raises(RuntimeError):
+        app_module.create_app()
+
+    monkeypatch.setenv("SEARCH_DAILY_BUDGET", "0")
+    with pytest.raises(RuntimeError):
+        app_module.create_app()
+
+    monkeypatch.setenv("SEARCH_DAILY_BUDGET", "-5")
+    with pytest.raises(RuntimeError):
+        app_module.create_app()

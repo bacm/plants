@@ -23,7 +23,8 @@ server in release builds (019).
 - [ ] `searchPlants` distinguishes "no results" from "search failed" (throws, or
       returns a result object — decide in the plan)
 - [ ] Both screens show a short French message for failures, distinct for rate
-      limit, service unavailable, and no network
+      limit, daily budget reached (503, from 037), service unavailable, and no
+      network
 - [ ] A failed search never blocks filling the form by hand
 - [ ] The error classification is a pure function with tests
 

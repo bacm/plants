@@ -12,6 +12,7 @@ import os
 import time
 import urllib.parse
 from collections import OrderedDict, deque
+from datetime import datetime, timezone
 
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -24,6 +25,8 @@ OPENAI_URL = "https://api.openai.com/v1/chat/completions"
 
 RATE_LIMIT_MAX_REQUESTS = 20
 RATE_LIMIT_WINDOW_SECONDS = 60
+
+SEARCH_DAILY_BUDGET_DEFAULT = 500
 
 WIKIPEDIA_SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
 WIKIPEDIA_USER_AGENT = "PlantsApp/1.0 (https://github.com/bacm/plants)"
@@ -88,6 +91,44 @@ class RateLimiter:
         if len(hits) >= self.max_requests:
             return False
         hits.append(now)
+        return True
+
+
+class DailyBudget:
+    """Caps the number of upstream OpenAI calls across all clients per UTC day.
+
+    The count resets whenever the UTC calendar date changes. Only calls that
+    actually reach OpenAI should consume budget; the caller decides that by
+    only calling `try_spend()` right before the upstream request. The clock
+    is injectable so tests can drive it without sleeping.
+    """
+
+    def __init__(self, limit, clock=lambda: datetime.now(timezone.utc)):
+        self.limit = limit
+        self.clock = clock
+        self._date = None
+        self._count = 0
+        self._warned_date = None
+
+    def _roll_if_new_day(self):
+        today = self.clock().date()
+        if today != self._date:
+            self._date = today
+            self._count = 0
+
+    def try_spend(self):
+        self._roll_if_new_day()
+        if self._count >= self.limit:
+            return False
+        self._count += 1
+        return True
+
+    def should_warn(self):
+        """True the first time the budget is hit on a given UTC day."""
+        self._roll_if_new_day()
+        if self._warned_date == self._date:
+            return False
+        self._warned_date = self._date
         return True
 
 
@@ -262,6 +303,19 @@ def create_app():
             "OPENAI_API_KEY environment variable is required to start the plant search server."
         )
 
+    raw_budget = os.environ.get("SEARCH_DAILY_BUDGET")
+    if raw_budget is None or not raw_budget.strip():
+        daily_budget_limit = SEARCH_DAILY_BUDGET_DEFAULT
+    else:
+        try:
+            daily_budget_limit = int(raw_budget)
+        except ValueError:
+            daily_budget_limit = -1
+        if daily_budget_limit <= 0:
+            raise RuntimeError(
+                "SEARCH_DAILY_BUDGET environment variable must be a positive integer."
+            )
+
     app = FastAPI()
 
     allowed_origins = [
@@ -280,6 +334,9 @@ def create_app():
     limiter = RateLimiter()
     app.state.limiter = limiter
 
+    budget = DailyBudget(daily_budget_limit)
+    app.state.budget = budget
+
     @app.get("/health")
     async def health():
         return {"status": "ok"}
@@ -289,6 +346,11 @@ def create_app():
         client_host = request.client.host if request.client else "unknown"
         if not app.state.limiter.allow(client_host):
             raise HTTPException(status_code=429, detail="Too many requests")
+
+        if not app.state.budget.try_spend():
+            if app.state.budget.should_warn():
+                logger.warning("Plant search daily budget of %s calls reached", app.state.budget.limit)
+            raise HTTPException(status_code=503, detail="Plant search daily limit reached")
 
         prompt = build_prompt(payload.query)
         try:

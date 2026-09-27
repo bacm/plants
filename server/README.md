@@ -36,6 +36,7 @@ python -m pytest -q
 | --- | --- | --- |
 | `OPENAI_API_KEY` | yes | OpenAI key used server-side to call the Chat Completions API. The server fails to start without it. |
 | `ALLOWED_ORIGINS` | no | Comma-separated list of origins allowed to call this server via CORS (e.g. `https://example.com`). Native apps don't need this; the web build does. Defaults to empty (no CORS). |
+| `SEARCH_DAILY_BUDGET` | no | Maximum number of upstream OpenAI calls served per UTC calendar day, across all clients. Beyond it `/search` answers 503 without calling OpenAI. Must be a positive integer if set; the server fails to start otherwise. Defaults to 500. |
 
 ## Notes
 
@@ -44,3 +45,6 @@ python -m pytest -q
 - The rate limit (20 requests / 60s per client IP) is per process and
   in-memory — it resets on restart and is not shared across multiple worker
   processes.
+- The daily budget (`SEARCH_DAILY_BUDGET`) is likewise per process and
+  in-memory: running several instances gives each one its own full budget,
+  so the effective total scales with instance count.

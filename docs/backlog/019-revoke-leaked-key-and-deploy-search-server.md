@@ -22,6 +22,7 @@ build.
 
 - [ ] The old key is revoked at platform.openai.com and a new one issued
 - [ ] The new key exists only in the server's environment
+- [ ] A hard monthly spend limit is set in the OpenAI dashboard (from 037)
 - [ ] The server is deployed with `--proxy-headers` if behind a reverse proxy
 - [ ] Release builds set `EXPO_PUBLIC_PLANT_API_URL` to the deployed URL
 - [ ] Every build published before 001 is treated as compromised

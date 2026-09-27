@@ -1,7 +1,7 @@
 ---
 id: 037
 title: Cap the search server's total OpenAI spend
-status: open
+status: done
 priority: P1
 type: security
 ---
@@ -20,14 +20,14 @@ run up the OpenAI bill, and nothing alerts anyone.
 
 ## Acceptance criteria
 
-- [ ] A global budget per day (requests, or estimated tokens) is enforced across
-      all clients; beyond it `/search` answers 503 with a clear message and the
-      app shows it
-- [ ] The budget is set by an environment variable with a safe default
-- [ ] Hitting the budget is logged at warning level once per day
-- [ ] A hard monthly spend limit is set in the OpenAI dashboard (owner action,
-      recorded here with the date)
-- [ ] Tests cover the budget boundary and the daily reset with an injected clock
+- [x] A global budget per day (requests, or estimated tokens) is enforced across
+      all clients; beyond it `/search` answers 503 with a clear message ~~and the
+      app shows it~~ (showing it moves to 038)
+- [x] The budget is set by an environment variable with a safe default
+- [x] Hitting the budget is logged at warning level once per day
+- [ ] ~~A hard monthly spend limit is set in the OpenAI dashboard~~ — owner
+      action, moved to 019
+- [x] Tests cover the budget boundary and the daily reset with an injected clock
 
 ## Notes
 
@@ -35,3 +35,6 @@ In-memory is fine for one process, as for the rate limiter; note in
 `server/README.md` that several instances would each get the full budget. App
 attestation (App Attest / Play Integrity) is the real fix for "only my app may
 call this" and is out of scope here.
+
+`SEARCH_DAILY_BUDGET` (default 500) counts calls that reach OpenAI per UTC day;
+validation errors and per-IP 429s do not consume it.
