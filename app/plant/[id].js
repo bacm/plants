@@ -30,7 +30,6 @@ import {
   markReminderDone,
   createCareLog,
   deletePlant,
-  deleteReminder,
   deleteCareLog,
 } from '../../lib/db';
 

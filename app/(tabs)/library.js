@@ -12,7 +12,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
-import { getPlants, getZones, PLANT_TYPES, SUN } from '../../lib/db';
+import { getPlants, getZones, SUN } from '../../lib/db';
 
 const SUN_LABELS = { full_sun: 'Plein soleil', partial: 'Mi-ombre', shade: 'Ombre' };
 
