@@ -17,7 +17,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
-import { createPlant, getZones, createReminder } from '../../lib/db';
+import { createPlant, getZones } from '../../lib/db';
 import {
   PLANT_TYPES,
   SUN,
@@ -115,12 +115,6 @@ export default function NewPlantScreen() {
     setSaving(true);
     try {
       const plantId = createPlant(formToPlantValues(form));
-      createReminder({
-        plantId,
-        kind: 'water',
-        frequencyDays: 7,
-        nextDueDate: new Date().toISOString().slice(0, 10),
-      });
       router.replace(`/plant/${plantId}`);
     } catch (e) {
       showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);

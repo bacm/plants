@@ -25,8 +25,9 @@ import {
   createReminder,
 } from '../../lib/db';
 import { monthName } from '../../lib/months';
-import { buildHeroSubtitle } from '../../lib/dashboard';
-import { showMessage } from '../../lib/dialogs';
+import { buildHeroSubtitle, groupDueTasks, latenessLabel } from '../../lib/dashboard';
+import { showMessage, confirm } from '../../lib/dialogs';
+import { plural } from '../../lib/text';
 import { REMINDER_KINDS, labelFor } from '../../lib/enums';
 import {
   deriveSeasonalTasks,
@@ -69,6 +70,7 @@ export default function Dashboard() {
   const [seasonalCareLogs, setSeasonalCareLogs] = useState([]);
   const [monthOffset, setMonthOffset] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set());
 
   const currentMonth = new Date().getMonth() + 1;
 
@@ -117,6 +119,39 @@ export default function Dashboard() {
     }
   };
 
+  const toggleGroup = (key) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+      return next;
+    });
+  };
+
+  const handleMarkAllDone = async (group) => {
+    const count = group.reminders.length;
+    const ok = await confirm({
+      title: 'Tout marquer fait',
+      message: `Marquer ${count} ${plural(count, 'rappel', 'rappels')} « ${labelFor(REMINDER_KINDS, group.kind)} » comme fait${count > 1 ? 's' : ''} ?`,
+    });
+    if (!ok) return;
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      for (const reminder of group.reminders) {
+        await markReminderDone(reminder.id);
+        const type =
+          careTypeForKind(reminder.kind) || NON_SEASONAL_CARE_TYPE[reminder.kind] || 'treated';
+        await createCareLog({ plantId: reminder.plantId, type, date: today });
+      }
+      await load();
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    }
+  };
+
   const { month: seasonalMonth, year: seasonalYear } = shiftedMonth(monthOffset);
   const seasonalTasks = deriveSeasonalTasks(allPlants, seasonalMonth).filter(
     (t) => !isTaskDone(t, seasonalCareLogs, seasonalYear)
@@ -156,6 +191,7 @@ export default function Dashboard() {
   };
 
   const tasks = [...overdue, ...dueToday];
+  const taskGroups = groupDueTasks(tasks, new Date().toISOString().slice(0, 10));
   const heroSubtitle = buildHeroSubtitle(currentMonth, blooming.length, tasks.length);
 
   const periodLabel = (p) => {
@@ -197,41 +233,112 @@ export default function Dashboard() {
             <Text style={styles.sectionTitle}>Tâches du jour</Text>
             {tasks.length > 0 && <Text style={styles.sectionCount}>({tasks.length})</Text>}
           </View>
-          {tasks.length === 0 ? (
+          {taskGroups.length === 0 ? (
             <GlassCard>
               <Text style={styles.emptyText}>Aucune tâche due pour l’instant.</Text>
             </GlassCard>
           ) : (
-            tasks.slice(0, 8).map((r) => (
-              <TouchableOpacity
-                key={r.id}
-                activeOpacity={0.8}
-                onPress={() => handleDone(r)}
-                style={styles.taskWrap}>
-                <GlassCard>
-                  <View style={styles.taskRow}>
-                    {r.photoUri ? (
-                      <Image source={{ uri: r.photoUri }} style={styles.taskPhoto} />
-                    ) : (
-                      <View style={[styles.taskPhoto, styles.taskPhotoPlaceholder]}>
-                        <Ionicons name="leaf-outline" size={24} color={colors.dark.textSecondary} />
+            taskGroups.slice(0, 8).map((group) => {
+              const key = `${group.kind}-${group.dueDate}`;
+              const isOverdue = group.daysLate > 0;
+              const label = latenessLabel(group.daysLate);
+
+              if (group.reminders.length === 1) {
+                const r = group.reminders[0];
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    activeOpacity={0.8}
+                    onPress={() => handleDone(r)}
+                    style={styles.taskWrap}>
+                    <GlassCard noPadding style={isOverdue && styles.taskCardOverdue}>
+                      <View style={styles.taskCardInner}>
+                        <View style={styles.taskRow}>
+                          {r.photoUri ? (
+                            <Image source={{ uri: r.photoUri }} style={styles.taskPhoto} />
+                          ) : (
+                            <View style={[styles.taskPhoto, styles.taskPhotoPlaceholder]}>
+                              <Ionicons
+                                name="leaf-outline"
+                                size={24}
+                                color={colors.dark.textSecondary}
+                              />
+                            </View>
+                          )}
+                          <View style={styles.taskContent}>
+                            <Text style={styles.taskTitle} numberOfLines={1}>
+                              {labelFor(REMINDER_KINDS, r.kind)} {r.plantName}
+                            </Text>
+                            <Text
+                              style={[
+                                styles.taskSubtitle,
+                                isOverdue && styles.taskSubtitleOverdue,
+                              ]}>
+                              {label}
+                            </Text>
+                          </View>
+                          <View style={styles.doneButton}>
+                            <Ionicons name="checkmark" size={22} color="#fff" />
+                          </View>
+                        </View>
+                      </View>
+                    </GlassCard>
+                  </TouchableOpacity>
+                );
+              }
+
+              const isExpanded = expandedGroups.has(key);
+              const count = group.reminders.length;
+              return (
+                <View key={key} style={styles.taskWrap}>
+                  <GlassCard noPadding style={isOverdue && styles.taskCardOverdue}>
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      onPress={() => toggleGroup(key)}
+                      style={styles.taskCardInner}>
+                      <View style={styles.taskRow}>
+                        <View style={styles.taskContent}>
+                          <Text style={styles.taskTitle} numberOfLines={1}>
+                            {labelFor(REMINDER_KINDS, group.kind)} {count}{' '}
+                            {plural(count, 'plante', 'plantes')}
+                          </Text>
+                          <Text
+                            style={[styles.taskSubtitle, isOverdue && styles.taskSubtitleOverdue]}>
+                            {label}
+                          </Text>
+                        </View>
+                        <Ionicons
+                          name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                          size={20}
+                          color={colors.dark.textSecondary}
+                        />
+                      </View>
+                    </TouchableOpacity>
+                    {isExpanded && (
+                      <View style={styles.groupExpanded}>
+                        {group.reminders.map((r) => (
+                          <View key={r.id} style={styles.groupRow}>
+                            <Text style={styles.groupPlantName} numberOfLines={1}>
+                              {r.plantName}
+                            </Text>
+                            <TouchableOpacity
+                              onPress={() => handleDone(r)}
+                              style={styles.groupDoneBtn}>
+                              <Text style={styles.groupDoneBtnText}>Fait</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ))}
+                        <TouchableOpacity
+                          onPress={() => handleMarkAllDone(group)}
+                          style={styles.markAllBtn}>
+                          <Text style={styles.markAllBtnText}>Tout marquer fait</Text>
+                        </TouchableOpacity>
                       </View>
                     )}
-                    <View style={styles.taskContent}>
-                      <Text style={styles.taskTitle} numberOfLines={1}>
-                        {labelFor(REMINDER_KINDS, r.kind)} {r.plantName}
-                      </Text>
-                      <Text style={styles.taskSubtitle}>
-                        Fréquence : tous les {r.frequencyDays} jours
-                      </Text>
-                    </View>
-                    <View style={styles.doneButton}>
-                      <Ionicons name="checkmark" size={22} color="#fff" />
-                    </View>
-                  </View>
-                </GlassCard>
-              </TouchableOpacity>
-            ))
+                  </GlassCard>
+                </View>
+              );
+            })
           )}
         </View>
 
@@ -395,6 +502,10 @@ const styles = StyleSheet.create({
   },
   monthToggleText: { ...typography.caption, color: colors.dark.text },
   taskWrap: { marginBottom: spacing.sm },
+  // Tâches du jour cards use noPadding + this inner padding instead of
+  // GlassCard's default 20, so four groups fit above the fold (ticket 045).
+  taskCardInner: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  taskCardOverdue: { borderWidth: 1, borderColor: colors.dark.danger },
   taskRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -413,6 +524,35 @@ const styles = StyleSheet.create({
   taskContent: { flex: 1, minWidth: 0 },
   taskTitle: { ...typography.label, color: colors.dark.text },
   taskSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 2 },
+  taskSubtitleOverdue: { color: colors.dark.danger },
+  groupExpanded: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.dark.border,
+  },
+  groupRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.xs,
+  },
+  groupPlantName: { ...typography.bodySmall, color: colors.dark.text, flex: 1, minWidth: 0 },
+  groupDoneBtn: {
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.dark.accent,
+    borderRadius: 10,
+    marginLeft: spacing.sm,
+  },
+  groupDoneBtnText: { ...typography.caption, color: '#fff' },
+  markAllBtn: {
+    marginTop: spacing.xs,
+    alignSelf: 'flex-start',
+    paddingVertical: 6,
+    paddingHorizontal: spacing.sm,
+  },
+  markAllBtnText: { ...typography.caption, color: colors.dark.accent },
   doneButton: {
     width: 40,
     height: 40,

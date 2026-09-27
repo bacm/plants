@@ -14,7 +14,11 @@ import {
 } from '../../lib/db';
 import { REMINDER_KINDS, labelFor } from '../../lib/enums';
 import { monthName } from '../../lib/months';
-import { seasonalRemindersFor, nextOccurrenceOfMonthStart } from '../../lib/seasonalTasks';
+import {
+  seasonalRemindersFor,
+  wateringSuggestionFor,
+  nextOccurrenceOfMonthStart,
+} from '../../lib/seasonalTasks';
 
 export default function RemindersScreen() {
   const { plantId } = useLocalSearchParams();
@@ -73,21 +77,37 @@ export default function RemindersScreen() {
   };
 
   // Suggestions derived from the plant's own pruning/harvest/bloom/winter-care
-  // data (ticket 022), minus any kind already covered by an existing
-  // reminder — never auto-created, the user has to tap "Ajouter".
-  const suggestions = plant
+  // data (ticket 022), plus a weekly watering suggestion when the plant has
+  // no water reminder yet (ticket 045 — watering used to be created
+  // automatically for every new plant; now it's offered here instead), minus
+  // any kind already covered by an existing reminder — never auto-created,
+  // the user has to tap "Ajouter".
+  const seasonalSuggestions = plant
     ? seasonalRemindersFor(plant).filter((s) => !reminders.some((r) => r.kind === s.kind))
     : [];
+  const wateringSuggestion = plant ? wateringSuggestionFor(plant, reminders) : null;
+  const suggestions = wateringSuggestion
+    ? [wateringSuggestion, ...seasonalSuggestions]
+    : seasonalSuggestions;
 
   const addSuggestion = async (suggestion) => {
     try {
-      createReminder({
-        plantId,
-        kind: suggestion.kind,
-        frequencyDays: 365,
-        nextDueDate: nextOccurrenceOfMonthStart(suggestion.month),
-        repeatRule: 'yearly',
-      });
+      if (suggestion.kind === 'water') {
+        createReminder({
+          plantId,
+          kind: 'water',
+          frequencyDays: suggestion.frequencyDays,
+          nextDueDate: new Date().toISOString().slice(0, 10),
+        });
+      } else {
+        createReminder({
+          plantId,
+          kind: suggestion.kind,
+          frequencyDays: 365,
+          nextDueDate: nextOccurrenceOfMonthStart(suggestion.month),
+          repeatRule: 'yearly',
+        });
+      }
       await load();
     } catch (e) {
       showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
@@ -121,7 +141,11 @@ export default function RemindersScreen() {
                 <View style={styles.reminderRow}>
                   <View style={styles.reminderInfo}>
                     <Text style={styles.reminderKind}>{labelFor(REMINDER_KINDS, s.kind)}</Text>
-                    <Text style={styles.reminderMeta}>Chaque année, en {monthName(s.month)}</Text>
+                    <Text style={styles.reminderMeta}>
+                      {s.kind === 'water'
+                        ? `Tous les ${s.frequencyDays} jours`
+                        : `Chaque année, en ${monthName(s.month)}`}
+                    </Text>
                   </View>
                   <TouchableOpacity onPress={() => addSuggestion(s)} style={styles.doneBtn}>
                     <Text style={styles.doneBtnText}>Ajouter</Text>

@@ -1,7 +1,7 @@
 ---
 id: 045
 title: Dashboard tasks drown in identical default watering reminders
-status: open
+status: in-progress
 priority: P2
 type: bug
 ---
@@ -22,16 +22,16 @@ matter, and a blanket weekly watering is wrong for most outdoor plants.
 
 ## Acceptance criteria
 
-- [ ] Creating a plant no longer creates a reminder silently; watering is offered
+- [x] Creating a plant no longer creates a reminder silently; watering is offered
       as a suggestion (like 022) the user can accept
-- [ ] Existing reminders are left untouched
-- [ ] Tasks of the same kind due the same day are grouped ("Arroser 4 plantes"),
+- [x] Existing reminders are left untouched
+- [x] Tasks of the same kind due the same day are grouped ("Arroser 4 plantes"),
       expandable, with a "tout marquer fait"
-- [ ] Each task shows its due date; overdue ones say by how much ("en retard de
+- [x] Each task shows its due date; overdue ones say by how much ("en retard de
       3 jours") and are visually distinct
 - [ ] "Ce mois-ci au jardin" is visible without scrolling on an iPhone 17 when
       there are 4 or fewer task groups
-- [ ] Grouping and lateness are pure functions with tests
+- [x] Grouping and lateness are pure functions with tests
 
 ## Notes
 

@@ -14,7 +14,6 @@
 | P2 | feature | [028 — Postpone outdoor watering reminders after enough rain](028-rain-aware-watering.md) |
 | P2 | feature | [029 — Record when plants actually bloom and compare year over year](029-observed-bloom-history.md) |
 | P2 | feature | [030 — Frame repeat photos with a ghost overlay and build a timelapse](030-aligned-photos-and-timelapse.md) |
-| P2 | bug | [045 — Dashboard tasks drown in identical default watering reminders](045-dashboard-tasks-drown-in-default-watering.md) |
 | P2 | bug | [046 — Plant sheet presents default values as if the user entered them](046-plant-sheet-shows-defaults-as-facts.md) |
 | P2 | feature | [048 — Add a plant from any zone, and keep the add button reachable](048-add-plant-from-zone-and-library.md) |
 | P2 | bug | [049 — Numeric keyboards on iOS cannot be dismissed on long forms](049-numeric-keyboard-done-and-form-scroll.md) |
@@ -30,6 +29,12 @@
 | P3 | refactor | [052 — Replace emoji icons with one consistent icon set](052-single-icon-set.md) |
 | P3 | feature | [053 — Denser cards, list thumbnails and lighter typography](053-denser-cards-and-list-thumbnails.md) |
 | P3 | feature | [054 — Sort the plant library](054-library-sorting.md) |
+
+## in-progress
+
+| Pri | Type | Ticket |
+| --- | --- | --- |
+| P2 | bug | [045 — Dashboard tasks drown in identical default watering reminders](045-dashboard-tasks-drown-in-default-watering.md) |
 
 ## blocked
 
