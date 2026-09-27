@@ -87,15 +87,35 @@ Each of these exists because it was violated and cost something.
 Tickets live in `docs/backlog/` as one markdown file each — see
 `docs/backlog/README.md` for the format, and `INDEX.md` for the current state.
 
+The main session (Opus) is the planner and reviewer; cheaper subagents in
+`.claude/agents/` do the bulk reading and editing. This keeps Opus tokens for
+decisions.
+
+| Agent | Model | Use for |
+| --- | --- | --- |
+| main session | Opus | reading the ticket, design, the plan, reviewing the diff, commit |
+| `scout` | Haiku | "where is X defined / used?" — any search touching more than 2–3 files |
+| `implementer` | Sonnet | executing the plan: edits, tests, `npm run verify` |
+
 1. Pick a ticket and set its `status:` to `in-progress`.
 2. Branch: `git checkout -b <type>/<id>-<slug>`, e.g. `fix/002-markreminderdone`.
-3. Make the change. Keep it to that ticket's scope — anything else you notice
-   becomes a new ticket, not a bigger diff.
-4. Add or extend a test when the change is testable. `lib/db.js` cannot be
-   imported under Jest (it opens SQLite at module scope), so logic worth testing
-   should be extracted into a pure module rather than left inline.
-5. `npm run verify`, then set `status: done` and run `npm run backlog`.
-6. Commit. The pre-commit hook re-runs `verify`.
+3. **Plan (Opus).** Locate the code with `scout` rather than reading files
+   wholesale. Write a plan precise enough to execute without judgement: files,
+   functions, the change in each, the test to add, and which CLAUDE.md rules
+   apply. Keep it to that ticket's scope — anything else you notice becomes a
+   new ticket, not a bigger diff.
+4. **Implement (`implementer`).** Hand it the plan. Add or extend a test when the
+   change is testable. `lib/db.js` cannot be imported under Jest (it opens SQLite
+   at module scope), so logic worth testing should be extracted into a pure
+   module rather than left inline.
+5. **Review (Opus).** Read `git diff`, not the whole files. If it is wrong, send
+   the corrections back to `implementer` rather than re-editing in the main
+   session. Check by eye what lint cannot: un-awaited async helpers (rule 1).
+6. `npm run verify`, then set `status: done` and run `npm run backlog`.
+7. Commit. The pre-commit hook re-runs `verify`.
+
+Skip the delegation for a change of a few lines — writing the plan would cost
+more than making the edit.
 
 Do not close a ticket that is partly done. Split it and say what is left.
 
