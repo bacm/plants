@@ -12,21 +12,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { GlassCard } from '../../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../../lib/theme';
 import { getZones, getPlantsByZoneWithImages, getZoneContextInfo } from '../../../lib/db';
-
-const SUN_LABELS = {
-  full_sun: 'Plein Soleil',
-  partial: 'Mi-Ombre',
-  shade: 'Ombre',
-};
-
-const REMINDER_LABELS = {
-  water: 'arrosage',
-  prune: 'taille',
-  fertilize: 'fertilisation',
-  deadhead: 'défloraison',
-  winter_prep: 'préparation hivernale',
-  custom: 'rappel',
-};
+import { SUN, REMINDER_KINDS, labelFor } from '../../../lib/enums';
 
 function getContextLine(info) {
   if (!info) return null;
@@ -51,14 +37,15 @@ function getContextLine(info) {
     const days = Math.floor(
       (new Date(nextReminder.nextDueDate).getTime() - Date.now()) / 86400000
     );
-    const kind = REMINDER_LABELS[nextReminder.kind] || nextReminder.kind;
+    const kind =
+      REMINDER_KINDS.find((k) => k.value === nextReminder.kind)?.noun || nextReminder.kind;
     if (days <= 0)
       return `${kind.charAt(0).toUpperCase() + kind.slice(1)} : aujourd'hui`;
     return `Prochain ${kind} : ${days} jour${days > 1 ? 's' : ''}`;
   }
 
   if (sunInfo?.sun) {
-    return `Exposition : ${SUN_LABELS[sunInfo.sun] || sunInfo.sun}`;
+    return `Exposition : ${labelFor(SUN, sunInfo.sun) || sunInfo.sun}`;
   }
 
   return null;

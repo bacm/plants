@@ -20,8 +20,8 @@ import {
   markReminderDone,
   createCareLog,
 } from '../../lib/db';
+import { MONTH_NAMES } from '../../lib/months';
 
-const MONTHS_FULL = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juil.', 'Août', 'Sept.', 'Oct.', 'Nov.', 'Déc.'];
 const HEADER_SUBTITLE = 'En ce moment : La floraison de printemps bat son plein.';
 const SETTINGS_BLUE = '#3B82F6';
 const CARD_WIDTH = 168;
@@ -82,8 +82,8 @@ export default function Dashboard() {
 
   const periodLabel = (p) => {
     if (!p.bloomStartMonth || !p.bloomEndMonth) return '';
-    const start = MONTHS_FULL[p.bloomStartMonth - 1];
-    const end = MONTHS_FULL[p.bloomEndMonth - 1];
+    const start = MONTH_NAMES[p.bloomStartMonth - 1];
+    const end = MONTH_NAMES[p.bloomEndMonth - 1];
     return start === end ? start : `${start} - ${end}`;
   };
 

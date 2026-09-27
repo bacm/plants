@@ -32,41 +32,9 @@ import {
   deletePlant,
   deleteCareLog,
 } from '../../lib/db';
+import { CARE_TYPES, REMINDER_KINDS, SUN, WATER, PLANT_TYPES, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY, labelFor, iconFor } from '../../lib/enums';
+import { monthShort } from '../../lib/months';
 
-const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sep','Oct','Nov','Déc'];
-const CARE_LABELS = {
-  watered: 'Arrosé',
-  pruned: 'Taillé',
-  fertilized: 'Fertilisé',
-  deadheaded: 'Fleurs fanées coupées',
-  treated: 'Traité',
-  repotted: 'Rempoté',
-  planted: 'Planté',
-  moved: 'Déplacé',
-};
-const REMINDER_LABELS = {
-  water: 'Arroser',
-  prune: 'Tailler',
-  fertilize: 'Fertiliser',
-  deadhead: 'Couper fleurs fanées',
-  winter_prep: "Préparer l'hiver",
-  custom: 'Autre',
-};
-const SUN_LABELS = { full_sun: 'Plein soleil', partial: 'Mi-ombre', shade: 'Ombre' };
-const WATER_LABELS = { low: 'Faible', medium: 'Moyen', high: 'Élevé' };
-const TYPE_LABELS = {
-  perennial: 'Vivace', annual: 'Annuelle', shrub: 'Arbuste', tree: 'Arbre',
-  bulb: 'Bulbe', groundcover: 'Couvre-sol', vine: 'Grimpante',
-};
-const TYPE_ICONS = {
-  perennial: '🌿', annual: '🌻', shrub: '🌳', tree: '🌲',
-  bulb: '🌷', groundcover: '🍀', vine: '🌾',
-};
-
-const SOIL_TYPE_LABELS = { clay: 'Argileux', sandy: 'Sableux', loamy: 'Limoneux', peaty: 'Tourbeux', rocky: 'Caillouteux' };
-const SOIL_PH_LABELS = { acidic: 'Acide', neutral: 'Neutre', alkaline: 'Alcalin' };
-const PROPAGATION_LABELS = { seed: 'Semis', cutting: 'Bouture', division: 'Division', layering: 'Marcotte', grafting: 'Greffe' };
-const TOXICITY_LABELS = { none: 'Aucune', pets: 'Animaux', humans: 'Humains', all: 'Tous' };
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HERO_HEIGHT = SCREEN_HEIGHT * 0.38;
@@ -74,8 +42,8 @@ const INFO_CARD_WIDTH = (SCREEN_WIDTH - spacing.lg * 2 - spacing.sm * 2) / 3;
 
 function getQuickTags(plant) {
   const tags = [];
-  if (plant.type && TYPE_LABELS[plant.type]) {
-    tags.push({ icon: TYPE_ICONS[plant.type] || '🌱', label: TYPE_LABELS[plant.type] });
+  if (plant.type && labelFor(PLANT_TYPES, plant.type)) {
+    tags.push({ icon: iconFor(PLANT_TYPES, plant.type) || '🌱', label: labelFor(PLANT_TYPES, plant.type) });
   }
   if (plant.minTemperature != null) {
     if (plant.minTemperature <= -15) tags.push({ icon: '❄️', label: 'Très rustique' });
@@ -280,13 +248,13 @@ export default function PlantDetailScreen() {
             <View style={styles.section}>
               <Text style={styles.ficheTechTitle}>FICHE TECHNIQUE</Text>
               <View style={styles.infoGrid}>
-                <InfoCard icon="☀️" value={SUN_LABELS[plant.sun] || '—'} />
-                <InfoCard icon="💧" value={WATER_LABELS[plant.water] || '—'} />
+                <InfoCard icon="☀️" value={labelFor(SUN, plant.sun) || '—'} />
+                <InfoCard icon="💧" value={labelFor(WATER, plant.water) || '—'} />
                 <InfoCard
                   icon="📅"
                   value={
                     plant.bloomStartMonth != null && plant.bloomEndMonth != null
-                      ? `${MONTHS[plant.bloomStartMonth - 1]} — ${MONTHS[plant.bloomEndMonth - 1]}`
+                      ? `${monthShort(plant.bloomStartMonth)} — ${monthShort(plant.bloomEndMonth)}`
                       : '—'
                   }
                 />
@@ -316,8 +284,8 @@ export default function PlantDetailScreen() {
                 <>
                   <Text style={styles.ficheTechTitle}>SOL</Text>
                   <View style={styles.infoGrid}>
-                    <InfoCard icon="🪨" value={SOIL_TYPE_LABELS[plant.soilType] || '—'} />
-                    <InfoCard icon="⚗️" value={SOIL_PH_LABELS[plant.soilPH] || '—'} />
+                    <InfoCard icon="🪨" value={labelFor(SOIL_TYPES, plant.soilType) || '—'} />
+                    <InfoCard icon="⚗️" value={labelFor(SOIL_PH, plant.soilPH) || '—'} />
                   </View>
                 </>
               )}
@@ -339,7 +307,7 @@ export default function PlantDetailScreen() {
                     <GlassCard style={styles.notesCard}>
                       <View style={styles.notesRow}>
                         <Text style={styles.notesIcon}>✂️</Text>
-                        <Text style={styles.notesLabel}>Taille{plant.pruningMonth ? ` (${MONTHS[plant.pruningMonth - 1]})` : ''} :</Text>
+                        <Text style={styles.notesLabel}>Taille{plant.pruningMonth ? ` (${monthShort(plant.pruningMonth)})` : ''} :</Text>
                       </View>
                       <Text style={styles.notesTextNew}>{plant.pruning}</Text>
                     </GlassCard>
@@ -362,7 +330,7 @@ export default function PlantDetailScreen() {
                   <Text style={styles.ficheTechTitle}>SANTÉ</Text>
                   <View style={styles.infoGrid}>
                     {plant.toxicity && plant.toxicity !== 'none' && (
-                      <InfoCard icon="⚠️" value={`Toxique: ${TOXICITY_LABELS[plant.toxicity]}`} />
+                      <InfoCard icon="⚠️" value={`Toxique: ${labelFor(TOXICITY, plant.toxicity)}`} />
                     )}
                     {plant.toxicity === 'none' && (
                       <InfoCard icon="✅" value="Non toxique" />
@@ -385,7 +353,7 @@ export default function PlantDetailScreen() {
                 <>
                   <Text style={styles.ficheTechTitle}>MULTIPLICATION</Text>
                   <View style={styles.infoGrid}>
-                    <InfoCard icon="🌱" value={PROPAGATION_LABELS[plant.propagation] || '—'} />
+                    <InfoCard icon="🌱" value={labelFor(PROPAGATION, plant.propagation) || '—'} />
                   </View>
                 </>
               )}
@@ -396,7 +364,7 @@ export default function PlantDetailScreen() {
                   <Text style={styles.ficheTechTitle}>RÉCOLTE</Text>
                   <View style={styles.infoGrid}>
                     {plant.harvestMonthStart != null && plant.harvestMonthEnd != null && (
-                      <InfoCard icon="📅" value={`${MONTHS[plant.harvestMonthStart - 1]} — ${MONTHS[plant.harvestMonthEnd - 1]}`} />
+                      <InfoCard icon="📅" value={`${monthShort(plant.harvestMonthStart)} — ${monthShort(plant.harvestMonthEnd)}`} />
                     )}
                   </View>
                   {plant.harvest && (
@@ -511,7 +479,7 @@ export default function PlantDetailScreen() {
                   <GlassCard key={r.id} style={styles.reminderCard}>
                     <View style={styles.reminderRow}>
                       <View style={styles.reminderInfo}>
-                        <Text style={styles.reminderKind}>{REMINDER_LABELS[r.kind]}</Text>
+                        <Text style={styles.reminderKind}>{labelFor(REMINDER_KINDS, r.kind)}</Text>
                         <Text style={styles.reminderDue}>Prochaine : {r.nextDueDate}</Text>
                       </View>
                       <TouchableOpacity onPress={() => handleReminderDone(r)} style={styles.doneBtn}>
@@ -536,7 +504,7 @@ export default function PlantDetailScreen() {
                   <GlassCard key={log.id} style={styles.logCard}>
                     <View style={styles.logRow}>
                       <View style={styles.logInfo}>
-                        <Text style={styles.logType}>{CARE_LABELS[log.type]}</Text>
+                        <Text style={styles.logType}>{labelFor(CARE_TYPES, log.type)}</Text>
                         <Text style={styles.logDate}>{log.date}</Text>
                       </View>
                       <TouchableOpacity onPress={() => handleDeleteCareLog(log)}>

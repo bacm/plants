@@ -11,10 +11,9 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
-import { colors, spacing, typography, radius } from '../../lib/theme';
-import { getPlants, getZones, SUN } from '../../lib/db';
-
-const SUN_LABELS = { full_sun: 'Plein soleil', partial: 'Mi-ombre', shade: 'Ombre' };
+import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
+import { getPlants, getZones } from '../../lib/db';
+import { SUN, labelFor } from '../../lib/enums';
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -107,14 +106,14 @@ export default function LibraryScreen() {
         </View>
 
         <View style={styles.sunFilters}>
-          {SUN.map((s) => (
+          {SUN.map(({ value: s, label }) => (
             <TouchableOpacity
               key={s}
               onPress={() => setSunFilter(sunFilter === s ? null : s)}
               style={[styles.sunPill, sunFilter === s && styles.sunPillActive]}
             >
               <Text style={[styles.sunPillText, sunFilter === s && styles.sunPillTextActive]}>
-                {SUN_LABELS[s]}
+                {label}
               </Text>
             </TouchableOpacity>
           ))}
@@ -143,7 +142,7 @@ export default function LibraryScreen() {
                     <View style={styles.plantInfo}>
                       <Text style={styles.plantName}>{p.name}</Text>
                       <Text style={styles.meta}>
-                        {p.zoneName || 'Sans zone'} · {SUN_LABELS[p.sun] || p.sun}
+                        {p.zoneName || 'Sans zone'} · {labelFor(SUN, p.sun) || p.sun}
                       </Text>
                     </View>
                     <Text style={styles.chevron}>→</Text>
@@ -167,16 +166,6 @@ export default function LibraryScreen() {
       </ScrollView>
     </View>
   );
-}
-
-function colorHex(color) {
-  if (!color) return colors.dark.sage;
-  const c = (color || '').toLowerCase();
-  const map = { rose: '#C9A9A6', rouge: '#B85450', blanc: '#E8E4DF', jaune: '#D4B854', bleu: '#6B8BAA', violet: '#B8A9C9', vert: '#6B9B7A', orange: '#C98B5A' };
-  for (const [k, v] of Object.entries(map)) {
-    if (c.includes(k)) return v;
-  }
-  return colors.dark.accentSoft;
 }
 
 const styles = StyleSheet.create({

@@ -13,18 +13,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
-import { getPlantById, createCareLog, addPhoto, CARE_TYPES } from '../../lib/db';
-
-const CARE_LABELS = {
-  watered: 'Arrosé',
-  pruned: 'Taillé',
-  fertilized: 'Fertilisé',
-  deadheaded: 'Fleurs fanées coupées',
-  treated: 'Traité',
-  repotted: 'Rempoté',
-  planted: 'Planté',
-  moved: 'Déplacé',
-};
+import { getPlantById, createCareLog, addPhoto } from '../../lib/db';
+import { CARE_TYPES } from '../../lib/enums';
 
 export default function LogCareScreen() {
   const { plantId } = useLocalSearchParams();
@@ -95,13 +85,13 @@ export default function LogCareScreen() {
           <GlassCard>
             <Text style={styles.label}>Type de soin</Text>
             <View style={styles.pills}>
-              {CARE_TYPES.map((t) => (
+              {CARE_TYPES.map(({ value: t, label }) => (
                 <TouchableOpacity
                   key={t}
                   onPress={() => setType(t)}
                   style={[styles.pill, type === t && styles.pillActive]}
                 >
-                  <Text style={[styles.pillText, type === t && styles.pillTextActive]}>{CARE_LABELS[t]}</Text>
+                  <Text style={[styles.pillText, type === t && styles.pillTextActive]}>{label}</Text>
                 </TouchableOpacity>
               ))}
             </View>

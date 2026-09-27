@@ -17,7 +17,9 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
-import { createPlant, getZones, createReminder, PLANT_TYPES, SUN, WATER, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY } from '../../lib/db';
+import { createPlant, getZones, createReminder } from '../../lib/db';
+import { PLANT_TYPES, SUN, WATER, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY } from '../../lib/enums';
+import { MONTH_SHORT } from '../../lib/months';
 import { searchPlants, normalizeToForm } from '../../lib/plantSearch';
 import { emptyPlantForm, formToPlantValues } from '../../lib/plantFields';
 
@@ -25,26 +27,6 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const SUN_LABELS = { full_sun: 'Plein soleil', partial: 'Mi-ombre', shade: 'Ombre' };
-const WATER_LABELS = { low: 'Faible', medium: 'Moyen', high: 'Élevé' };
-const TYPE_LABELS = {
-  perennial: 'Vivace',
-  annual: 'Annuelle',
-  shrub: 'Arbuste',
-  tree: 'Arbre',
-  bulb: 'Bulbe',
-  groundcover: 'Couvre-sol',
-  vine: 'Grimpante',
-};
-
-const SUN_ICONS = { full_sun: '☀', partial: '⛅', shade: '☁' };
-const WATER_ICONS = { low: '💧', medium: '💧💧', high: '💧💧💧' };
-
-const SOIL_TYPE_LABELS = { clay: 'Argileux', sandy: 'Sableux', loamy: 'Limoneux', peaty: 'Tourbeux', rocky: 'Caillouteux' };
-const SOIL_PH_LABELS = { acidic: 'Acide', neutral: 'Neutre', alkaline: 'Alcalin' };
-const PROPAGATION_LABELS = { seed: 'Semis', cutting: 'Bouture', division: 'Division', layering: 'Marcotte', grafting: 'Greffe' };
-const TOXICITY_LABELS = { none: 'Aucune', pets: 'Animaux', humans: 'Humains', all: 'Tous' };
-const MONTHS_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
 
 export default function NewPlantScreen() {
   const router = useRouter();
@@ -215,14 +197,14 @@ export default function NewPlantScreen() {
             {/* Type */}
             <Text style={styles.label}>Type</Text>
             <View style={styles.pills}>
-              {PLANT_TYPES.map((t) => (
+              {PLANT_TYPES.map(({ value: t, label }) => (
                 <TouchableOpacity
                   key={t}
                   onPress={() => setField('type', t)}
                   style={[styles.pill, form.type === t && styles.pillActive]}
                 >
                   <Text style={[styles.pillText, form.type === t && styles.pillTextActive]}>
-                    {TYPE_LABELS[t]}
+                    {label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -236,18 +218,18 @@ export default function NewPlantScreen() {
             <View style={styles.dualCol}>
               <Text style={styles.labelSmall}>Exposition</Text>
               <View style={styles.segmented}>
-                {SUN.map((s) => (
+                {SUN.map(({ value: s, label, icon }) => (
                   <TouchableOpacity
                     key={s}
                     onPress={() => setField('sun', s)}
                     style={[styles.segBtn, form.sun === s && styles.segBtnActive]}
                   >
-                    <Text style={styles.segIcon}>{SUN_ICONS[s]}</Text>
+                    <Text style={styles.segIcon}>{icon}</Text>
                     <Text
                       style={[styles.segLabel, form.sun === s && styles.segLabelActive]}
                       numberOfLines={1}
                     >
-                      {SUN_LABELS[s]}
+                      {label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -256,18 +238,18 @@ export default function NewPlantScreen() {
             <View style={styles.dualCol}>
               <Text style={styles.labelSmall}>Arrosage</Text>
               <View style={styles.segmented}>
-                {WATER.map((w) => (
+                {WATER.map(({ value: w, label, icon }) => (
                   <TouchableOpacity
                     key={w}
                     onPress={() => setField('water', w)}
                     style={[styles.segBtn, form.water === w && styles.segBtnActive]}
                   >
-                    <Text style={styles.segIcon}>{WATER_ICONS[w]}</Text>
+                    <Text style={styles.segIcon}>{icon}</Text>
                     <Text
                       style={[styles.segLabel, form.water === w && styles.segLabelActive]}
                       numberOfLines={1}
                     >
-                      {WATER_LABELS[w]}
+                      {label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -413,14 +395,14 @@ export default function NewPlantScreen() {
 
               <Text style={styles.label}>Type de sol</Text>
               <View style={styles.pills}>
-                {SOIL_TYPES.map((s) => (
+                {SOIL_TYPES.map(({ value: s, label }) => (
                   <TouchableOpacity
                     key={s}
                     onPress={() => setField('soilType', s)}
                     style={[styles.pill, form.soilType === s && styles.pillActive]}
                   >
                     <Text style={[styles.pillText, form.soilType === s && styles.pillTextActive]}>
-                      {SOIL_TYPE_LABELS[s]}
+                      {label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -428,14 +410,14 @@ export default function NewPlantScreen() {
 
               <Text style={styles.label}>pH du sol</Text>
               <View style={styles.pills}>
-                {SOIL_PH.map((p) => (
+                {SOIL_PH.map(({ value: p, label }) => (
                   <TouchableOpacity
                     key={p}
                     onPress={() => setField('soilPH', p)}
                     style={[styles.pill, form.soilPH === p && styles.pillActive]}
                   >
                     <Text style={[styles.pillText, form.soilPH === p && styles.pillTextActive]}>
-                      {SOIL_PH_LABELS[p]}
+                      {label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -471,7 +453,7 @@ export default function NewPlantScreen() {
                   >
                     <Text style={[styles.pillText, form.pruningMonth === null && styles.pillTextActive]}>—</Text>
                   </TouchableOpacity>
-                  {MONTHS_LABELS.map((m, i) => (
+                  {MONTH_SHORT.map((m, i) => (
                     <TouchableOpacity
                       key={i}
                       onPress={() => setField('pruningMonth', i + 1)}
@@ -504,14 +486,14 @@ export default function NewPlantScreen() {
                 >
                   <Text style={[styles.pillText, form.propagation === null && styles.pillTextActive]}>—</Text>
                 </TouchableOpacity>
-                {PROPAGATION.map((p) => (
+                {PROPAGATION.map(({ value: p, label }) => (
                   <TouchableOpacity
                     key={p}
                     onPress={() => setField('propagation', p)}
                     style={[styles.pill, form.propagation === p && styles.pillActive]}
                   >
                     <Text style={[styles.pillText, form.propagation === p && styles.pillTextActive]}>
-                      {PROPAGATION_LABELS[p]}
+                      {label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -532,14 +514,14 @@ export default function NewPlantScreen() {
 
               <Text style={styles.label}>Toxicité</Text>
               <View style={styles.pills}>
-                {TOXICITY.map((t) => (
+                {TOXICITY.map(({ value: t, label }) => (
                   <TouchableOpacity
                     key={t}
                     onPress={() => setField('toxicity', t)}
                     style={[styles.pill, form.toxicity === t && styles.pillActive]}
                   >
                     <Text style={[styles.pillText, form.toxicity === t && styles.pillTextActive]}>
-                      {TOXICITY_LABELS[t]}
+                      {label}
                     </Text>
                   </TouchableOpacity>
                 ))}

@@ -10,13 +10,9 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
-import { colors, spacing, typography, radius } from '../../lib/theme';
+import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
 import { getPlantsBloomingInMonth } from '../../lib/db';
-
-const MONTHS = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre',
-];
+import { MONTH_NAMES, MONTH_SHORT } from '../../lib/months';
 
 export default function BloomScreen() {
   const router = useRouter();
@@ -63,7 +59,7 @@ export default function BloomScreen() {
 
         <View style={styles.monthStrip}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.monthStripContent}>
-            {MONTHS.map((name, i) => {
+            {MONTH_SHORT.map((name, i) => {
               const month = i + 1;
               const isSelected = month === selectedMonth;
               return (
@@ -73,7 +69,7 @@ export default function BloomScreen() {
                   style={[styles.monthPill, isSelected && styles.monthPillSelected]}
                 >
                   <Text style={[styles.monthPillText, isSelected && styles.monthPillTextSelected]}>
-                    {name.slice(0, 3)}
+                    {name}
                   </Text>
                 </TouchableOpacity>
               );
@@ -83,7 +79,7 @@ export default function BloomScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
-            {MONTHS[selectedMonth - 1]} — {plants.length} plante{plants.length !== 1 ? 's' : ''} en fleurs
+            {MONTH_NAMES[selectedMonth - 1]} — {plants.length} plante{plants.length !== 1 ? 's' : ''} en fleurs
           </Text>
           {plants.length === 0 ? (
             <GlassCard>
@@ -119,16 +115,6 @@ export default function BloomScreen() {
       </ScrollView>
     </View>
   );
-}
-
-function colorHex(color) {
-  if (!color) return colors.dark.sage;
-  const c = (color || '').toLowerCase();
-  const map = { rose: '#C9A9A6', rouge: '#B85450', blanc: '#E8E4DF', jaune: '#D4B854', bleu: '#6B8BAA', violet: '#B8A9C9', vert: '#6B9B7A', orange: '#C98B5A' };
-  for (const [k, v] of Object.entries(map)) {
-    if (c.includes(k)) return v;
-  }
-  return colors.dark.accentSoft;
 }
 
 const styles = StyleSheet.create({

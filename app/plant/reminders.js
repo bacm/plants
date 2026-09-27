@@ -12,16 +12,8 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
-import { getPlantById, getRemindersByPlantId, createReminder, deleteReminder, markReminderDone, REMINDER_KINDS } from '../../lib/db';
-
-const REMINDER_LABELS = {
-  water: 'Arroser',
-  prune: 'Tailler',
-  fertilize: 'Fertiliser',
-  deadhead: 'Couper fleurs fanées',
-  winter_prep: 'Préparer l’hiver',
-  custom: 'Autre',
-};
+import { getPlantById, getRemindersByPlantId, createReminder, deleteReminder, markReminderDone } from '../../lib/db';
+import { REMINDER_KINDS, labelFor } from '../../lib/enums';
 
 export default function RemindersScreen() {
   const { plantId } = useLocalSearchParams();
@@ -103,13 +95,13 @@ export default function RemindersScreen() {
           <GlassCard>
             <Text style={styles.label}>Type</Text>
             <View style={styles.pills}>
-              {REMINDER_KINDS.map((k) => (
+              {REMINDER_KINDS.map(({ value: k, label }) => (
                 <TouchableOpacity
                   key={k}
                   onPress={() => setKind(k)}
                   style={[styles.pill, kind === k && styles.pillActive]}
                 >
-                  <Text style={[styles.pillText, kind === k && styles.pillTextActive]}>{REMINDER_LABELS[k]}</Text>
+                  <Text style={[styles.pillText, kind === k && styles.pillTextActive]}>{label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -147,7 +139,7 @@ export default function RemindersScreen() {
               <GlassCard key={r.id} style={styles.reminderCard}>
                 <View style={styles.reminderRow}>
                   <View style={styles.reminderInfo}>
-                    <Text style={styles.reminderKind}>{REMINDER_LABELS[r.kind]}</Text>
+                    <Text style={styles.reminderKind}>{labelFor(REMINDER_KINDS, r.kind)}</Text>
                     <Text style={styles.reminderMeta}>Tous les {r.frequencyDays} j · Prochaine : {r.nextDueDate}</Text>
                   </View>
                   <View style={styles.reminderActions}>

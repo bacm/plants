@@ -10,7 +10,7 @@ import {
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../../components/GradientHero';
 import { GlassCard } from '../../../components/GlassCard';
-import { colors, spacing, typography, radius } from '../../../lib/theme';
+import { colors, spacing, typography, radius, colorHex } from '../../../lib/theme';
 import { getZones, getPlants } from '../../../lib/db';
 
 export default function ZoneDetailScreen() {
@@ -115,16 +115,6 @@ export default function ZoneDetailScreen() {
       </ScrollView>
     </View>
   );
-}
-
-function colorHex(color) {
-  if (!color) return colors.dark.sage;
-  const c = (color || '').toLowerCase();
-  const map = { rose: '#C9A9A6', rouge: '#B85450', blanc: '#E8E4DF', jaune: '#D4B854', bleu: '#6B8BAA', violet: '#B8A9C9', vert: '#6B9B7A', orange: '#C98B5A' };
-  for (const [k, v] of Object.entries(map)) {
-    if (c.includes(k)) return v;
-  }
-  return colors.dark.accentSoft;
 }
 
 const styles = StyleSheet.create({

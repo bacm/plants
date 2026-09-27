@@ -1,7 +1,7 @@
 ---
 id: 011
 title: Enum labels and month names are duplicated across seven files
-status: open
+status: done
 priority: P2
 type: refactor
 ---
@@ -34,11 +34,11 @@ describe them.
 
 ## Acceptance criteria
 
-- [ ] One module owns the month names, in both full and abbreviated form
-- [ ] One module owns the label map for each enum exported by `lib/db.js`
-- [ ] `colorHex` exists once
-- [ ] No screen declares a label map or a month array
-- [ ] A test asserts every enum value has a label, so adding a value without its
+- [x] One module owns the month names, in both full and abbreviated form
+- [x] One module owns the label map for each enum exported by `lib/db.js`
+- [x] `colorHex` exists once
+- [x] No screen declares a label map or a month array
+- [x] A test asserts every enum value has a label, so adding a value without its
       label fails the build
 
 ## Notes
@@ -49,3 +49,7 @@ field's definition.
 
 Deliberately not an i18n framework: the UI is French-only today and introducing
 one is a separate decision.
+
+Resolved label conflicts: sun labels use "Plein soleil"/"Mi-ombre"; month
+abbreviations drop the trailing period ("Fév"); the dashboard now shows full month
+names. Reminder kinds carry both a verb `label` (buttons) and a `noun` (sentences).
