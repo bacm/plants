@@ -1,7 +1,7 @@
 ---
 id: 017
 title: Decide whether to enforce Prettier formatting repo-wide
-status: open
+status: done
 priority: P3
 type: chore
 ---
@@ -31,11 +31,11 @@ One of the two:
 
 **Option A — enforce it**
 
-- [ ] `npm run format` is run once across the repo, as its own commit touching
+- [x] `npm run format` is run once across the repo, as its own commit touching
       nothing but formatting
-- [ ] That commit's SHA is added to `.git-blame-ignore-revs` so `git blame` skips it
-- [ ] `format:check` is added to `npm run verify` and to CI
-- [ ] The commit is not mixed with any behavioural change
+- [x] That commit's SHA is added to `.git-blame-ignore-revs` so `git blame` skips it
+- [x] `format:check` is added to `npm run verify` and to CI
+- [x] The commit is not mixed with any behavioural change
 
 **Option B — drop it**
 
@@ -49,3 +49,6 @@ Option A is the usual answer for a project where an agent writes most of the cod
 because consistent formatting is what keeps diffs reviewable. The one-time
 reformat is best done when the working tree is otherwise clean — so after 003 is
 resolved, not before.
+
+Resolved with option A. The reformat is 75b39d6, alone in its commit and listed
+in `.git-blame-ignore-revs` (`npm run setup` configures blame to use it).

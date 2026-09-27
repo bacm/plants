@@ -37,6 +37,10 @@ case "$FILE" in
   *) exit 0 ;;
 esac
 
+# Format first, so `format:check` in verify never fails on a file Claude wrote.
+# Prettier reads .prettierignore itself; a formatting failure is left to verify.
+(cd "$REPO" && npx --no-install prettier --write --log-level warn "$FILE" >/dev/null 2>&1)
+
 OUTPUT="$(cd "$REPO" && npx --no-install eslint --format stylish "$FILE" 2>&1)"
 STATUS=$?
 
