@@ -408,4 +408,53 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Ce mois-ci au jardin')).toBeVisible();
     await expect(visibleText(page, `Tailler · ${plantName}`)).toHaveCount(0);
   });
+
+  // Ticket 024: a plant with a declared bloom range shows up as a row in the
+  // bloom tab's "Sur l'année" view.
+  test('a plant with bloom months shows up in the year bloom view', async ({ page }) => {
+    const zoneName = `E2E Bloom Zone ${Date.now()}`;
+    const plantName = `E2E Bloom Plant ${Date.now()}`;
+
+    await page.goto('/');
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+
+    await visibleText(page, 'Zones').click();
+    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await visibleText(page, '+ Créer une zone').click();
+    await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
+    await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
+    await visibleText(page, 'Créer la zone').click();
+    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+
+    await visibleText(page, zoneName).click();
+    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
+    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
+    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await visibleText(page, zoneName).click();
+    // "Floraison" (start/end month) lives in the collapsible "Plus de
+    // details" section, same as "Mois de taille" in the test above. Its
+    // "Fin" placeholder is shared with the harvest range further down the
+    // same expanded section, so scope to the first (bloom) occurrence.
+    await page.getByText('Plus de details', { exact: false }).click();
+    await page.getByPlaceholder('Debut').fill('5');
+    await page.getByPlaceholder('Fin', { exact: true }).first().fill('7');
+    await visibleText(page, 'Enregistrer').click();
+    await expect(visibleText(page, plantName)).toBeVisible();
+
+    // --- Bloom tab: "Sur l'année" shows this plant's row ---
+    await visibleText(page, '‹ Retour').click(); // plant detail -> zone detail
+    await expect(visibleText(page, '1 plante')).toBeVisible();
+    await visibleText(page, 'Floraison').click(); // zone detail (tabs) -> bloom tab
+    await expect(visibleText(page, 'Ce qui fleurit par mois')).toBeVisible();
+    await visibleText(page, 'Sur l’année').click();
+    // The zone-detail screen we came from stays mounted (hidden but not
+    // aria-hidden-filtered by :visible) behind the tabs, and also shows the
+    // plant name -- see the comment on visibleText() above. Assert on the
+    // row's accessibilityLabel instead: getByLabel only matches the
+    // accessibility tree, which does exclude that hidden screen.
+    await expect(
+      page.getByLabel(`${plantName} : fleurit de Mai à Juillet`, { exact: true })
+    ).toBeVisible();
+  });
 });
