@@ -1,7 +1,7 @@
 ---
 id: 006
 title: Deleting a photo does not refresh the screen
-status: open
+status: done
 priority: P1
 type: bug
 ---
@@ -25,13 +25,17 @@ It disappears only after a manual pull-to-refresh, which reads as a broken app.
 
 ## Acceptance criteria
 
-- [ ] `deletePhoto` is awaited before `load()`
-- [ ] The cover photo path (`app/plant/[id].js`, hero long-press) is checked too —
+- [x] `deletePhoto` is awaited before `load()`
+- [x] The cover photo path (`app/plant/[id].js`, hero long-press) is checked too —
       it shares the same handler
-- [ ] Every other call to an `async` `lib/db` function in `app/` is audited for the
+- [x] Every other call to an `async` `lib/db` function in `app/` is audited for the
       same shape and awaited
 
 ## Notes
 
 The sibling call at `:245` (`deletePlant(id); router.replace(...)`) is fine —
 `deletePlant` is synchronous. Worth confirming rather than assuming while auditing.
+
+Audit (2026-09-27): the async exports of `lib/db.js` are `getPlantById`,
+`markReminderDone`, `deletePhoto` and `getZoneContextInfo`. Every call site in
+`app/` is awaited, `Promise.all`'d, or a deliberate `.then` setter in an effect.

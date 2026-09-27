@@ -227,7 +227,7 @@ export default function PlantDetailScreen() {
   const handleDeletePhoto = (photo) => {
     Alert.alert('Supprimer la photo', 'Cette photo sera supprimée.', [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: async () => { deletePhoto(photo.id); await load(); } },
+      { text: 'Supprimer', style: 'destructive', onPress: async () => { await deletePhoto(photo.id); await load(); } },
     ]);
   };
 
