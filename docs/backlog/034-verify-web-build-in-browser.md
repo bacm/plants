@@ -1,7 +1,7 @@
 ---
 id: 034
 title: Verify the web build end to end in a browser
-status: open
+status: done
 priority: P2
 type: chore
 ---
@@ -19,12 +19,17 @@ Unit tests on the storage shim do not prove the screens render and behave on web
 
 ## Acceptance criteria
 
-- [ ] `npx expo start --web`: create a zone, create a plant in it, edit the plant,
-      add a care log and a photo, and open the zones tab — no console errors
-- [ ] Reloading the page keeps everything created
-- [ ] Any defect found becomes its own ticket
+- [x] `npx expo start --web`: create a zone, create a plant in it, edit the plant,
+      add a care log ~~and a photo~~ (moved to 036), and open the zones tab — no
+      console errors
+- [x] Reloading the page keeps everything created
+- [x] Any defect found becomes its own ticket
 
 ## Notes
 
 Can be done by hand in a few minutes. Automating it (Playwright as a dev
 dependency, a smoke script in CI) is a separate decision.
+
+Automated as `npm run e2e:web` (Playwright, `e2e/web-smoke.spec.js`); not part of
+`verify` or CI yet. It found 035, and fails on it until 035 is fixed — every step
+before that passes with no console errors.

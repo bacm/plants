@@ -19,6 +19,7 @@
     "backlog": "node scripts/backlog.mjs",
     "backlog:check": "node scripts/backlog.mjs --check",
     "bundle": "expo export --output-dir .bundle-check --clear",
+    "e2e:web": "playwright test",
 
     "verify": "npm run lint && npm run test && npm run secrets && npm run backlog:check",
     "verify:full": "npm run verify && npm run bundle"
@@ -48,6 +49,7 @@
   },
   "private": true,
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "babel-preset-expo": "~55.0.0",
     "eslint": "^9.39.5",
     "eslint-config-expo": "^55.0.1",

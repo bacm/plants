@@ -13,6 +13,9 @@ module.exports = [
       '.expo/**',
       'ios/**',
       'android/**',
+      // Playwright's own output (npm run e2e:web); see .gitignore.
+      'test-results/**',
+      'playwright-report/**',
       // Leftover Expo template entry points; `main` is expo-router/entry.
       // Tracked by docs/backlog/013-remove-dead-code.md.
       'App.js',
@@ -81,6 +84,23 @@ module.exports = [
       globals: {
         process: 'readonly',
         console: 'readonly',
+      },
+    },
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
+    // Playwright config and specs run under Node/Playwright's test runner,
+    // not the app or Jest.
+    files: ['playwright.config.js', 'e2e/**/*.js'],
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        require: 'readonly',
+        module: 'readonly',
+        __dirname: 'readonly',
       },
     },
     rules: {

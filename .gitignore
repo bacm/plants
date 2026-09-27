@@ -56,3 +56,7 @@ deploy-iphone.sh
 server/.venv/
 __pycache__/
 .pytest_cache/
+
+# Playwright (npm run e2e:web)
+/test-results/
+/playwright-report/
