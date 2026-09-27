@@ -89,6 +89,9 @@ Each of these exists because it was violated and cost something.
    compare months in SQL. Validate input with `lib/validation.js`.
 8. **No new dependency without declaring it in `package.json`.** `@expo/vector-icons`
    worked for a while only because it sat in Expo's nested `node_modules`.
+   Expo SDK packages (`expo*`, `react`, `react-native*`, `jest-expo`…) are added
+   and updated with `npx expo install`, never plain `npm install` — the SDK pins
+   their versions, and Dependabot is configured to leave them alone.
 
 ## Working a ticket
 

@@ -5,24 +5,19 @@ updates:
     schedule:
       interval: 'weekly'
     open-pull-requests-limit: 5
-    groups:
-      expo:
-        patterns:
-          - 'expo*'
-          - 'react-native*'
-          - 'react'
-          - '@expo/*'
-        update-types:
-          - 'minor'
-          - 'patch'
+    # Packages pinned by the Expo SDK move only with `npx expo install --fix` or
+    # a deliberate SDK upgrade; Dependabot bumping them breaks the alignment.
     ignore:
-      - dependency-name: 'expo*'
-        update-types: ['version-update:semver-major']
-      - dependency-name: 'react-native*'
-        update-types: ['version-update:semver-major']
-      - dependency-name: 'react'
-        update-types: ['version-update:semver-major']
+      - dependency-name: 'expo'
+      - dependency-name: 'expo-*'
       - dependency-name: '@expo/*'
+      - dependency-name: 'jest-expo'
+      - dependency-name: 'eslint-config-expo'
+      - dependency-name: 'react'
+      - dependency-name: 'react-dom'
+      - dependency-name: 'react-native'
+      - dependency-name: 'react-native-*'
+      - dependency-name: 'eslint'
         update-types: ['version-update:semver-major']
 
   - package-ecosystem: 'pip'
