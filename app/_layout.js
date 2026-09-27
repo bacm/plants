@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initDb } from '../lib/db';
+import { colors } from '../lib/theme';
 
 export default function RootLayout() {
   useEffect(() => {
@@ -15,7 +16,7 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#1C1917' },
+          contentStyle: { backgroundColor: colors.dark.background },
           animation: 'slide_from_right',
         }}
       />
