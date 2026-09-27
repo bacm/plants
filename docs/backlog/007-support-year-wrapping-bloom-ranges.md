@@ -1,7 +1,7 @@
 ---
 id: 007
 title: Bloom periods that wrap the year never match
-status: open
+status: done
 priority: P1
 type: bug
 ---
@@ -29,10 +29,10 @@ ignored.
 
 ## Acceptance criteria
 
-- [ ] A month matches when `start <= end ? (m >= start && m <= end) : (m >= start || m <= end)`
-- [ ] The rule is implemented once, not repeated at each of the three query sites
-- [ ] `lib/db.web.js` uses the same rule
-- [ ] Tests cover a normal range (May–July), a wrapping range (Nov–Feb), a
+- [x] A month matches when `start <= end ? (m >= start && m <= end) : (m >= start || m <= end)`
+- [x] The rule is implemented once, not repeated at each of the three query sites
+- [x] `lib/db.web.js` uses the same rule
+- [x] Tests cover a normal range (May–July), a wrapping range (Nov–Feb), a
       single-month range (`start === end`), and a plant with no bloom months
 
 ## Notes
