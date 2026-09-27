@@ -140,6 +140,21 @@ test.describe('web smoke', () => {
     await visibleText(page, zoneName).click();
     await expect(visibleText(page, plantName)).toBeVisible();
 
+    // --- Ticket 048: a zone that already has a plant still offers
+    // "Ajouter une plante", and the form preselects that zone ---
+    const secondPlantName = `E2E Plant 2 ${Date.now()}`;
+    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
+    await page.getByPlaceholder('Nom de la plante *').fill(secondPlantName);
+    // Zone preselected via the zoneId route param -- save without touching
+    // the zone pill, then check the plant lands in this zone anyway.
+    await visibleText(page, 'Enregistrer').click();
+    await expect(visibleText(page, secondPlantName)).toBeVisible();
+    await visibleText(page, '‹ Retour').click(); // plant detail -> zone detail
+    await expect(visibleText(page, '2 plantes')).toBeVisible();
+    await expect(visibleText(page, plantName)).toBeVisible();
+    await expect(visibleText(page, secondPlantName)).toBeVisible();
+
     // --- Delete the zone: a confirmation-driven deletion (ticket 042) ---
     // window.confirm() on web; accept the browser-native dialog.
     page.once('dialog', (d) => d.accept());

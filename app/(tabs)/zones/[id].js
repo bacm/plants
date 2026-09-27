@@ -89,6 +89,12 @@ export default function ZoneDetailScreen() {
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={styles.actionBtn}
+              onPress={() => router.push(`/plant/new?zoneId=${zone.id}`)}
+              accessibilityLabel="Ajouter une plante">
+              <Text style={styles.actionBtnText}>+ Ajouter une plante</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionBtn}
               onPress={() => router.push(`/zone/edit?id=${zone.id}`)}
               accessibilityLabel="Modifier la zone">
               <Text style={styles.actionBtnText}>Modifier</Text>
@@ -109,9 +115,6 @@ export default function ZoneDetailScreen() {
                 Aucune plante dans cette zone. Ajoutez des plantes et assignez-les à « {zone.name}{' '}
                 ».
               </Text>
-              <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/plant/new')}>
-                <Text style={styles.addBtnText}>+ Ajouter une plante</Text>
-              </TouchableOpacity>
             </GlassCard>
           ) : (
             plants.map((p) => (
@@ -167,14 +170,6 @@ const styles = StyleSheet.create({
     color: colors.dark.textSecondary,
     marginBottom: spacing.md,
   },
-  addBtn: {
-    alignSelf: 'flex-start',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: colors.dark.accent,
-    borderRadius: radius.md,
-  },
-  addBtnText: { ...typography.label, color: '#fff' },
   cardWrap: { marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center' },
   colorDot: { width: 12, height: 12, borderRadius: 6, marginRight: spacing.md },

@@ -7,16 +7,22 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
-import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
+import { colors, spacing, typography, radius, shadow, colorHex } from '../../lib/theme';
 import { getPlants, getZones } from '../../lib/db';
 import { SUN, choices, isUnknown, labelFor } from '../../lib/enums';
 
+// Tab bar height from app/(tabs)/_layout.js -- the floating button sits above it.
+const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
+
 export default function LibraryScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [plants, setPlants] = useState([]);
   const [zones, setZones] = useState([]);
   const [search, setSearch] = useState('');
@@ -63,7 +69,10 @@ export default function LibraryScreen() {
     <View style={styles.container}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 72 },
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -163,17 +172,15 @@ export default function LibraryScreen() {
             ))
           )}
         </View>
-
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.primaryButton}
-            onPress={() => router.push('/plant/new')}
-            activeOpacity={0.85}>
-            <Text style={styles.primaryButtonText}>+ Ajouter une plante</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={{ height: 100 }} />
       </ScrollView>
+
+      <TouchableOpacity
+        style={[styles.fab, { bottom: TAB_BAR_HEIGHT + insets.bottom + spacing.md }, shadow.card]}
+        onPress={() => router.push('/plant/new')}
+        accessibilityLabel="Ajouter une plante"
+        accessibilityRole="button">
+        <Text style={styles.fabText}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -184,6 +191,17 @@ const styles = StyleSheet.create({
   scrollContent: { paddingBottom: 24 },
   heroTitle: { ...typography.display, color: colors.dark.text, marginBottom: 4 },
   heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  fab: {
+    position: 'absolute',
+    right: spacing.lg,
+    width: 56,
+    height: 56,
+    borderRadius: radius.full,
+    backgroundColor: colors.dark.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fabText: { fontSize: 28, lineHeight: 30, color: '#fff', fontWeight: '600' },
   searchRow: { paddingHorizontal: spacing.lg, marginTop: spacing.lg },
   searchCard: { paddingVertical: 12, paddingHorizontal: 16 },
   searchInput: {
@@ -228,12 +246,4 @@ const styles = StyleSheet.create({
   plantName: { ...typography.title, color: colors.dark.text },
   meta: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 2 },
   chevron: { ...typography.body, color: colors.dark.textSecondary },
-  footer: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  primaryButton: {
-    backgroundColor: colors.dark.accent,
-    paddingVertical: 16,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-  },
-  primaryButtonText: { ...typography.label, color: '#fff' },
 });

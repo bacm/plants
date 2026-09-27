@@ -1,7 +1,7 @@
 ---
 id: 048
 title: Add a plant from any zone, and keep the add button reachable
-status: open
+status: done
 priority: P2
 type: feature
 ---
@@ -19,8 +19,11 @@ button is a scroll away.
 
 ## Acceptance criteria
 
-- [ ] A zone always offers "Ajouter une plante", which opens the form with that
+- [x] A zone always offers "Ajouter une plante", which opens the form with that
       zone preselected
-- [ ] Bibliothèque has an add action that stays visible whatever the scroll
+- [x] Bibliothèque has an add action that stays visible whatever the scroll
       position (header action or floating button)
-- [ ] The e2e test adds a second plant from a zone and finds it in that zone
+- [x] The e2e test adds a second plant from a zone and finds it in that zone
+
+Zones always offer "+ Ajouter une plante" (zone preselected via `?zoneId=`);
+Bibliothèque has a floating "+" outside its scroll view.

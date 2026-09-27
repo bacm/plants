@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { showMessage } from '../../lib/dialogs';
-import { useRouter, useFocusEffect } from 'expo-router';
+import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
@@ -40,12 +40,14 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function NewPlantScreen() {
   const router = useRouter();
+  const { zoneId } = useLocalSearchParams();
   const [zones, setZones] = useState([]);
   const [form, setForm] = useState(emptyPlantForm);
   const [errors, setErrors] = useState({});
   const [noFlowering, setNoFlowering] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showMore, setShowMore] = useState(false);
+  const [preselectedZone, setPreselectedZone] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -63,6 +65,14 @@ export default function NewPlantScreen() {
       getZones().then(setZones);
     }, [])
   );
+
+  useEffect(() => {
+    if (preselectedZone || !zoneId || zones.length === 0) return;
+    if (zones.some((z) => z.id === zoneId)) {
+      setField('zoneId', zoneId);
+    }
+    setPreselectedZone(true);
+  }, [zoneId, zones, preselectedZone]);
 
   const handleSearch = async () => {
     if (searchQuery.trim().length < 2) return;
