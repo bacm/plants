@@ -6,10 +6,26 @@
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+
+    "setup": "git config core.hooksPath scripts/hooks && chmod +x scripts/*.sh scripts/hooks/* && echo 'Git hooks enabled (core.hooksPath=scripts/hooks).'",
+
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "format": "prettier --write .",
+    "secrets": "bash scripts/check-secrets.sh",
+    "backlog": "node scripts/backlog.mjs",
+    "backlog:check": "node scripts/backlog.mjs --check",
+    "bundle": "expo export --output-dir .bundle-check --clear",
+
+    "verify": "npm run lint && npm run test && npm run secrets && npm run backlog:check",
+    "verify:full": "npm run verify && npm run bundle"
   },
   "dependencies": {
     "@expo/metro-runtime": "~55.0.6",
+    "@expo/vector-icons": "^15.1.1",
     "expo": "~55.0.4",
     "expo-blur": "^55.0.8",
     "expo-constants": "^55.0.7",
@@ -32,6 +48,11 @@
   },
   "private": true,
   "devDependencies": {
-    "babel-preset-expo": "~55.0.0"
+    "babel-preset-expo": "~55.0.0",
+    "eslint": "^9.39.5",
+    "eslint-config-expo": "^55.0.1",
+    "jest": "^29.7.0",
+    "jest-expo": "~55.0.22",
+    "prettier": "^3.9.9"
   }
 }

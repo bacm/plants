@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-release/
+.bundle-check/
+.expo/
+ios/
+android/
+package-lock.json
+docs/backlog/INDEX.md

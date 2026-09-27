@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A second push to the same branch makes the first run's result irrelevant.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Local development runs a newer Node; CI pins the active LTS so a
+          # failure here is never "works on my machine".
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Steps are kept separate so the GitHub UI names the gate that failed
+      # rather than showing one opaque "verify" box.
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm run test
+
+      - name: Secret scan
+        run: npm run secrets
+
+      - name: Backlog index is current
+        run: npm run backlog:check
+
+      # The strongest cheap end-to-end signal for an Expo app: if Metro can
+      # resolve and bundle every route for all three platforms, no import is
+      # broken and no route is orphaned. Catches what unit tests cannot.
+      - name: Bundle (iOS, Android, web)
+        run: npm run bundle

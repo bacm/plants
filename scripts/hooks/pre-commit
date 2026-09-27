@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+#
+# Blocks a commit that would not survive CI. Enabled by `npm run setup`, which
+# points core.hooksPath at this directory so the hook is versioned with the code
+# instead of living only in one clone's .git/hooks.
+#
+# Bypass deliberately with `git commit --no-verify` when you know why.
+set -uo pipefail
+
+REPO="$(git rev-parse --show-toplevel)"
+cd "$REPO" || exit 1
+
+echo "pre-commit: running npm run verify"
+if ! npm run --silent verify; then
+  echo
+  echo "pre-commit: verify failed — commit aborted."
+  echo "Run 'npm run verify' to reproduce, or 'git commit --no-verify' to override."
+  exit 1
+fi
