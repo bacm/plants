@@ -24,6 +24,19 @@ function visibleText(page, text) {
   return page.locator(`:text-is(${JSON.stringify(text)}):visible`);
 }
 
+// A photo row can survive a reload while its image does not (ticket 044: web
+// stored a blob: URL that died with the page). Assert real, decodable bytes.
+async function expectStoredPhotoLoads(page) {
+  await page.waitForFunction(
+    () =>
+      [...document.images].some(
+        (img) => img.src.startsWith('data:') && img.complete && img.naturalWidth > 0
+      ),
+    null,
+    { timeout: 10000 }
+  );
+}
+
 test.describe('web smoke', () => {
   test('zone -> plant -> edit -> care log -> reload survives', async ({ page }) => {
     const consoleErrors = [];
@@ -199,6 +212,7 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, plantName)).toBeVisible();
     await visibleText(page, 'Photos').click();
     await expect(visibleText(page, photoDate)).toBeVisible();
+    await expectStoredPhotoLoads(page);
   });
 
   // Ticket 020: export the garden, delete a plant, then restore it (photo
@@ -319,5 +333,6 @@ test.describe('web smoke', () => {
     await visibleText(page, 'Photos').click();
     await expect(visibleText(page, 'Mes photos')).toBeVisible();
     await expect(page.locator('img:visible').first()).toBeVisible();
+    await expectStoredPhotoLoads(page);
   });
 });
