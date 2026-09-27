@@ -35,19 +35,22 @@ import {
 import {
   CARE_TYPES,
   REMINDER_KINDS,
-  SUN,
-  WATER,
   PLANT_TYPES,
-  SOIL_TYPES,
-  SOIL_PH,
   PROPAGATION,
   TOXICITY,
+  isUnknown,
   labelFor,
   iconFor,
 } from '../../lib/enums';
 import { monthShort } from '../../lib/months';
 import { parseISODate } from '../../lib/validation';
 import { parseImageUrls } from '../../lib/plantFields';
+import {
+  ficheTechniqueTiles,
+  ficheTechniqueMissing,
+  solTiles,
+  solMissing,
+} from '../../lib/plantSheet';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HERO_HEIGHT = SCREEN_HEIGHT * 0.38;
@@ -55,7 +58,7 @@ const INFO_CARD_WIDTH = (SCREEN_WIDTH - spacing.lg * 2 - spacing.sm * 2) / 3;
 
 function getQuickTags(plant) {
   const tags = [];
-  if (plant.type && labelFor(PLANT_TYPES, plant.type)) {
+  if (!isUnknown(plant.type)) {
     tags.push({
       icon: iconFor(PLANT_TYPES, plant.type) || '🌱',
       label: labelFor(PLANT_TYPES, plant.type),
@@ -72,19 +75,6 @@ function getQuickTags(plant) {
     tags.push({ icon: '🌸', label: 'Florifère' });
   }
   return tags.slice(0, 3);
-}
-
-function formatCm(cm) {
-  if (cm >= 100) return `${(cm / 100).toFixed(cm % 100 === 0 ? 0 : 1)} m`;
-  return `${cm} cm`;
-}
-
-function buildDimensionsText(plant) {
-  const parts = [];
-  if (plant.height) parts.push(`Hauteur: ${formatCm(plant.height)}`);
-  if (plant.width) parts.push(`Largeur: ${formatCm(plant.width)}`);
-  if (plant.minTemperature != null) parts.push(`${plant.minTemperature}°C`);
-  return parts.length > 0 ? parts.join('\n') : '—';
 }
 
 export default function PlantDetailScreen() {
@@ -295,26 +285,27 @@ export default function PlantDetailScreen() {
             <View style={styles.tabContentInner}>
               <View style={styles.section}>
                 <Text style={styles.ficheTechTitle}>FICHE TECHNIQUE</Text>
-                <View style={styles.infoGrid}>
-                  <InfoCard icon="☀️" value={labelFor(SUN, plant.sun) || '—'} />
-                  <InfoCard icon="💧" value={labelFor(WATER, plant.water) || '—'} />
-                  <InfoCard
-                    icon="📅"
-                    value={
-                      plant.bloomStartMonth != null && plant.bloomEndMonth != null
-                        ? `${monthShort(plant.bloomStartMonth)} — ${monthShort(plant.bloomEndMonth)}`
-                        : '—'
-                    }
-                  />
-                  <InfoCard icon="🌡️" value={buildDimensionsText(plant)} />
-                  <InfoCard
-                    icon="🍃"
-                    value={
-                      plant.deciduous !== null ? (plant.deciduous ? 'Caduque' : 'Persistant') : '—'
-                    }
-                  />
-                  <InfoCard icon="🌸" value={plant.flowerColor || '—'} />
-                </View>
+                {ficheTechniqueTiles(plant).length > 0 && (
+                  <View style={styles.infoGrid}>
+                    {ficheTechniqueTiles(plant).map((tile) => (
+                      <InfoCard
+                        key={tile.key}
+                        icon={tile.icon}
+                        label={tile.label}
+                        value={tile.value}
+                      />
+                    ))}
+                  </View>
+                )}
+                {ficheTechniqueMissing(plant).length > 0 && (
+                  <TouchableOpacity
+                    style={styles.missingLink}
+                    onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
+                    <Text style={styles.missingLinkText}>
+                      À compléter : {ficheTechniqueMissing(plant).join(', ').toLowerCase()}
+                    </Text>
+                  </TouchableOpacity>
+                )}
                 {plant.notes ? (
                   <GlassCard style={styles.notesCard}>
                     <View style={styles.notesRow}>
@@ -326,13 +317,30 @@ export default function PlantDetailScreen() {
                 ) : null}
 
                 {/* Section Sol */}
-                {(plant.soilType || plant.soilPH) && (
+                {(solTiles(plant).length > 0 || solMissing(plant).length > 0) && (
                   <>
                     <Text style={styles.ficheTechTitle}>SOL</Text>
-                    <View style={styles.infoGrid}>
-                      <InfoCard icon="🪨" value={labelFor(SOIL_TYPES, plant.soilType) || '—'} />
-                      <InfoCard icon="⚗️" value={labelFor(SOIL_PH, plant.soilPH) || '—'} />
-                    </View>
+                    {solTiles(plant).length > 0 && (
+                      <View style={styles.infoGrid}>
+                        {solTiles(plant).map((tile) => (
+                          <InfoCard
+                            key={tile.key}
+                            icon={tile.icon}
+                            label={tile.label}
+                            value={tile.value}
+                          />
+                        ))}
+                      </View>
+                    )}
+                    {solMissing(plant).length > 0 && (
+                      <TouchableOpacity
+                        style={styles.missingLink}
+                        onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
+                        <Text style={styles.missingLinkText}>
+                          À compléter : {solMissing(plant).join(', ').toLowerCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </>
                 )}
 
@@ -374,18 +382,23 @@ export default function PlantDetailScreen() {
                 )}
 
                 {/* Section Santé */}
-                {(plant.pests || plant.toxicity) && (
+                {(plant.pests || !isUnknown(plant.toxicity)) && (
                   <>
                     <Text style={styles.ficheTechTitle}>SANTÉ</Text>
-                    <View style={styles.infoGrid}>
-                      {plant.toxicity && plant.toxicity !== 'none' && (
-                        <InfoCard
-                          icon="⚠️"
-                          value={`Toxique: ${labelFor(TOXICITY, plant.toxicity)}`}
-                        />
-                      )}
-                      {plant.toxicity === 'none' && <InfoCard icon="✅" value="Non toxique" />}
-                    </View>
+                    {!isUnknown(plant.toxicity) && (
+                      <View style={styles.infoGrid}>
+                        {plant.toxicity !== 'none' && (
+                          <InfoCard
+                            icon="⚠️"
+                            label="Toxicité"
+                            value={labelFor(TOXICITY, plant.toxicity)}
+                          />
+                        )}
+                        {plant.toxicity === 'none' && (
+                          <InfoCard icon="✅" label="Toxicité" value="Non toxique" />
+                        )}
+                      </View>
+                    )}
                     {plant.pests && (
                       <GlassCard style={styles.notesCard}>
                         <View style={styles.notesRow}>
@@ -799,11 +812,12 @@ export default function PlantDetailScreen() {
   );
 }
 
-function InfoCard({ icon, value }) {
+function InfoCard({ icon, label, value }) {
   return (
     <GlassCard style={styles.infoCardOuter} noPadding>
       <View style={styles.infoCardInner}>
         <Text style={styles.infoCardIcon}>{icon}</Text>
+        {label ? <Text style={styles.infoCardLabel}>{label}</Text> : null}
         <Text style={styles.infoCardValue}>{value}</Text>
       </View>
     </GlassCard>
@@ -908,11 +922,24 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   infoCardIcon: { fontSize: 28, marginBottom: 8 },
+  infoCardLabel: {
+    ...typography.caption,
+    color: colors.dark.textSecondary,
+    textTransform: 'uppercase',
+    fontSize: 10,
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
   infoCardValue: {
     ...typography.bodySmall,
     color: colors.dark.text,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  missingLink: { marginTop: spacing.sm },
+  missingLinkText: {
+    ...typography.caption,
+    color: colors.dark.accent,
   },
 
   // Notes

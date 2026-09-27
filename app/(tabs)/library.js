@@ -13,7 +13,7 @@ import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
 import { getPlants, getZones } from '../../lib/db';
-import { SUN, labelFor } from '../../lib/enums';
+import { SUN, choices, isUnknown, labelFor } from '../../lib/enums';
 
 export default function LibraryScreen() {
   const router = useRouter();
@@ -118,7 +118,7 @@ export default function LibraryScreen() {
         </View>
 
         <View style={styles.sunFilters}>
-          {SUN.map(({ value: s, label }) => (
+          {choices(SUN).map(({ value: s, label }) => (
             <TouchableOpacity
               key={s}
               onPress={() => setSunFilter(sunFilter === s ? null : s)}
@@ -152,7 +152,8 @@ export default function LibraryScreen() {
                     <View style={styles.plantInfo}>
                       <Text style={styles.plantName}>{p.name}</Text>
                       <Text style={styles.meta}>
-                        {p.zoneName || 'Sans zone'} · {labelFor(SUN, p.sun) || p.sun}
+                        {p.zoneName || 'Sans zone'}
+                        {isUnknown(p.sun) ? '' : ` · ${labelFor(SUN, p.sun)}`}
                       </Text>
                     </View>
                     <Text style={styles.chevron}>→</Text>

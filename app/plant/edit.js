@@ -26,6 +26,8 @@ import {
   SOIL_PH,
   PROPAGATION,
   TOXICITY,
+  choices,
+  toggleChip,
 } from '../../lib/enums';
 import { MONTH_SHORT } from '../../lib/months';
 import { searchPlants, normalizeToForm, PlantSearchError } from '../../lib/plantSearch';
@@ -262,10 +264,10 @@ export default function EditPlantScreen() {
             {/* Type */}
             <Text style={styles.label}>Type</Text>
             <View style={styles.pills}>
-              {PLANT_TYPES.map(({ value: t, label }) => (
+              {choices(PLANT_TYPES).map(({ value: t, label }) => (
                 <TouchableOpacity
                   key={t}
-                  onPress={() => setField('type', t)}
+                  onPress={() => setField('type', toggleChip(form.type, t))}
                   style={[styles.pill, form.type === t && styles.pillActive]}>
                   <Text style={[styles.pillText, form.type === t && styles.pillTextActive]}>
                     {label}
@@ -282,10 +284,10 @@ export default function EditPlantScreen() {
             <View style={styles.dualCol}>
               <Text style={styles.labelSmall}>Exposition</Text>
               <View style={styles.segmented}>
-                {SUN.map(({ value: s, label, icon }) => (
+                {choices(SUN).map(({ value: s, label, icon }) => (
                   <TouchableOpacity
                     key={s}
-                    onPress={() => setField('sun', s)}
+                    onPress={() => setField('sun', toggleChip(form.sun, s))}
                     style={[styles.segBtn, form.sun === s && styles.segBtnActive]}>
                     <Text style={styles.segIcon}>{icon}</Text>
                     <Text
@@ -300,10 +302,10 @@ export default function EditPlantScreen() {
             <View style={styles.dualCol}>
               <Text style={styles.labelSmall}>Arrosage</Text>
               <View style={styles.segmented}>
-                {WATER.map(({ value: w, label, icon }) => (
+                {choices(WATER).map(({ value: w, label, icon }) => (
                   <TouchableOpacity
                     key={w}
-                    onPress={() => setField('water', w)}
+                    onPress={() => setField('water', toggleChip(form.water, w))}
                     style={[styles.segBtn, form.water === w && styles.segBtnActive]}>
                     <Text style={styles.segIcon}>{icon}</Text>
                     <Text
@@ -474,10 +476,10 @@ export default function EditPlantScreen() {
 
               <Text style={styles.label}>Type de sol</Text>
               <View style={styles.pills}>
-                {SOIL_TYPES.map(({ value: s, label }) => (
+                {choices(SOIL_TYPES).map(({ value: s, label }) => (
                   <TouchableOpacity
                     key={s}
-                    onPress={() => setField('soilType', s)}
+                    onPress={() => setField('soilType', toggleChip(form.soilType, s))}
                     style={[styles.pill, form.soilType === s && styles.pillActive]}>
                     <Text style={[styles.pillText, form.soilType === s && styles.pillTextActive]}>
                       {label}
@@ -488,10 +490,10 @@ export default function EditPlantScreen() {
 
               <Text style={styles.label}>pH du sol</Text>
               <View style={styles.pills}>
-                {SOIL_PH.map(({ value: p, label }) => (
+                {choices(SOIL_PH).map(({ value: p, label }) => (
                   <TouchableOpacity
                     key={p}
-                    onPress={() => setField('soilPH', p)}
+                    onPress={() => setField('soilPH', toggleChip(form.soilPH, p))}
                     style={[styles.pill, form.soilPH === p && styles.pillActive]}>
                     <Text style={[styles.pillText, form.soilPH === p && styles.pillTextActive]}>
                       {label}
@@ -603,10 +605,10 @@ export default function EditPlantScreen() {
 
               <Text style={styles.label}>Toxicité</Text>
               <View style={styles.pills}>
-                {TOXICITY.map(({ value: t, label }) => (
+                {choices(TOXICITY).map(({ value: t, label }) => (
                   <TouchableOpacity
                     key={t}
-                    onPress={() => setField('toxicity', t)}
+                    onPress={() => setField('toxicity', toggleChip(form.toxicity, t))}
                     style={[styles.pill, form.toxicity === t && styles.pillActive]}>
                     <Text style={[styles.pillText, form.toxicity === t && styles.pillTextActive]}>
                       {label}

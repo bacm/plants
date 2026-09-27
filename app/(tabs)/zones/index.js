@@ -12,7 +12,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { GlassCard } from '../../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../../lib/theme';
 import { getZones, getPlantsByZoneWithImages, getZoneContextInfo } from '../../../lib/db';
-import { SUN, REMINDER_KINDS, labelFor } from '../../../lib/enums';
+import { SUN, REMINDER_KINDS, isUnknown, labelFor } from '../../../lib/enums';
 import { parseImageUrls } from '../../../lib/plantFields';
 
 function getContextLine(info) {
@@ -36,8 +36,8 @@ function getContextLine(info) {
     return `Prochain ${kind} : ${days} jour${days > 1 ? 's' : ''}`;
   }
 
-  if (sunInfo?.sun) {
-    return `Exposition : ${labelFor(SUN, sunInfo.sun) || sunInfo.sun}`;
+  if (sunInfo?.sun && !isUnknown(sunInfo.sun)) {
+    return `Exposition : ${labelFor(SUN, sunInfo.sun)}`;
   }
 
   return null;
