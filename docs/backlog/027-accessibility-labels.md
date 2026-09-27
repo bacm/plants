@@ -29,3 +29,5 @@ all, so the app cannot be used without sight.
 ## Notes
 
 Easiest done screen by screen, one commit each.
+
+Best done during the visual pass (052, 053), on the final screens.

@@ -46,3 +46,11 @@ install, so the migrations run on real data):
 ## Notes
 
 Back up the device's garden database first: until 020, there is no export.
+
+Simulator run (2026-09-27, iPhone 17 / iOS 26, Expo Go, Maestro — see 055): on a
+fresh install, all of these passed natively: edit keeps "date d'ajout" (010),
+"Fait" advances the due date (002), back after save (035), month/date validation
+(009), a photo survives a relaunch and deletes (006, 043), export opens the share
+sheet (020), zone deletion keeps plants (023), a monthly task ticks off (031).
+Still to do on a real device: the migration of an existing database and photos,
+the camera, Android, and importing a backup.
