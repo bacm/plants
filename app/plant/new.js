@@ -19,6 +19,7 @@ import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { createPlant, getZones, createReminder, PLANT_TYPES, SUN, WATER, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY } from '../../lib/db';
 import { searchPlants, normalizeToForm } from '../../lib/plantSearch';
+import { emptyPlantForm, formToPlantValues } from '../../lib/plantFields';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -36,8 +37,8 @@ const TYPE_LABELS = {
   vine: 'Grimpante',
 };
 
-const SUN_ICONS = { full_sun: '\u2600', partial: '\u26C5', shade: '\u2601' };
-const WATER_ICONS = { low: '\uD83D\uDCA7', medium: '\uD83D\uDCA7\uD83D\uDCA7', high: '\uD83D\uDCA7\uD83D\uDCA7\uD83D\uDCA7' };
+const SUN_ICONS = { full_sun: '☀', partial: '⛅', shade: '☁' };
+const WATER_ICONS = { low: '💧', medium: '💧💧', high: '💧💧💧' };
 
 const SOIL_TYPE_LABELS = { clay: 'Argileux', sandy: 'Sableux', loamy: 'Limoneux', peaty: 'Tourbeux', rocky: 'Caillouteux' };
 const SOIL_PH_LABELS = { acidic: 'Acide', neutral: 'Neutre', alkaline: 'Alcalin' };
@@ -48,45 +49,17 @@ const MONTHS_LABELS = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû
 export default function NewPlantScreen() {
   const router = useRouter();
   const [zones, setZones] = useState([]);
-  const [name, setName] = useState('');
-  const [latinName, setLatinName] = useState('');
-  const [type, setType] = useState('perennial');
-  const [flowerColor, setFlowerColor] = useState('');
-  const [sun, setSun] = useState('partial');
-  const [water, setWater] = useState('medium');
-  const [bloomStartMonth, setBloomStartMonth] = useState('');
-  const [bloomEndMonth, setBloomEndMonth] = useState('');
+  const [form, setForm] = useState(emptyPlantForm);
   const [noFlowering, setNoFlowering] = useState(false);
-  const [height, setHeight] = useState('');
-  const [width, setWidth] = useState('');
-  const [deciduous, setDeciduous] = useState(null);
-  const [minTemperature, setMinTemperature] = useState('');
-  const [zoneId, setZoneId] = useState(null);
-  const [notes, setNotes] = useState('');
-  const [createdAt, setCreatedAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [showMore, setShowMore] = useState(false);
-
-  // Nouveaux champs
-  const [soilType, setSoilType] = useState('loamy');
-  const [soilPH, setSoilPH] = useState('neutral');
-  const [fertilizer, setFertilizer] = useState('');
-  const [pruning, setPruning] = useState('');
-  const [pruningMonth, setPruningMonth] = useState(null);
-  const [propagation, setPropagation] = useState(null);
-  const [pests, setPests] = useState('');
-  const [toxicity, setToxicity] = useState('none');
-  const [companionPlants, setCompanionPlants] = useState('');
-  const [harvest, setHarvest] = useState('');
-  const [harvestMonthStart, setHarvestMonthStart] = useState('');
-  const [harvestMonthEnd, setHarvestMonthEnd] = useState('');
-  const [origin, setOrigin] = useState('');
-  const [winterCare, setWinterCare] = useState('');
 
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [searching, setSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+
+  const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }));
 
   useFocusEffect(
     useCallback(() => {
@@ -96,7 +69,7 @@ export default function NewPlantScreen() {
 
   const handleSearch = async () => {
     if (searchQuery.trim().length < 2) return;
-    
+
     setSearching(true);
     setShowSuggestions(true);
     try {
@@ -112,42 +85,15 @@ export default function NewPlantScreen() {
 
   const handleSelectSuggestion = (plant) => {
     const formData = normalizeToForm(plant);
-    const hasBloom = formData.bloomStartMonth != null && formData.bloomEndMonth != null;
-    setName(formData.name);
-    setLatinName(formData.latinName);
-    setType(formData.type);
-    setSun(formData.sun);
-    setWater(formData.water);
-    setFlowerColor(formData.flowerColor);
-    setBloomStartMonth(formData.bloomStartMonth?.toString() || '');
-    setBloomEndMonth(formData.bloomEndMonth?.toString() || '');
+    const hasBloom = !!formData.bloomStartMonth && !!formData.bloomEndMonth;
+    setForm((f) => ({ ...f, ...formData }));
     setNoFlowering(!hasBloom);
-    setHeight(formData.height || '');
-    setWidth(formData.width || '');
-    setDeciduous(formData.deciduous);
-    setMinTemperature(formData.minTemperature || '');
-    setNotes(formData.notes);
-    // Nouveaux champs
-    setSoilType(formData.soilType || 'loamy');
-    setSoilPH(formData.soilPH || 'neutral');
-    setFertilizer(formData.fertilizer || '');
-    setPruning(formData.pruning || '');
-    setPruningMonth(formData.pruningMonth || null);
-    setPropagation(formData.propagation || null);
-    setPests(formData.pests || '');
-    setToxicity(formData.toxicity || 'none');
-    setCompanionPlants(formData.companionPlants || '');
-    setHarvest(formData.harvest || '');
-    setHarvestMonthStart(formData.harvestMonthStart?.toString() || '');
-    setHarvestMonthEnd(formData.harvestMonthEnd?.toString() || '');
-    setOrigin(formData.origin || '');
-    setWinterCare(formData.winterCare || '');
     setShowSuggestions(false);
     setSuggestions([]);
   };
 
   const handleNameChange = (text) => {
-    setName(text);
+    setField('name', text);
     setSearchQuery(text);
   };
 
@@ -157,47 +103,10 @@ export default function NewPlantScreen() {
   };
 
   const save = async () => {
-    if (!name.trim()) return;
+    if (!form.name.trim()) return;
     setSaving(true);
     try {
-      const start = bloomStartMonth ? parseInt(bloomStartMonth, 10) : null;
-      const end = bloomEndMonth ? parseInt(bloomEndMonth, 10) : null;
-      const h = height ? parseInt(height, 10) : null;
-      const w = width ? parseInt(width, 10) : null;
-      const minTemp = minTemperature ? parseInt(minTemperature, 10) : null;
-      const harvestStart = harvestMonthStart ? parseInt(harvestMonthStart, 10) : null;
-      const harvestEnd = harvestMonthEnd ? parseInt(harvestMonthEnd, 10) : null;
-      const plantId = createPlant({
-        name: name.trim(),
-        latinName: latinName.trim() || null,
-        type,
-        flowerColor: flowerColor.trim() || null,
-        sun,
-        water,
-        bloomStartMonth: start,
-        bloomEndMonth: end,
-        height: h,
-        width: w,
-        deciduous: deciduous,
-        minTemperature: minTemp,
-        zoneId,
-        notes: notes.trim() || null,
-        createdAt: createdAt.trim() ? new Date(createdAt.trim()).toISOString() : null,
-        soilType,
-        soilPH,
-        fertilizer: fertilizer.trim() || null,
-        pruning: pruning.trim() || null,
-        pruningMonth,
-        propagation,
-        pests: pests.trim() || null,
-        toxicity,
-        companionPlants: companionPlants.trim() || null,
-        harvest: harvest.trim() || null,
-        harvestMonthStart: harvestStart,
-        harvestMonthEnd: harvestEnd,
-        origin: origin.trim() || null,
-        winterCare: winterCare.trim() || null,
-      });
+      const plantId = createPlant(formToPlantValues(form));
       createReminder({
         plantId,
         kind: 'water',
@@ -238,7 +147,7 @@ export default function NewPlantScreen() {
       >
         <GradientHero>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>{'\u2190'} Annuler</Text>
+            <Text style={styles.backBtnText}>{'←'} Annuler</Text>
           </TouchableOpacity>
           <Text style={styles.heroTitle}>Nouvelle plante</Text>
         </GradientHero>
@@ -249,30 +158,30 @@ export default function NewPlantScreen() {
             <View style={styles.searchContainer}>
               <TextInput
                 style={styles.inputName}
-                value={name}
+                value={form.name}
                 onChangeText={handleNameChange}
                 onSubmitEditing={handleSearch}
                 placeholder="Nom de la plante *"
                 placeholderTextColor={colors.dark.textSecondary}
                 autoFocus
               />
-              <TouchableOpacity 
-                style={styles.searchButton} 
+              <TouchableOpacity
+                style={styles.searchButton}
                 onPress={handleSearch}
                 disabled={searching || searchQuery.trim().length < 2}
               >
                 {searching ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.searchButtonText}>{'\uD83D\uDD0D'}</Text>
+                  <Text style={styles.searchButtonText}>{'🔍'}</Text>
                 )}
               </TouchableOpacity>
             </View>
 
             <TextInput
               style={styles.inputLatin}
-              value={latinName}
-              onChangeText={setLatinName}
+              value={form.latinName}
+              onChangeText={(v) => setField('latinName', v)}
               placeholder="Nom latin (optionnel)"
               placeholderTextColor={colors.dark.border}
             />
@@ -283,18 +192,18 @@ export default function NewPlantScreen() {
                 <Text style={styles.label}>Zone</Text>
                 <View style={styles.pills}>
                   <TouchableOpacity
-                    onPress={() => setZoneId(null)}
-                    style={[styles.pill, !zoneId && styles.pillActive]}
+                    onPress={() => setField('zoneId', null)}
+                    style={[styles.pill, !form.zoneId && styles.pillActive]}
                   >
-                    <Text style={[styles.pillText, !zoneId && styles.pillTextActive]}>Aucune</Text>
+                    <Text style={[styles.pillText, !form.zoneId && styles.pillTextActive]}>Aucune</Text>
                   </TouchableOpacity>
                   {zones.map((z) => (
                     <TouchableOpacity
                       key={z.id}
-                      onPress={() => setZoneId(z.id)}
-                      style={[styles.pill, zoneId === z.id && styles.pillActive]}
+                      onPress={() => setField('zoneId', z.id)}
+                      style={[styles.pill, form.zoneId === z.id && styles.pillActive]}
                     >
-                      <Text style={[styles.pillText, zoneId === z.id && styles.pillTextActive]}>
+                      <Text style={[styles.pillText, form.zoneId === z.id && styles.pillTextActive]}>
                         {z.name}
                       </Text>
                     </TouchableOpacity>
@@ -309,10 +218,10 @@ export default function NewPlantScreen() {
               {PLANT_TYPES.map((t) => (
                 <TouchableOpacity
                   key={t}
-                  onPress={() => setType(t)}
-                  style={[styles.pill, type === t && styles.pillActive]}
+                  onPress={() => setField('type', t)}
+                  style={[styles.pill, form.type === t && styles.pillActive]}
                 >
-                  <Text style={[styles.pillText, type === t && styles.pillTextActive]}>
+                  <Text style={[styles.pillText, form.type === t && styles.pillTextActive]}>
                     {TYPE_LABELS[t]}
                   </Text>
                 </TouchableOpacity>
@@ -330,12 +239,12 @@ export default function NewPlantScreen() {
                 {SUN.map((s) => (
                   <TouchableOpacity
                     key={s}
-                    onPress={() => setSun(s)}
-                    style={[styles.segBtn, sun === s && styles.segBtnActive]}
+                    onPress={() => setField('sun', s)}
+                    style={[styles.segBtn, form.sun === s && styles.segBtnActive]}
                   >
                     <Text style={styles.segIcon}>{SUN_ICONS[s]}</Text>
                     <Text
-                      style={[styles.segLabel, sun === s && styles.segLabelActive]}
+                      style={[styles.segLabel, form.sun === s && styles.segLabelActive]}
                       numberOfLines={1}
                     >
                       {SUN_LABELS[s]}
@@ -350,12 +259,12 @@ export default function NewPlantScreen() {
                 {WATER.map((w) => (
                   <TouchableOpacity
                     key={w}
-                    onPress={() => setWater(w)}
-                    style={[styles.segBtn, water === w && styles.segBtnActive]}
+                    onPress={() => setField('water', w)}
+                    style={[styles.segBtn, form.water === w && styles.segBtnActive]}
                   >
                     <Text style={styles.segIcon}>{WATER_ICONS[w]}</Text>
                     <Text
-                      style={[styles.segLabel, water === w && styles.segLabelActive]}
+                      style={[styles.segLabel, form.water === w && styles.segLabelActive]}
                       numberOfLines={1}
                     >
                       {WATER_LABELS[w]}
@@ -371,7 +280,7 @@ export default function NewPlantScreen() {
         <View style={styles.section}>
           <TouchableOpacity onPress={toggleMore} style={styles.moreToggle}>
             <Text style={styles.moreToggleText}>
-              {showMore ? 'Moins de details  \u25B2' : 'Plus de details  \u25BC'}
+              {showMore ? 'Moins de details  ▲' : 'Plus de details  ▼'}
             </Text>
           </TouchableOpacity>
 
@@ -380,8 +289,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Couleur des fleurs</Text>
               <TextInput
                 style={styles.input}
-                value={flowerColor}
-                onChangeText={setFlowerColor}
+                value={form.flowerColor}
+                onChangeText={(v) => setField('flowerColor', v)}
                 placeholder="ex. rose, blanc"
                 placeholderTextColor={colors.dark.textSecondary}
               />
@@ -389,13 +298,13 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Floraison</Text>
               <View style={styles.pills}>
                 <TouchableOpacity
-                  onPress={() => { setNoFlowering(false); setBloomStartMonth(''); setBloomEndMonth(''); }}
+                  onPress={() => { setNoFlowering(false); setField('bloomStartMonth', ''); setField('bloomEndMonth', ''); }}
                   style={[styles.pill, !noFlowering && styles.pillActive]}
                 >
                   <Text style={[styles.pillText, !noFlowering && styles.pillTextActive]}>Oui</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => { setNoFlowering(true); setBloomStartMonth(''); setBloomEndMonth(''); }}
+                  onPress={() => { setNoFlowering(true); setField('bloomStartMonth', ''); setField('bloomEndMonth', ''); }}
                   style={[styles.pill, noFlowering && styles.pillActive]}
                 >
                   <Text style={[styles.pillText, noFlowering && styles.pillTextActive]}>Non applicable</Text>
@@ -406,18 +315,18 @@ export default function NewPlantScreen() {
                 <View style={styles.bloomRow}>
                   <TextInput
                     style={[styles.input, styles.inputSmall]}
-                    value={bloomStartMonth}
-                    onChangeText={setBloomStartMonth}
+                    value={form.bloomStartMonth}
+                    onChangeText={(v) => setField('bloomStartMonth', v)}
                     placeholder="Debut"
                     placeholderTextColor={colors.dark.textSecondary}
                     keyboardType="number-pad"
                     maxLength={2}
                   />
-                  <Text style={styles.dash}>{'\u2013'}</Text>
+                  <Text style={styles.dash}>{'–'}</Text>
                   <TextInput
                     style={[styles.input, styles.inputSmall]}
-                    value={bloomEndMonth}
-                    onChangeText={setBloomEndMonth}
+                    value={form.bloomEndMonth}
+                    onChangeText={(v) => setField('bloomEndMonth', v)}
                     placeholder="Fin"
                     placeholderTextColor={colors.dark.textSecondary}
                     keyboardType="number-pad"
@@ -429,8 +338,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Hauteur (cm)</Text>
               <TextInput
                 style={styles.input}
-                value={height}
-                onChangeText={setHeight}
+                value={form.height}
+                onChangeText={(v) => setField('height', v)}
                 placeholder="ex. 150"
                 placeholderTextColor={colors.dark.textSecondary}
                 keyboardType="number-pad"
@@ -439,8 +348,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Largeur (cm)</Text>
               <TextInput
                 style={styles.input}
-                value={width}
-                onChangeText={setWidth}
+                value={form.width}
+                onChangeText={(v) => setField('width', v)}
                 placeholder="ex. 100"
                 placeholderTextColor={colors.dark.textSecondary}
                 keyboardType="number-pad"
@@ -449,30 +358,30 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Type de feuille</Text>
               <View style={styles.pills}>
                 <TouchableOpacity
-                  onPress={() => setDeciduous(null)}
-                  style={[styles.pill, deciduous === null && styles.pillActive]}
+                  onPress={() => setField('deciduous', null)}
+                  style={[styles.pill, form.deciduous === null && styles.pillActive]}
                 >
-                  <Text style={[styles.pillText, deciduous === null && styles.pillTextActive]}>?</Text>
+                  <Text style={[styles.pillText, form.deciduous === null && styles.pillTextActive]}>?</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => setDeciduous(false)}
-                  style={[styles.pill, deciduous === false && styles.pillActive]}
+                  onPress={() => setField('deciduous', false)}
+                  style={[styles.pill, form.deciduous === false && styles.pillActive]}
                 >
-                  <Text style={[styles.pillText, deciduous === false && styles.pillTextActive]}>Persistante</Text>
+                  <Text style={[styles.pillText, form.deciduous === false && styles.pillTextActive]}>Persistante</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => setDeciduous(true)}
-                  style={[styles.pill, deciduous === true && styles.pillActive]}
+                  onPress={() => setField('deciduous', true)}
+                  style={[styles.pill, form.deciduous === true && styles.pillActive]}
                 >
-                  <Text style={[styles.pillText, deciduous === true && styles.pillTextActive]}>Caduque</Text>
+                  <Text style={[styles.pillText, form.deciduous === true && styles.pillTextActive]}>Caduque</Text>
                 </TouchableOpacity>
               </View>
 
               <Text style={styles.label}>Température min (°C)</Text>
               <TextInput
                 style={styles.input}
-                value={minTemperature}
-                onChangeText={setMinTemperature}
+                value={form.minTemperature}
+                onChangeText={(v) => setField('minTemperature', v)}
                 placeholder="ex. -10"
                 placeholderTextColor={colors.dark.textSecondary}
                 keyboardType="numbers-and-punctuation"
@@ -481,8 +390,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Notes</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                value={notes}
-                onChangeText={setNotes}
+                value={form.notes}
+                onChangeText={(v) => setField('notes', v)}
                 placeholder="Notes..."
                 placeholderTextColor={colors.dark.textSecondary}
                 multiline
@@ -491,8 +400,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Date d'ajout</Text>
               <TextInput
                 style={styles.input}
-                value={createdAt}
-                onChangeText={setCreatedAt}
+                value={form.createdAt}
+                onChangeText={(v) => setField('createdAt', v)}
                 placeholder="AAAA-MM-JJ"
                 placeholderTextColor={colors.dark.textSecondary}
                 keyboardType="numbers-and-punctuation"
@@ -507,10 +416,10 @@ export default function NewPlantScreen() {
                 {SOIL_TYPES.map((s) => (
                   <TouchableOpacity
                     key={s}
-                    onPress={() => setSoilType(s)}
-                    style={[styles.pill, soilType === s && styles.pillActive]}
+                    onPress={() => setField('soilType', s)}
+                    style={[styles.pill, form.soilType === s && styles.pillActive]}
                   >
-                    <Text style={[styles.pillText, soilType === s && styles.pillTextActive]}>
+                    <Text style={[styles.pillText, form.soilType === s && styles.pillTextActive]}>
                       {SOIL_TYPE_LABELS[s]}
                     </Text>
                   </TouchableOpacity>
@@ -522,10 +431,10 @@ export default function NewPlantScreen() {
                 {SOIL_PH.map((p) => (
                   <TouchableOpacity
                     key={p}
-                    onPress={() => setSoilPH(p)}
-                    style={[styles.pill, soilPH === p && styles.pillActive]}
+                    onPress={() => setField('soilPH', p)}
+                    style={[styles.pill, form.soilPH === p && styles.pillActive]}
                   >
-                    <Text style={[styles.pillText, soilPH === p && styles.pillTextActive]}>
+                    <Text style={[styles.pillText, form.soilPH === p && styles.pillTextActive]}>
                       {SOIL_PH_LABELS[p]}
                     </Text>
                   </TouchableOpacity>
@@ -538,8 +447,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Engrais</Text>
               <TextInput
                 style={styles.input}
-                value={fertilizer}
-                onChangeText={setFertilizer}
+                value={form.fertilizer}
+                onChangeText={(v) => setField('fertilizer', v)}
                 placeholder="ex. NPK 10-10-10 au printemps"
                 placeholderTextColor={colors.dark.textSecondary}
               />
@@ -547,8 +456,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Taille</Text>
               <TextInput
                 style={styles.input}
-                value={pruning}
-                onChangeText={setPruning}
+                value={form.pruning}
+                onChangeText={(v) => setField('pruning', v)}
                 placeholder="ex. Taille de formation en fin d'hiver"
                 placeholderTextColor={colors.dark.textSecondary}
               />
@@ -557,18 +466,18 @@ export default function NewPlantScreen() {
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.pills}>
                   <TouchableOpacity
-                    onPress={() => setPruningMonth(null)}
-                    style={[styles.pill, pruningMonth === null && styles.pillActive]}
+                    onPress={() => setField('pruningMonth', null)}
+                    style={[styles.pill, form.pruningMonth === null && styles.pillActive]}
                   >
-                    <Text style={[styles.pillText, pruningMonth === null && styles.pillTextActive]}>—</Text>
+                    <Text style={[styles.pillText, form.pruningMonth === null && styles.pillTextActive]}>—</Text>
                   </TouchableOpacity>
                   {MONTHS_LABELS.map((m, i) => (
                     <TouchableOpacity
                       key={i}
-                      onPress={() => setPruningMonth(i + 1)}
-                      style={[styles.pill, pruningMonth === i + 1 && styles.pillActive]}
+                      onPress={() => setField('pruningMonth', i + 1)}
+                      style={[styles.pill, form.pruningMonth === i + 1 && styles.pillActive]}
                     >
-                      <Text style={[styles.pillText, pruningMonth === i + 1 && styles.pillTextActive]}>{m}</Text>
+                      <Text style={[styles.pillText, form.pruningMonth === i + 1 && styles.pillTextActive]}>{m}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -577,8 +486,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Entretien hivernal</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                value={winterCare}
-                onChangeText={setWinterCare}
+                value={form.winterCare}
+                onChangeText={(v) => setField('winterCare', v)}
                 placeholder="ex. Paillage, protection hivernale..."
                 placeholderTextColor={colors.dark.textSecondary}
                 multiline
@@ -590,18 +499,18 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Méthode</Text>
               <View style={styles.pills}>
                 <TouchableOpacity
-                  onPress={() => setPropagation(null)}
-                  style={[styles.pill, propagation === null && styles.pillActive]}
+                  onPress={() => setField('propagation', null)}
+                  style={[styles.pill, form.propagation === null && styles.pillActive]}
                 >
-                  <Text style={[styles.pillText, propagation === null && styles.pillTextActive]}>—</Text>
+                  <Text style={[styles.pillText, form.propagation === null && styles.pillTextActive]}>—</Text>
                 </TouchableOpacity>
                 {PROPAGATION.map((p) => (
                   <TouchableOpacity
                     key={p}
-                    onPress={() => setPropagation(p)}
-                    style={[styles.pill, propagation === p && styles.pillActive]}
+                    onPress={() => setField('propagation', p)}
+                    style={[styles.pill, form.propagation === p && styles.pillActive]}
                   >
-                    <Text style={[styles.pillText, propagation === p && styles.pillTextActive]}>
+                    <Text style={[styles.pillText, form.propagation === p && styles.pillTextActive]}>
                       {PROPAGATION_LABELS[p]}
                     </Text>
                   </TouchableOpacity>
@@ -614,8 +523,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Ravageurs / Maladies</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                value={pests}
-                onChangeText={setPests}
+                value={form.pests}
+                onChangeText={(v) => setField('pests', v)}
                 placeholder="ex. Pucerons, oïdium..."
                 placeholderTextColor={colors.dark.textSecondary}
                 multiline
@@ -626,10 +535,10 @@ export default function NewPlantScreen() {
                 {TOXICITY.map((t) => (
                   <TouchableOpacity
                     key={t}
-                    onPress={() => setToxicity(t)}
-                    style={[styles.pill, toxicity === t && styles.pillActive]}
+                    onPress={() => setField('toxicity', t)}
+                    style={[styles.pill, form.toxicity === t && styles.pillActive]}
                   >
-                    <Text style={[styles.pillText, toxicity === t && styles.pillTextActive]}>
+                    <Text style={[styles.pillText, form.toxicity === t && styles.pillTextActive]}>
                       {TOXICITY_LABELS[t]}
                     </Text>
                   </TouchableOpacity>
@@ -642,8 +551,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Informations de récolte</Text>
               <TextInput
                 style={styles.input}
-                value={harvest}
-                onChangeText={setHarvest}
+                value={form.harvest}
+                onChangeText={(v) => setField('harvest', v)}
                 placeholder="ex. Fruits mûrs en été"
                 placeholderTextColor={colors.dark.textSecondary}
               />
@@ -652,18 +561,18 @@ export default function NewPlantScreen() {
               <View style={styles.bloomRow}>
                 <TextInput
                   style={[styles.input, styles.inputSmall]}
-                  value={harvestMonthStart}
-                  onChangeText={setHarvestMonthStart}
+                  value={form.harvestMonthStart}
+                  onChangeText={(v) => setField('harvestMonthStart', v)}
                   placeholder="Début"
                   placeholderTextColor={colors.dark.textSecondary}
                   keyboardType="number-pad"
                   maxLength={2}
                 />
-                <Text style={styles.dash}>{'\u2013'}</Text>
+                <Text style={styles.dash}>{'–'}</Text>
                 <TextInput
                   style={[styles.input, styles.inputSmall]}
-                  value={harvestMonthEnd}
-                  onChangeText={setHarvestMonthEnd}
+                  value={form.harvestMonthEnd}
+                  onChangeText={(v) => setField('harvestMonthEnd', v)}
                   placeholder="Fin"
                   placeholderTextColor={colors.dark.textSecondary}
                   keyboardType="number-pad"
@@ -677,8 +586,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Plantes compagnes</Text>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                value={companionPlants}
-                onChangeText={setCompanionPlants}
+                value={form.companionPlants}
+                onChangeText={(v) => setField('companionPlants', v)}
                 placeholder="ex. Tomates, basilic..."
                 placeholderTextColor={colors.dark.textSecondary}
                 multiline
@@ -687,8 +596,8 @@ export default function NewPlantScreen() {
               <Text style={styles.label}>Région d'origine</Text>
               <TextInput
                 style={styles.input}
-                value={origin}
-                onChangeText={setOrigin}
+                value={form.origin}
+                onChangeText={(v) => setField('origin', v)}
                 placeholder="ex. Méditerranée, Asie..."
                 placeholderTextColor={colors.dark.textSecondary}
               />
@@ -698,12 +607,12 @@ export default function NewPlantScreen() {
 
         {/* --- Save --- */}
         <TouchableOpacity
-          style={[styles.saveBtn, (!name.trim() || saving) && styles.saveBtnDisabled]}
+          style={[styles.saveBtn, (!form.name.trim() || saving) && styles.saveBtnDisabled]}
           onPress={save}
-          disabled={!name.trim() || saving}
+          disabled={!form.name.trim() || saving}
         >
           <Text style={styles.saveBtnText}>
-            {saving ? 'Enregistrement\u2026' : 'Enregistrer'}
+            {saving ? 'Enregistrement…' : 'Enregistrer'}
           </Text>
         </TouchableOpacity>
         <View style={{ height: 60 }} />

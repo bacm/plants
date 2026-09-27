@@ -1,7 +1,7 @@
 ---
 id: 008
 title: Define the plant field list once instead of five times
-status: open
+status: done
 priority: P1
 type: refactor
 ---
@@ -32,15 +32,15 @@ its own.
 
 ## Acceptance criteria
 
-- [ ] One module declares each field once: name, SQL type, default, and how it maps
+- [x] One module declares each field once: name, SQL type, default, and how it maps
       to and from a form value
-- [ ] `createPlant` and `updatePlant` derive their column, placeholder and value
+- [x] `createPlant` and `updatePlant` derive their column, placeholder and value
       lists from it
-- [ ] `normalizeToForm` derives its mapping from it
-- [ ] `new.js` and `edit.js` hold form state in a single object keyed by that
+- [x] `normalizeToForm` derives its mapping from it
+- [x] `new.js` and `edit.js` hold form state in a single object keyed by that
       definition, rather than ~30 separate `useState` calls
-- [ ] Adding a field to the definition requires no other edit than a migration
-- [ ] A test asserts the definition covers every column in the `plants` table
+- [x] Adding a field to the definition requires no other edit than a migration
+- [x] A test asserts the definition covers every column in the `plants` table
 
 ## Notes
 
