@@ -1,7 +1,7 @@
 ---
 id: 004
 title: updatePlant interpolates caller-supplied keys into SQL
-status: open
+status: done
 priority: P1
 type: refactor
 ---
@@ -32,12 +32,12 @@ the removal of the barrier that keeps it from becoming one.
 
 ## Acceptance criteria
 
-- [ ] `updatePlant` validates every key against an explicit field list before it
+- [x] `updatePlant` validates every key against an explicit field list before it
       reaches the `SET` clause, and ignores or rejects unknown keys
-- [ ] `lib/db.web.js` applies the same validation
-- [ ] The field list is not a fourth hand-maintained copy — it comes from the
+- [x] `lib/db.web.js` applies the same validation
+- [x] The field list is not a fourth hand-maintained copy — it comes from the
       shared definition in 008, or 008 lands first
-- [ ] A test asserts that an unknown key is rejected
+- [x] A test asserts that an unknown key is rejected
 
 ## Notes
 
