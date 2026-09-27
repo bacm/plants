@@ -19,7 +19,8 @@ on SQLite would reach the user's real garden data.
 
 ## Acceptance criteria
 
-On a development build or Expo Go, with an existing garden database (not a fresh
+On a development build **rebuilt after 039** (React Native 0.83.10, new
+reanimated) or Expo Go, with an existing garden database (not a fresh
 install, so the migrations run on real data):
 
 - [ ] Existing plants, zones, reminders and photos all still display

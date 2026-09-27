@@ -26,6 +26,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
       # Steps are kept separate so the GitHub UI names the gate that failed
       # rather than showing one opaque "verify" box.
       - name: Lint
@@ -62,6 +65,9 @@ jobs:
 
       - name: Install
         run: pip install -r server/requirements-dev.txt
+
+      - name: Dependency audit
+        run: pip-audit -r server/requirements.txt
 
       - name: Tests
         working-directory: server

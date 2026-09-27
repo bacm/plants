@@ -13,6 +13,9 @@ module.exports = [
       '.expo/**',
       'ios/**',
       'android/**',
+      // Python virtualenv for the server; some pip packages (e.g. urllib3,
+      // pulled in by pip-audit) ship .js files that are not ours to lint.
+      'server/.venv/**',
       // Playwright's own output (npm run e2e:web); see .gitignore.
       'test-results/**',
       'playwright-report/**',
