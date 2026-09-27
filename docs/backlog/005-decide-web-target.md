@@ -1,7 +1,7 @@
 ---
 id: 005
 title: Decide whether web is a supported target, then make db.web.js match
-status: open
+status: done
 priority: P1
 type: chore
 ---
@@ -33,11 +33,11 @@ data. Either state is defensible; the current one is not.
 One of the two:
 
 **Option A — support web**
-- [ ] All seven names exist in `lib/db.web.js` with equivalent behaviour
-- [ ] `createPlant` and `createZone` persist every column the native version does
-- [ ] `KNOWN_WEB_GAPS` in `lib/__tests__/db-parity.test.js` is empty and the test
+- [x] All seven names exist in `lib/db.web.js` with equivalent behaviour
+- [x] `createPlant` and `createZone` persist every column the native version does
+- [x] `KNOWN_WEB_GAPS` in `lib/__tests__/db-parity.test.js` is empty and the test
       passes
-- [ ] Zones, plant create and plant edit verified in a browser
+- [ ] ~~Zones, plant create and plant edit verified in a browser~~ — moved to 034
 
 **Option B — drop web**
 - [ ] `lib/db.web.js` is deleted
@@ -54,3 +54,8 @@ A is a few hours and an ongoing maintenance tax on every schema change.
 
 Until this is decided, `KNOWN_WEB_GAPS` keeps the gap from widening: adding a new
 native export without a web twin fails the test.
+
+Resolved with option A (support web). Beyond the named gaps, the web shim now
+persists a zone's `icon` and honours the date passed to `addPhoto`, both of which
+it silently dropped. The browser check could not run (no Playwright here) and is
+split into 034.
