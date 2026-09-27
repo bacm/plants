@@ -25,13 +25,13 @@
 | P3 | feature | [032 — Flag plants that are not hardy in the garden's climate](032-hardiness-for-local-climate.md) |
 | P3 | feature | [033 — Optional assistant that answers questions about this garden](033-optional-garden-assistant.md) |
 | P3 | chore | [036 — Cover adding a photo in the web end-to-end test](036-automate-photo-step-in-web-e2e.md) |
-| P3 | chore | [041 — Upgrade ESLint to version 10](041-upgrade-eslint-10.md) |
 
 ## blocked
 
 | Pri | Type | Ticket |
 | --- | --- | --- |
 | P0 | security | [019 — Revoke the leaked OpenAI key and deploy the search server](019-revoke-leaked-key-and-deploy-search-server.md) |
+| P3 | chore | [041 — Upgrade ESLint to version 10](041-upgrade-eslint-10.md) |
 
 ## done
 

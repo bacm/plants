@@ -1,7 +1,7 @@
 ---
 id: 041
 title: Upgrade ESLint to version 10
-status: open
+status: blocked
 priority: P3
 type: chore
 ---
@@ -30,3 +30,9 @@ rule 1) must keep working after the upgrade.
 
 Dependabot ignores ESLint majors (`.github/dependabot.yml`), so this ticket is
 the only place the upgrade is tracked.
+
+Blocked on 2026-09-27: `eslint-config-expo` 55 depends on `eslint-plugin-react`
+^7.37, whose `react/display-name` rule calls `context.getFilename()`, removed in
+ESLint 10 — linting any component throws. No published `eslint-plugin-react`
+supports ESLint 10 yet (latest 7.37.5 peers `eslint ^9.7`), so a newer Expo SDK
+would not help either. Unblock when eslint-plugin-react ships ESLint 10 support.
