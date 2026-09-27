@@ -20,7 +20,7 @@ import { colors, spacing, typography, radius } from '../../lib/theme';
 import { createPlant, getZones, createReminder } from '../../lib/db';
 import { PLANT_TYPES, SUN, WATER, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY } from '../../lib/enums';
 import { MONTH_SHORT } from '../../lib/months';
-import { searchPlants, normalizeToForm } from '../../lib/plantSearch';
+import { searchPlants, normalizeToForm, PlantSearchError } from '../../lib/plantSearch';
 import { emptyPlantForm, formToPlantValues } from '../../lib/plantFields';
 import { validatePlantForm } from '../../lib/validation';
 
@@ -42,6 +42,7 @@ export default function NewPlantScreen() {
   const [suggestions, setSuggestions] = useState([]);
   const [searching, setSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchError, setSearchError] = useState('');
 
   const setField = (key, value) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -59,12 +60,18 @@ export default function NewPlantScreen() {
 
     setSearching(true);
     setShowSuggestions(true);
+    setSearchError('');
     try {
       const results = await searchPlants(searchQuery);
       setSuggestions(results);
     } catch (err) {
-      console.error('Search error:', err);
       setSuggestions([]);
+      if (err instanceof PlantSearchError) {
+        setSearchError(err.message);
+      } else {
+        console.error('Unexpected search error:', err);
+        setSearchError('Recherche impossible pour le moment');
+      }
     } finally {
       setSearching(false);
     }
@@ -82,6 +89,7 @@ export default function NewPlantScreen() {
   const handleNameChange = (text) => {
     setField('name', text);
     setSearchQuery(text);
+    setSearchError('');
   };
 
   const toggleMore = () => {
@@ -170,6 +178,7 @@ export default function NewPlantScreen() {
                 )}
               </TouchableOpacity>
             </View>
+            {searchError ? <Text style={styles.fieldError}>{searchError}</Text> : null}
 
             <TextInput
               style={styles.inputLatin}
