@@ -335,4 +335,77 @@ test.describe('web smoke', () => {
     await expect(page.locator('img:visible').first()).toBeVisible();
     await expectStoredPhotoLoads(page);
   });
+
+  // Tickets 022/031: a plant's pruning month derives a "Ce mois-ci au jardin"
+  // task on the dashboard (lib/seasonalTasks.js) when it matches the current
+  // month. Ticking it off logs a care entry and the task disappears -- and
+  // stays gone after a reload, since it's derived from the plant plus a
+  // care log, not a separate row that could be left behind.
+  test("a prune task derived from this month's pruning month disappears once ticked off", async ({
+    page,
+  }) => {
+    const MONTH_SHORT = [
+      'Jan',
+      'Fév',
+      'Mar',
+      'Avr',
+      'Mai',
+      'Juin',
+      'Juil',
+      'Août',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Déc',
+    ];
+    const currentMonthShort = MONTH_SHORT[new Date().getMonth()];
+
+    const zoneName = `E2E Seasonal Zone ${Date.now()}`;
+    const plantName = `E2E Seasonal Plant ${Date.now()}`;
+
+    await page.goto('/');
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+
+    await visibleText(page, 'Zones').click();
+    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await visibleText(page, '+ Créer une zone').click();
+    await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
+    await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
+    await visibleText(page, 'Créer la zone').click();
+    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+
+    await visibleText(page, zoneName).click();
+    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
+    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
+    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await visibleText(page, zoneName).click();
+    // "Mois de taille" pills live in the collapsible "Plus de details" section
+    // (app/plant/new.js); expand it, then set this month.
+    await page.getByText('Plus de details', { exact: false }).click();
+    await visibleText(page, currentMonthShort).click();
+    await visibleText(page, 'Enregistrer').click();
+    await expect(visibleText(page, plantName)).toBeVisible();
+
+    // --- Dashboard shows the derived prune task ---
+    // plant/[id] is a full-screen route outside the (tabs) group, so the tab
+    // bar isn't rendered there (see the comment on the first test above); go
+    // back to the zone detail screen first, which is inside the tabs group.
+    await visibleText(page, '‹ Retour').click(); // plant detail -> zone detail
+    await expect(visibleText(page, '1 plante')).toBeVisible();
+    await visibleText(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+    await expect(visibleText(page, 'Ce mois-ci au jardin')).toBeVisible();
+    await expect(visibleText(page, `Tailler · ${plantName}`)).toBeVisible();
+
+    // --- Tick it off: the task disappears ---
+    await page.locator('[aria-label="Fait"]:visible').click();
+    await expect(visibleText(page, `Tailler · ${plantName}`)).toHaveCount(0);
+
+    // --- Reload: still gone (derived from the plant + the new care log) ---
+    await page.reload();
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+    await expect(visibleText(page, 'Ce mois-ci au jardin')).toBeVisible();
+    await expect(visibleText(page, `Tailler · ${plantName}`)).toHaveCount(0);
+  });
 });

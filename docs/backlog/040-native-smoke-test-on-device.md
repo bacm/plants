@@ -39,6 +39,8 @@ install, so the migrations run on real data):
       cache; deleting a photo works (043)
 - [ ] Réglages: export shares a file; importing it on a second device (or after
       reinstalling) restores plants, zones, reminders, logs and photos (020)
+- [ ] "Ce mois-ci au jardin" lists this month's tasks; ticking one logs care and
+      removes it; a suggested yearly reminder can be added (022, 031)
 - [ ] Any defect becomes its own ticket
 
 ## Notes

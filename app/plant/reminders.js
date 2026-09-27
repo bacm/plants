@@ -13,6 +13,8 @@ import {
   markReminderDone,
 } from '../../lib/db';
 import { REMINDER_KINDS, labelFor } from '../../lib/enums';
+import { monthName } from '../../lib/months';
+import { seasonalRemindersFor, nextOccurrenceOfMonthStart } from '../../lib/seasonalTasks';
 
 export default function RemindersScreen() {
   const { plantId } = useLocalSearchParams();
@@ -70,6 +72,28 @@ export default function RemindersScreen() {
     }
   };
 
+  // Suggestions derived from the plant's own pruning/harvest/bloom/winter-care
+  // data (ticket 022), minus any kind already covered by an existing
+  // reminder — never auto-created, the user has to tap "Ajouter".
+  const suggestions = plant
+    ? seasonalRemindersFor(plant).filter((s) => !reminders.some((r) => r.kind === s.kind))
+    : [];
+
+  const addSuggestion = async (suggestion) => {
+    try {
+      createReminder({
+        plantId,
+        kind: suggestion.kind,
+        frequencyDays: 365,
+        nextDueDate: nextOccurrenceOfMonthStart(suggestion.month),
+        repeatRule: 'yearly',
+      });
+      await load();
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    }
+  };
+
   if (!plant) {
     return (
       <View style={styles.container}>
@@ -88,6 +112,25 @@ export default function RemindersScreen() {
           <Text style={styles.heroTitle}>Rappels</Text>
           <Text style={styles.heroSubtitle}>{plant.name}</Text>
         </GradientHero>
+
+        {suggestions.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Suggestions</Text>
+            {suggestions.map((s) => (
+              <GlassCard key={s.kind} style={styles.reminderCard}>
+                <View style={styles.reminderRow}>
+                  <View style={styles.reminderInfo}>
+                    <Text style={styles.reminderKind}>{labelFor(REMINDER_KINDS, s.kind)}</Text>
+                    <Text style={styles.reminderMeta}>Chaque année, en {monthName(s.month)}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => addSuggestion(s)} style={styles.doneBtn}>
+                    <Text style={styles.doneBtnText}>Ajouter</Text>
+                  </TouchableOpacity>
+                </View>
+              </GlassCard>
+            ))}
+          </View>
+        )}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Ajouter un rappel</Text>
@@ -141,7 +184,10 @@ export default function RemindersScreen() {
                   <View style={styles.reminderInfo}>
                     <Text style={styles.reminderKind}>{labelFor(REMINDER_KINDS, r.kind)}</Text>
                     <Text style={styles.reminderMeta}>
-                      Tous les {r.frequencyDays} j · Prochaine : {r.nextDueDate}
+                      {r.repeatRule === 'yearly'
+                        ? `Chaque année, en ${monthName(Number(r.nextDueDate.slice(5, 7)))}`
+                        : `Tous les ${r.frequencyDays} j`}{' '}
+                      · Prochaine : {r.nextDueDate}
                     </Text>
                   </View>
                   <View style={styles.reminderActions}>

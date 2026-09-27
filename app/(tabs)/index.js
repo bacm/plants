@@ -17,35 +17,77 @@ import {
   getDueTodayReminders,
   getOverdueReminders,
   getPlantsBloomingInMonth,
+  getPlants,
+  getCareLogsBetween,
+  getRemindersByPlantId,
   markReminderDone,
   createCareLog,
+  createReminder,
 } from '../../lib/db';
 import { monthName } from '../../lib/months';
 import { buildHeroSubtitle } from '../../lib/dashboard';
+import { showMessage } from '../../lib/dialogs';
+import { REMINDER_KINDS, labelFor } from '../../lib/enums';
+import {
+  deriveSeasonalTasks,
+  isTaskDone,
+  careTypeForKind,
+  nextOccurrenceOfMonthStart,
+} from '../../lib/seasonalTasks';
 
 const CARD_WIDTH = 168;
 const TASK_PHOTO_SIZE = 48;
 const BLOOM_IMAGE_SIZE = CARD_WIDTH;
+
+// This month's task list looks one month ahead when the "Mois prochain"
+// toggle is on; wraps December -> January into the next calendar year.
+function shiftedMonth(offset) {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const year = now.getFullYear();
+  if (offset === 0) return { month, year };
+  return month === 12 ? { month: 1, year: year + 1 } : { month: month + 1, year };
+}
+
+function monthRangeISO(month, year) {
+  const mm = String(month).padStart(2, '0');
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return {
+    startISO: `${year}-${mm}-01`,
+    endISO: `${year}-${mm}-${String(lastDay).padStart(2, '0')}`,
+  };
+}
+
+const NON_SEASONAL_CARE_TYPE = { water: 'watered', fertilize: 'fertilized' };
 
 export default function Dashboard() {
   const router = useRouter();
   const [overdue, setOverdue] = useState([]);
   const [dueToday, setDueToday] = useState([]);
   const [blooming, setBlooming] = useState([]);
+  const [allPlants, setAllPlants] = useState([]);
+  const [seasonalCareLogs, setSeasonalCareLogs] = useState([]);
+  const [monthOffset, setMonthOffset] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
 
   const currentMonth = new Date().getMonth() + 1;
 
   const load = useCallback(async () => {
-    const [o, d, b] = await Promise.all([
+    const { month: seasonalMonth, year: seasonalYear } = shiftedMonth(monthOffset);
+    const { startISO, endISO } = monthRangeISO(seasonalMonth, seasonalYear);
+    const [o, d, b, plants, careLogs] = await Promise.all([
       getOverdueReminders(),
       getDueTodayReminders(),
       getPlantsBloomingInMonth(currentMonth),
+      getPlants(),
+      getCareLogsBetween(startISO, endISO),
     ]);
     setOverdue(o);
     setDueToday(d);
     setBlooming(b);
-  }, [currentMonth]);
+    setAllPlants(plants);
+    setSeasonalCareLogs(careLogs);
+  }, [currentMonth, monthOffset]);
 
   useFocusEffect(
     useCallback(() => {
@@ -60,21 +102,57 @@ export default function Dashboard() {
   }, [load]);
 
   const handleDone = async (reminder) => {
-    await markReminderDone(reminder.id);
-    const kindMap = {
-      water: 'watered',
-      prune: 'pruned',
-      fertilize: 'fertilized',
-      deadhead: 'deadheaded',
-      winter_prep: 'treated',
-      custom: 'treated',
-    };
-    await createCareLog({
-      plantId: reminder.plantId,
-      type: kindMap[reminder.kind] || 'watered',
-      date: new Date().toISOString().slice(0, 10),
-    });
-    await load();
+    try {
+      await markReminderDone(reminder.id);
+      const type =
+        careTypeForKind(reminder.kind) || NON_SEASONAL_CARE_TYPE[reminder.kind] || 'treated';
+      await createCareLog({
+        plantId: reminder.plantId,
+        type,
+        date: new Date().toISOString().slice(0, 10),
+      });
+      await load();
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    }
+  };
+
+  const { month: seasonalMonth, year: seasonalYear } = shiftedMonth(monthOffset);
+  const seasonalTasks = deriveSeasonalTasks(allPlants, seasonalMonth).filter(
+    (t) => !isTaskDone(t, seasonalCareLogs, seasonalYear)
+  );
+
+  const tickSeasonalTask = async (task) => {
+    try {
+      await createCareLog({
+        plantId: task.plantId,
+        type: careTypeForKind(task.kind),
+        date: new Date().toISOString().slice(0, 10),
+      });
+      await load();
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    }
+  };
+
+  const addSeasonalReminder = async (task) => {
+    try {
+      const existing = await getRemindersByPlantId(task.plantId);
+      if (existing.some((r) => r.kind === task.kind)) {
+        showMessage('Rappel déjà présent', 'Un rappel de ce type existe déjà pour cette plante.');
+        return;
+      }
+      createReminder({
+        plantId: task.plantId,
+        kind: task.kind,
+        frequencyDays: 365,
+        nextDueDate: nextOccurrenceOfMonthStart(task.month),
+        repeatRule: 'yearly',
+      });
+      showMessage('Rappel créé', 'Le rappel annuel a été ajouté.');
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    }
   };
 
   const tasks = [...overdue, ...dueToday];
@@ -141,7 +219,7 @@ export default function Dashboard() {
                     )}
                     <View style={styles.taskContent}>
                       <Text style={styles.taskTitle} numberOfLines={1}>
-                        {reminderLabel(r.kind)} {r.plantName}
+                        {labelFor(REMINDER_KINDS, r.kind)} {r.plantName}
                       </Text>
                       <Text style={styles.taskSubtitle}>
                         Fréquence : tous les {r.frequencyDays} jours
@@ -153,6 +231,50 @@ export default function Dashboard() {
                   </View>
                 </GlassCard>
               </TouchableOpacity>
+            ))
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <View style={[styles.sectionHeader, styles.sectionHeaderBetween]}>
+            <Text style={styles.sectionTitle}>Ce mois-ci au jardin</Text>
+            <TouchableOpacity
+              onPress={() => setMonthOffset((o) => (o === 0 ? 1 : 0))}
+              style={styles.monthToggle}>
+              <Text style={styles.monthToggleText}>
+                {monthOffset === 0 ? 'Mois prochain' : 'Ce mois-ci'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {seasonalTasks.length === 0 ? (
+            <GlassCard>
+              <Text style={styles.emptyText}>Rien à faire ce mois-ci. Profitez du jardin !</Text>
+            </GlassCard>
+          ) : (
+            seasonalTasks.map((t) => (
+              <GlassCard key={`${t.plantId}-${t.kind}`} style={styles.taskWrap}>
+                <View style={styles.taskRow}>
+                  <View style={styles.taskContent}>
+                    <Text style={styles.taskTitle} numberOfLines={1}>
+                      {labelFor(REMINDER_KINDS, t.kind)} · {t.plantName}
+                    </Text>
+                  </View>
+                  <View style={styles.seasonalActions}>
+                    <TouchableOpacity
+                      onPress={() => monthOffset === 0 && tickSeasonalTask(t)}
+                      disabled={monthOffset !== 0}
+                      accessibilityLabel="Fait"
+                      style={[styles.doneButton, monthOffset !== 0 && styles.doneButtonDisabled]}>
+                      <Ionicons name="checkmark" size={20} color="#fff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => addSeasonalReminder(t)}
+                      style={styles.reminderLinkBtn}>
+                      <Text style={styles.reminderLinkText}>Rappel annuel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </GlassCard>
             ))
           )}
         </View>
@@ -225,18 +347,6 @@ export default function Dashboard() {
   );
 }
 
-function reminderLabel(kind) {
-  const labels = {
-    water: 'Arroser',
-    prune: 'Tailler',
-    fertilize: 'Fertiliser',
-    deadhead: 'Couper les fleurs fanées',
-    winter_prep: 'Préparer l’hiver',
-    custom: 'À faire',
-  };
-  return labels[kind] || kind;
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark.background },
   scroll: { flex: 1 },
@@ -276,6 +386,14 @@ const styles = StyleSheet.create({
     color: colors.dark.accent,
     marginLeft: spacing.xs,
   },
+  sectionHeaderBetween: { justifyContent: 'space-between' },
+  monthToggle: {
+    paddingVertical: 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 12,
+    backgroundColor: colors.dark.surfaceGlass,
+  },
+  monthToggleText: { ...typography.caption, color: colors.dark.text },
   taskWrap: { marginBottom: spacing.sm },
   taskRow: {
     flexDirection: 'row',
@@ -304,6 +422,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: spacing.sm,
   },
+  doneButtonDisabled: { opacity: 0.35 },
+  seasonalActions: { flexDirection: 'row', alignItems: 'center' },
+  reminderLinkBtn: { marginLeft: spacing.sm, paddingHorizontal: spacing.xs },
+  reminderLinkText: { ...typography.caption, color: colors.dark.accent },
   emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
   bloomScrollContent: { paddingRight: spacing.lg },
   bloomCardWrap: { marginRight: spacing.md },
