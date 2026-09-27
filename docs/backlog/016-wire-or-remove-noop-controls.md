@@ -1,7 +1,7 @@
 ---
 id: 016
 title: Three buttons and a hero subtitle do nothing
-status: open
+status: done
 priority: P3
 type: chore
 ---
@@ -23,10 +23,10 @@ of the year, on the first screen the user sees.
 
 ## Acceptance criteria
 
-- [ ] Each button either navigates somewhere real or is removed
-- [ ] The hero subtitle reflects the current month and the actual state of the
+- [x] Each button either navigates somewhere real or is removed
+- [x] The hero subtitle reflects the current month and the actual state of the
       garden, or is removed
-- [ ] No `onPress={() => {}}` remains in `app/`
+- [x] No `onPress={() => {}}` remains in `app/`
 
 ## Notes
 
@@ -37,3 +37,7 @@ screen is wanted, that is a feature ticket.
 A month-aware subtitle can be derived from what the existing dashboard queries
 already return — for instance the number of plants blooming this month — rather
 than needing new data.
+
+The three buttons are removed (a settings screen comes with 020). The subtitle is
+built by `buildHeroSubtitle` in `lib/dashboard.js` from the month, the plants in
+bloom and the care tasks due.

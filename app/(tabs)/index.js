@@ -21,9 +21,8 @@ import {
   createCareLog,
 } from '../../lib/db';
 import { monthName } from '../../lib/months';
+import { buildHeroSubtitle } from '../../lib/dashboard';
 
-const HEADER_SUBTITLE = 'En ce moment : La floraison de printemps bat son plein.';
-const SETTINGS_BLUE = '#3B82F6';
 const CARD_WIDTH = 168;
 const TASK_PHOTO_SIZE = 48;
 const BLOOM_IMAGE_SIZE = CARD_WIDTH;
@@ -79,6 +78,7 @@ export default function Dashboard() {
   };
 
   const tasks = [...overdue, ...dueToday];
+  const heroSubtitle = buildHeroSubtitle(currentMonth, blooming.length, tasks.length);
 
   const periodLabel = (p) => {
     if (!p.bloomStartMonth || !p.bloomEndMonth) return '';
@@ -101,27 +101,9 @@ export default function Dashboard() {
         }
       >
         <GradientHero>
-          <View style={styles.heroRow}>
-            <View style={styles.heroTextWrap}>
-              <Text style={styles.heroTitle}>Votre jardin</Text>
-              <Text style={styles.heroSubtitle}>{HEADER_SUBTITLE}</Text>
-            </View>
-            <View style={styles.heroIcons}>
-              <TouchableOpacity
-                style={[styles.heroIconBtn, styles.heroIconBtnBlue]}
-                onPress={() => {}}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="settings" size={20} color="#fff" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.heroIconBtn, styles.heroIconBtnGray]}
-                onPress={() => {}}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="person-outline" size={20} color={colors.dark.text} />
-              </TouchableOpacity>
-            </View>
+          <View style={styles.heroTextWrap}>
+            <Text style={styles.heroTitle}>Votre jardin</Text>
+            <Text style={styles.heroSubtitle}>{heroSubtitle}</Text>
           </View>
         </GradientHero>
 
@@ -252,12 +234,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  heroRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  heroTextWrap: { flex: 1, paddingRight: spacing.md },
+  heroTextWrap: {},
   heroTitle: {
     ...typography.display,
     color: colors.dark.text,
@@ -267,16 +244,6 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.dark.textSecondary,
   },
-  heroIcons: { flexDirection: 'row', gap: spacing.sm, alignItems: 'center' },
-  heroIconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  heroIconBtnBlue: { backgroundColor: SETTINGS_BLUE },
-  heroIconBtnGray: { backgroundColor: colors.dark.surface },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   sectionHeader: {
     flexDirection: 'row',

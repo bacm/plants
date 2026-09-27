@@ -123,13 +123,6 @@ export default function ZonesScreen() {
               Organisez les zones de votre jardin
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.settingsBtn}
-            onPress={() => {}}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.settingsIcon}>⚙️</Text>
-          </TouchableOpacity>
         </View>
 
         <View style={styles.section}>
@@ -265,7 +258,7 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     paddingBottom: spacing.lg,
   },
-  headerLeft: { flex: 1, marginRight: spacing.md },
+  headerLeft: { flex: 1 },
   heroTitle: {
     ...typography.display,
     color: colors.dark.text,
@@ -275,16 +268,6 @@ const styles = StyleSheet.create({
     ...typography.bodySmall,
     color: colors.dark.textSecondary,
   },
-  settingsBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#2196F3',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 4,
-  },
-  settingsIcon: { fontSize: 20 },
 
   // Section
   section: { paddingHorizontal: spacing.lg },
