@@ -1,7 +1,7 @@
 ---
 id: 015
 title: Zones screen serialises its queries and library search has no debounce
-status: open
+status: done
 priority: P3
 type: chore
 ---
@@ -32,11 +32,11 @@ useful. Neither is urgent; both are cheap to fix while the code is fresh.
 
 ## Acceptance criteria
 
-- [ ] Zone data loads concurrently (`Promise.all`) or in one aggregate query
-- [ ] `getZoneContextInfo`'s three queries run concurrently
-- [ ] Library search is debounced (~250ms) and an in-flight query is not raced by
+- [x] Zone data loads concurrently (`Promise.all`) or in one aggregate query
+- [x] `getZoneContextInfo`'s three queries run concurrently
+- [x] Library search is debounced (~250ms) and an in-flight query is not raced by
       its successor
-- [ ] Behaviour is unchanged: same results, same ordering
+- [x] Behaviour is unchanged: same results, same ordering
 
 ## Notes
 

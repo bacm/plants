@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,22 +20,32 @@ export default function LibraryScreen() {
   const [plants, setPlants] = useState([]);
   const [zones, setZones] = useState([]);
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [zoneFilter, setZoneFilter] = useState(null);
   const [sunFilter, setSunFilter] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const latestRequestId = useRef(0);
+
+  useEffect(() => {
+    const handle = setTimeout(() => setDebouncedSearch(search), 250);
+    return () => clearTimeout(handle);
+  }, [search]);
 
   const load = useCallback(async () => {
+    const requestId = ++latestRequestId.current;
     const [p, z] = await Promise.all([
       getPlants({
-        search: search || undefined,
+        search: debouncedSearch || undefined,
         zoneId: zoneFilter || undefined,
         sun: sunFilter || undefined,
       }),
       getZones(),
     ]);
+    // Ignore a response that arrives after a newer request has been made.
+    if (requestId !== latestRequestId.current) return;
     setPlants(p);
     setZones(z);
-  }, [search, zoneFilter, sunFilter]);
+  }, [debouncedSearch, zoneFilter, sunFilter]);
 
   useFocusEffect(
     useCallback(() => {

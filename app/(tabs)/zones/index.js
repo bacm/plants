@@ -72,12 +72,20 @@ export default function ZonesScreen() {
   const load = useCallback(async () => {
     const z = await getZones();
     setZones(z);
+    const results = await Promise.all(
+      z.map((zone) =>
+        Promise.all([
+          getPlantsByZoneWithImages(zone.id),
+          getZoneContextInfo(zone.id),
+        ])
+      )
+    );
     const plants = {};
     const contexts = {};
-    for (const zone of z) {
-      plants[zone.id] = await getPlantsByZoneWithImages(zone.id);
-      contexts[zone.id] = await getZoneContextInfo(zone.id);
-    }
+    z.forEach((zone, idx) => {
+      plants[zone.id] = results[idx][0];
+      contexts[zone.id] = results[idx][1];
+    });
     setZonePlants(plants);
     setZoneContexts(contexts);
   }, []);
