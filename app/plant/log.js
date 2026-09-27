@@ -62,7 +62,7 @@ export default function LogCareScreen() {
       if (photoUri) {
         addPhoto({ plantId, careLogId: logId, uri: photoUri, date: value });
       }
-      router.replace(`/plant/${plantId}`);
+      router.back();
     } catch (e) {
       Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
     } finally {

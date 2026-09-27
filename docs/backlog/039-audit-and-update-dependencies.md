@@ -33,3 +33,7 @@ httpx is directly exploitable. Silent drift also makes later upgrades bigger.
 Expo SDK upgrades are their own project; this ticket only covers patch and minor
 updates within the current SDK. Needs the GitHub remote working for the CI and
 Dependabot parts.
+
+`npx expo start` warns that 16 packages are behind the versions SDK 55 expects
+(`expo` 55.0.4 vs ~55.0.31, `react-native` 0.83.2 vs 0.83.10, `expo-router`,
+`expo-sqlite`, …). `npx expo install --fix` is the first step here.

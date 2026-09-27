@@ -118,7 +118,9 @@ export default function EditPlantScreen() {
     setSaving(true);
     try {
       await updatePlant(id, formToPlantValues(form));
-      router.replace(`/plant/${id}`);
+      // back(), not replace(): the detail screen is still underneath and reloads
+      // on focus. replace() stacked a second copy of it, which broke "Retour".
+      router.back();
     } catch (e) {
       Alert.alert('Erreur', `Impossible d'enregistrer : ${e.message}`);
     } finally {

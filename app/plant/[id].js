@@ -555,7 +555,10 @@ export default function PlantDetailScreen() {
             </TouchableOpacity>
           )}
           <View style={[styles.heroOverlay, { paddingTop: insets.top + 8 }]}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.heroBackBtn}>
+            <TouchableOpacity
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
+              style={styles.heroBackBtn}
+            >
               <Text style={styles.heroBackText}>‹ Retour</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>

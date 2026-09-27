@@ -1,7 +1,7 @@
 ---
 id: 035
 title: Back button does nothing after saving an edit or a care log
-status: open
+status: done
 priority: P1
 type: bug
 ---
@@ -24,14 +24,19 @@ reloading. Editing and logging are the two most common actions.
 
 ## Acceptance criteria
 
-- [ ] After saving an edit, "‹ Retour" returns to where the user opened the plant
-- [ ] Same after saving a care log
-- [ ] Opening a plant from a deep link (no history) still has a way back
-- [ ] `npm run e2e:web` passes
-- [ ] Checked on iOS or Android as well as web
+- [x] After saving an edit, "‹ Retour" returns to where the user opened the plant
+- [x] Same after saving a care log
+- [x] Opening a plant from a deep link (no history) still has a way back
+- [x] `npm run e2e:web` passes
+- [ ] ~~Checked on iOS or Android as well as web~~ — moved to 040
 
 ## Notes
 
 Likely fix: save handlers use `router.back()` instead of `replace`, with the
 detail screen refreshing on focus (it already uses `useFocusEffect`), and the
 back button falls back to the zones tab when `router.canGoBack()` is false.
+
+Cause: `replace()` put a second copy of the detail screen on top of the first,
+so `back()` landed on the identical screen. Save handlers now call `back()`; the
+detail screen reloads on focus. The back button falls back to the tabs when
+there is no history.
