@@ -11,7 +11,10 @@ type: bug
 `app/plant/[id].js:231`:
 
 ```js
-onPress: async () => { deletePhoto(photo.id); await load(); }
+onPress: async () => {
+  deletePhoto(photo.id);
+  await load();
+};
 ```
 
 `deletePhoto` is `async` — it awaits `FileSystem.deleteAsync` before issuing the

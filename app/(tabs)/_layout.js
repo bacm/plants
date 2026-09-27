@@ -9,11 +9,7 @@ function TabIcon({ name, focused }) {
     bloom: '📅',
     library: '📚',
   };
-  return (
-    <Text style={[styles.icon, focused && styles.iconFocused]}>
-      {icons[name] || '•'}
-    </Text>
-  );
+  return <Text style={[styles.icon, focused && styles.iconFocused]}>{icons[name] || '•'}</Text>;
 }
 
 export default function TabsLayout() {
@@ -26,8 +22,7 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.dark.textSecondary,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
-      }}
-    >
+      }}>
       <Tabs.Screen
         name="index"
         options={{

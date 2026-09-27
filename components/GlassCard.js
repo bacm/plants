@@ -8,7 +8,12 @@ export function GlassCard({ children, style, intensity = 40, noPadding }) {
       {Platform.OS === 'ios' ? (
         <BlurView intensity={intensity} tint="dark" style={StyleSheet.absoluteFill} />
       ) : null}
-      <View style={[styles.inner, Platform.OS !== 'ios' && styles.innerAndroid, noPadding && styles.innerNoPadding]}>
+      <View
+        style={[
+          styles.inner,
+          Platform.OS !== 'ios' && styles.innerAndroid,
+          noPadding && styles.innerNoPadding,
+        ]}>
         {children}
       </View>
     </View>

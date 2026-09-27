@@ -30,6 +30,7 @@ on purpose rather than by neglect.
 One of the two:
 
 **Option A — enforce it**
+
 - [ ] `npm run format` is run once across the repo, as its own commit touching
       nothing but formatting
 - [ ] That commit's SHA is added to `.git-blame-ignore-revs` so `git blame` skips it
@@ -37,6 +38,7 @@ One of the two:
 - [ ] The commit is not mixed with any behavioural change
 
 **Option B — drop it**
+
 - [ ] Prettier is removed from `devDependencies`
 - [ ] `.prettierrc`, `.prettierignore` and the `format` script are deleted
 - [ ] CLAUDE.md stops mentioning formatting

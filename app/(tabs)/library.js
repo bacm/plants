@@ -70,13 +70,10 @@ export default function LibraryScreen() {
             onRefresh={onRefresh}
             tintColor={colors.dark.accent}
           />
-        }
-      >
+        }>
         <GradientHero>
           <Text style={styles.heroTitle}>Bibliothèque</Text>
-          <Text style={styles.heroSubtitle}>
-            Toutes vos plantes
-          </Text>
+          <Text style={styles.heroSubtitle}>Toutes vos plantes</Text>
         </GradientHero>
 
         <View style={styles.searchRow}>
@@ -92,11 +89,13 @@ export default function LibraryScreen() {
         </View>
 
         <View style={styles.filters}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filtersContent}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersContent}>
             <TouchableOpacity
               onPress={() => setZoneFilter(null)}
-              style={[styles.filterPill, !zoneFilter && styles.filterPillActive]}
-            >
+              style={[styles.filterPill, !zoneFilter && styles.filterPillActive]}>
               <Text style={[styles.filterPillText, !zoneFilter && styles.filterPillTextActive]}>
                 Toutes zones
               </Text>
@@ -105,9 +104,12 @@ export default function LibraryScreen() {
               <TouchableOpacity
                 key={z.id}
                 onPress={() => setZoneFilter(zoneFilter === z.id ? null : z.id)}
-                style={[styles.filterPill, zoneFilter === z.id && styles.filterPillActive]}
-              >
-                <Text style={[styles.filterPillText, zoneFilter === z.id && styles.filterPillTextActive]}>
+                style={[styles.filterPill, zoneFilter === z.id && styles.filterPillActive]}>
+                <Text
+                  style={[
+                    styles.filterPillText,
+                    zoneFilter === z.id && styles.filterPillTextActive,
+                  ]}>
                   {z.name}
                 </Text>
               </TouchableOpacity>
@@ -120,8 +122,7 @@ export default function LibraryScreen() {
             <TouchableOpacity
               key={s}
               onPress={() => setSunFilter(sunFilter === s ? null : s)}
-              style={[styles.sunPill, sunFilter === s && styles.sunPillActive]}
-            >
+              style={[styles.sunPill, sunFilter === s && styles.sunPillActive]}>
               <Text style={[styles.sunPillText, sunFilter === s && styles.sunPillTextActive]}>
                 {label}
               </Text>
@@ -144,8 +145,7 @@ export default function LibraryScreen() {
                 key={p.id}
                 activeOpacity={0.9}
                 onPress={() => router.push(`/plant/${p.id}`)}
-                style={styles.cardWrap}
-              >
+                style={styles.cardWrap}>
                 <GlassCard>
                   <View style={styles.row}>
                     <View style={[styles.colorDot, { backgroundColor: colorHex(p.flowerColor) }]} />
@@ -167,8 +167,7 @@ export default function LibraryScreen() {
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => router.push('/plant/new')}
-            activeOpacity={0.85}
-          >
+            activeOpacity={0.85}>
             <Text style={styles.primaryButtonText}>+ Ajouter une plante</Text>
           </TouchableOpacity>
         </View>
@@ -203,7 +202,13 @@ const styles = StyleSheet.create({
   filterPillActive: { backgroundColor: colors.dark.accent },
   filterPillText: { ...typography.caption, color: colors.dark.textSecondary },
   filterPillTextActive: { color: '#fff' },
-  sunFilters: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, marginTop: spacing.sm, gap: spacing.sm },
+  sunFilters: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    gap: spacing.sm,
+  },
   sunPill: {
     paddingVertical: 6,
     paddingHorizontal: 12,

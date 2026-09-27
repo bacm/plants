@@ -12,7 +12,13 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
-import { getPlantById, getRemindersByPlantId, createReminder, deleteReminder, markReminderDone } from '../../lib/db';
+import {
+  getPlantById,
+  getRemindersByPlantId,
+  createReminder,
+  deleteReminder,
+  markReminderDone,
+} from '../../lib/db';
 import { REMINDER_KINDS, labelFor } from '../../lib/enums';
 
 export default function RemindersScreen() {
@@ -99,9 +105,10 @@ export default function RemindersScreen() {
                 <TouchableOpacity
                   key={k}
                   onPress={() => setKind(k)}
-                  style={[styles.pill, kind === k && styles.pillActive]}
-                >
-                  <Text style={[styles.pillText, kind === k && styles.pillTextActive]}>{label}</Text>
+                  style={[styles.pill, kind === k && styles.pillActive]}>
+                  <Text style={[styles.pillText, kind === k && styles.pillTextActive]}>
+                    {label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -140,7 +147,9 @@ export default function RemindersScreen() {
                 <View style={styles.reminderRow}>
                   <View style={styles.reminderInfo}>
                     <Text style={styles.reminderKind}>{labelFor(REMINDER_KINDS, r.kind)}</Text>
-                    <Text style={styles.reminderMeta}>Tous les {r.frequencyDays} j · Prochaine : {r.nextDueDate}</Text>
+                    <Text style={styles.reminderMeta}>
+                      Tous les {r.frequencyDays} j · Prochaine : {r.nextDueDate}
+                    </Text>
                   </View>
                   <View style={styles.reminderActions}>
                     <TouchableOpacity onPress={() => doNow(r)} style={styles.doneBtn}>
@@ -173,13 +182,33 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   sectionTitle: { ...typography.title, color: colors.dark.text, marginBottom: spacing.md },
   label: { ...typography.label, color: colors.dark.textSecondary, marginBottom: 6, marginTop: 12 },
-  input: { ...typography.body, color: colors.dark.text, backgroundColor: colors.dark.surface, borderRadius: radius.sm, padding: 14, borderWidth: 1, borderColor: colors.dark.border },
+  input: {
+    ...typography.body,
+    color: colors.dark.text,
+    backgroundColor: colors.dark.surface,
+    borderRadius: radius.sm,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.full, backgroundColor: colors.dark.surface },
+  pill: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.full,
+    backgroundColor: colors.dark.surface,
+  },
   pillActive: { backgroundColor: colors.dark.accent },
   pillText: { ...typography.caption, color: colors.dark.textSecondary },
   pillTextActive: { color: '#fff' },
-  addBtn: { marginTop: 16, alignSelf: 'flex-start', paddingVertical: 10, paddingHorizontal: 16, backgroundColor: colors.dark.accent, borderRadius: radius.md },
+  addBtn: {
+    marginTop: 16,
+    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: colors.dark.accent,
+    borderRadius: radius.md,
+  },
   addBtnText: { ...typography.label, color: '#fff' },
   emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
   reminderCard: { marginBottom: spacing.sm },
@@ -188,7 +217,12 @@ const styles = StyleSheet.create({
   reminderKind: { ...typography.label, color: colors.dark.text },
   reminderMeta: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 2 },
   reminderActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  doneBtn: { paddingVertical: 6, paddingHorizontal: 12, backgroundColor: colors.dark.accent, borderRadius: radius.sm },
+  doneBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    backgroundColor: colors.dark.accent,
+    borderRadius: radius.sm,
+  },
   doneBtnText: { ...typography.caption, color: '#fff' },
   deleteBtnText: { ...typography.caption, color: colors.dark.textSecondary },
 });

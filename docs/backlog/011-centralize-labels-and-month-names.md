@@ -10,13 +10,13 @@ type: refactor
 
 Five separate month-name arrays exist, with three different abbreviation schemes:
 
-| File | Constant | Form |
-| --- | --- | --- |
-| `app/(tabs)/bloom.js:16` | `MONTHS` | full names |
-| `app/(tabs)/index.js:29` | `MONTHS_FULL` | full, but `Juil.` `Sept.` `Oct.` abbreviated |
-| `app/plant/[id].js:37` | `MONTHS` | `Jan` `Fév` `Mar` |
-| `app/plant/new.js:45` | `MONTHS_LABELS` | same three-letter set |
-| `app/plant/edit.js:45` | `MONTHS_LABELS` | same three-letter set |
+| File                     | Constant        | Form                                         |
+| ------------------------ | --------------- | -------------------------------------------- |
+| `app/(tabs)/bloom.js:16` | `MONTHS`        | full names                                   |
+| `app/(tabs)/index.js:29` | `MONTHS_FULL`   | full, but `Juil.` `Sept.` `Oct.` abbreviated |
+| `app/plant/[id].js:37`   | `MONTHS`        | `Jan` `Fév` `Mar`                            |
+| `app/plant/new.js:45`    | `MONTHS_LABELS` | same three-letter set                        |
+| `app/plant/edit.js:45`   | `MONTHS_LABELS` | same three-letter set                        |
 
 The same holds for `SUN_LABELS` (5 copies, two with different capitalisation —
 `app/(tabs)/zones/index.js:16` uses `Plein Soleil`, others `Plein soleil`),

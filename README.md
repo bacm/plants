@@ -5,6 +5,7 @@ Mobile app **for ornamental plants and flowers only** to manage: location, flowe
 ## Installation
 
 1. Copy `.env.model` to `.env`:
+
    ```bash
    cp .env.model .env
    ```

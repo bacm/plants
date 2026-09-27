@@ -33,6 +33,7 @@ data. Either state is defensible; the current one is not.
 One of the two:
 
 **Option A — support web**
+
 - [x] All seven names exist in `lib/db.web.js` with equivalent behaviour
 - [x] `createPlant` and `createZone` persist every column the native version does
 - [x] `KNOWN_WEB_GAPS` in `lib/__tests__/db-parity.test.js` is empty and the test
@@ -40,6 +41,7 @@ One of the two:
 - [ ] ~~Zones, plant create and plant edit verified in a browser~~ — moved to 034
 
 **Option B — drop web**
+
 - [ ] `lib/db.web.js` is deleted
 - [ ] `web` is removed from `package.json` scripts and from `app.json`
 - [ ] The bundle step in `.github/workflows/ci.yml` stops building web

@@ -15,8 +15,22 @@ import { colors, spacing, typography, radius } from '../../lib/theme';
 import { createZone } from '../../lib/db';
 
 const ZONE_ICONS = [
-  '🌱', '🌳', '🌿', '🪴', '🌺', '🌻', '🌹', '🍅',
-  '🥕', '🌾', '🍃', '🪻', '🌵', '🎋', '🍀', '☘️',
+  '🌱',
+  '🌳',
+  '🌿',
+  '🪴',
+  '🌺',
+  '🌻',
+  '🌹',
+  '🍅',
+  '🥕',
+  '🌾',
+  '🍃',
+  '🪻',
+  '🌵',
+  '🎋',
+  '🍀',
+  '☘️',
 ];
 
 export default function NewZoneScreen() {
@@ -61,13 +75,9 @@ export default function NewZoneScreen() {
               {ZONE_ICONS.map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
-                  style={[
-                    styles.iconOption,
-                    icon === emoji && styles.iconOptionSelected,
-                  ]}
+                  style={[styles.iconOption, icon === emoji && styles.iconOptionSelected]}
                   onPress={() => setIcon(emoji)}
-                  activeOpacity={0.7}
-                >
+                  activeOpacity={0.7}>
                   <Text style={styles.iconEmoji}>{emoji}</Text>
                 </TouchableOpacity>
               ))}
@@ -96,8 +106,7 @@ export default function NewZoneScreen() {
         <TouchableOpacity
           style={[styles.saveBtn, (!name.trim() || saving) && styles.saveBtnDisabled]}
           onPress={save}
-          disabled={!name.trim() || saving}
-        >
+          disabled={!name.trim() || saving}>
           <Text style={styles.saveBtnText}>{saving ? 'Enregistrement…' : 'Créer la zone'}</Text>
         </TouchableOpacity>
         <View style={{ height: 80 }} />

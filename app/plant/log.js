@@ -97,9 +97,10 @@ export default function LogCareScreen() {
                 <TouchableOpacity
                   key={t}
                   onPress={() => setType(t)}
-                  style={[styles.pill, type === t && styles.pillActive]}
-                >
-                  <Text style={[styles.pillText, type === t && styles.pillTextActive]}>{label}</Text>
+                  style={[styles.pill, type === t && styles.pillActive]}>
+                  <Text style={[styles.pillText, type === t && styles.pillTextActive]}>
+                    {label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -107,7 +108,10 @@ export default function LogCareScreen() {
             <TextInput
               style={styles.input}
               value={date}
-              onChangeText={(v) => { setDate(v); setDateError(''); }}
+              onChangeText={(v) => {
+                setDate(v);
+                setDateError('');
+              }}
               placeholder="AAAA-MM-JJ"
               placeholderTextColor={colors.dark.textSecondary}
             />
@@ -157,19 +161,46 @@ const styles = StyleSheet.create({
   heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 4 },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   label: { ...typography.label, color: colors.dark.textSecondary, marginBottom: 6, marginTop: 12 },
-  input: { ...typography.body, color: colors.dark.text, backgroundColor: colors.dark.surface, borderRadius: radius.sm, padding: 14, borderWidth: 1, borderColor: colors.dark.border },
+  input: {
+    ...typography.body,
+    color: colors.dark.text,
+    backgroundColor: colors.dark.surface,
+    borderRadius: radius.sm,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
   fieldError: { ...typography.caption, color: colors.dark.danger, marginTop: 6 },
   textArea: { minHeight: 80 },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: radius.full, backgroundColor: colors.dark.surface },
+  pill: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: radius.full,
+    backgroundColor: colors.dark.surface,
+  },
   pillActive: { backgroundColor: colors.dark.accent },
   pillText: { ...typography.caption, color: colors.dark.textSecondary },
   pillTextActive: { color: '#fff' },
   photoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   photoLabel: { ...typography.bodySmall, color: colors.dark.text },
   removePhoto: { ...typography.caption, color: colors.dark.accent },
-  photoBtn: { paddingVertical: 14, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.dark.border, borderStyle: 'dashed', alignItems: 'center' },
+  photoBtn: {
+    paddingVertical: 14,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+  },
   photoBtnText: { ...typography.caption, color: colors.dark.textSecondary },
-  saveBtn: { marginHorizontal: spacing.lg, marginTop: spacing.xxl, backgroundColor: colors.dark.accent, paddingVertical: 16, borderRadius: radius.lg, alignItems: 'center' },
+  saveBtn: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xxl,
+    backgroundColor: colors.dark.accent,
+    paddingVertical: 16,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+  },
   saveBtnText: { ...typography.label, color: '#fff' },
 });

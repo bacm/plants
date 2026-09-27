@@ -10,13 +10,13 @@ type: refactor
 
 The ~30 columns of a plant are written out by hand in five places:
 
-| Location | Form |
-| --- | --- |
-| `lib/db.js` `createPlant` | column list + placeholder list + value list |
-| `lib/db.js` `updatePlant` | the allowlist that was just removed (see 004) |
-| `lib/plantSearch.js` `normalizeToForm` | snake_case → camelCase mapping, twice |
-| `app/plant/new.js` | ~30 `useState` declarations + the save payload |
-| `app/plant/edit.js` | the same ~30, plus the load-from-row mapping |
+| Location                               | Form                                           |
+| -------------------------------------- | ---------------------------------------------- |
+| `lib/db.js` `createPlant`              | column list + placeholder list + value list    |
+| `lib/db.js` `updatePlant`              | the allowlist that was just removed (see 004)  |
+| `lib/plantSearch.js` `normalizeToForm` | snake_case → camelCase mapping, twice          |
+| `app/plant/new.js`                     | ~30 `useState` declarations + the save payload |
+| `app/plant/edit.js`                    | the same ~30, plus the load-from-row mapping   |
 
 `lib/db.web.js` `createPlant` is a sixth, partial copy.
 

@@ -18,7 +18,15 @@ import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { getPlantById, updatePlant, getZones } from '../../lib/db';
-import { PLANT_TYPES, SUN, WATER, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY } from '../../lib/enums';
+import {
+  PLANT_TYPES,
+  SUN,
+  WATER,
+  SOIL_TYPES,
+  SOIL_PH,
+  PROPAGATION,
+  TOXICITY,
+} from '../../lib/enums';
 import { MONTH_SHORT } from '../../lib/months';
 import { searchPlants, normalizeToForm, PlantSearchError } from '../../lib/plantSearch';
 import { emptyPlantForm, plantRowToForm, formToPlantValues } from '../../lib/plantFields';
@@ -27,7 +35,6 @@ import { validatePlantForm } from '../../lib/validation';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-
 
 export default function EditPlantScreen() {
   const { id } = useLocalSearchParams();
@@ -67,7 +74,25 @@ export default function EditPlantScreen() {
         setNoFlowering(!hasBloom);
         setSearchQuery(p.name);
         // Auto-expand details if any secondary field has data
-        if (p.flowerColor || p.bloomStartMonth || p.bloomEndMonth || p.height || p.width || p.deciduous != null || p.minTemperature || p.notes || p.createdAt || p.soilType || p.fertilizer || p.pruning || p.pests || p.companionPlants || p.harvest || p.origin || p.winterCare) {
+        if (
+          p.flowerColor ||
+          p.bloomStartMonth ||
+          p.bloomEndMonth ||
+          p.height ||
+          p.width ||
+          p.deciduous != null ||
+          p.minTemperature ||
+          p.notes ||
+          p.createdAt ||
+          p.soilType ||
+          p.fertilizer ||
+          p.pruning ||
+          p.pests ||
+          p.companionPlants ||
+          p.harvest ||
+          p.origin ||
+          p.winterCare
+        ) {
           setShowMore(true);
         }
       });
@@ -147,13 +172,11 @@ export default function EditPlantScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
+        keyboardShouldPersistTaps="handled">
         <GradientHero>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backBtnText}>{'←'} Annuler</Text>
@@ -175,8 +198,7 @@ export default function EditPlantScreen() {
             <TouchableOpacity
               style={styles.searchButton}
               onPress={handleSearch}
-              disabled={searching || searchQuery.trim().length < 2}
-            >
+              disabled={searching || searchQuery.trim().length < 2}>
               {searching ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
@@ -192,8 +214,7 @@ export default function EditPlantScreen() {
                 <TouchableOpacity
                   key={item.id}
                   style={styles.suggestionItem}
-                  onPress={() => handleSelectSuggestion(item)}
-                >
+                  onPress={() => handleSelectSuggestion(item)}>
                   <Text style={styles.suggestionName}>{item.common_name}</Text>
                   <Text style={styles.suggestionLatin}>{item.scientific_name}</Text>
                 </TouchableOpacity>
@@ -218,17 +239,18 @@ export default function EditPlantScreen() {
                 <View style={styles.pills}>
                   <TouchableOpacity
                     onPress={() => setField('zoneId', null)}
-                    style={[styles.pill, !form.zoneId && styles.pillActive]}
-                  >
-                    <Text style={[styles.pillText, !form.zoneId && styles.pillTextActive]}>Aucune</Text>
+                    style={[styles.pill, !form.zoneId && styles.pillActive]}>
+                    <Text style={[styles.pillText, !form.zoneId && styles.pillTextActive]}>
+                      Aucune
+                    </Text>
                   </TouchableOpacity>
                   {zones.map((z) => (
                     <TouchableOpacity
                       key={z.id}
                       onPress={() => setField('zoneId', z.id)}
-                      style={[styles.pill, form.zoneId === z.id && styles.pillActive]}
-                    >
-                      <Text style={[styles.pillText, form.zoneId === z.id && styles.pillTextActive]}>
+                      style={[styles.pill, form.zoneId === z.id && styles.pillActive]}>
+                      <Text
+                        style={[styles.pillText, form.zoneId === z.id && styles.pillTextActive]}>
                         {z.name}
                       </Text>
                     </TouchableOpacity>
@@ -244,8 +266,7 @@ export default function EditPlantScreen() {
                 <TouchableOpacity
                   key={t}
                   onPress={() => setField('type', t)}
-                  style={[styles.pill, form.type === t && styles.pillActive]}
-                >
+                  style={[styles.pill, form.type === t && styles.pillActive]}>
                   <Text style={[styles.pillText, form.type === t && styles.pillTextActive]}>
                     {label}
                   </Text>
@@ -265,13 +286,11 @@ export default function EditPlantScreen() {
                   <TouchableOpacity
                     key={s}
                     onPress={() => setField('sun', s)}
-                    style={[styles.segBtn, form.sun === s && styles.segBtnActive]}
-                  >
+                    style={[styles.segBtn, form.sun === s && styles.segBtnActive]}>
                     <Text style={styles.segIcon}>{icon}</Text>
                     <Text
                       style={[styles.segLabel, form.sun === s && styles.segLabelActive]}
-                      numberOfLines={1}
-                    >
+                      numberOfLines={1}>
                       {label}
                     </Text>
                   </TouchableOpacity>
@@ -285,13 +304,11 @@ export default function EditPlantScreen() {
                   <TouchableOpacity
                     key={w}
                     onPress={() => setField('water', w)}
-                    style={[styles.segBtn, form.water === w && styles.segBtnActive]}
-                  >
+                    style={[styles.segBtn, form.water === w && styles.segBtnActive]}>
                     <Text style={styles.segIcon}>{icon}</Text>
                     <Text
                       style={[styles.segLabel, form.water === w && styles.segLabelActive]}
-                      numberOfLines={1}
-                    >
+                      numberOfLines={1}>
                       {label}
                     </Text>
                   </TouchableOpacity>
@@ -323,16 +340,24 @@ export default function EditPlantScreen() {
               <Text style={styles.label}>Floraison</Text>
               <View style={styles.pills}>
                 <TouchableOpacity
-                  onPress={() => { setNoFlowering(false); setField('bloomStartMonth', ''); setField('bloomEndMonth', ''); }}
-                  style={[styles.pill, !noFlowering && styles.pillActive]}
-                >
+                  onPress={() => {
+                    setNoFlowering(false);
+                    setField('bloomStartMonth', '');
+                    setField('bloomEndMonth', '');
+                  }}
+                  style={[styles.pill, !noFlowering && styles.pillActive]}>
                   <Text style={[styles.pillText, !noFlowering && styles.pillTextActive]}>Oui</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => { setNoFlowering(true); setField('bloomStartMonth', ''); setField('bloomEndMonth', ''); }}
-                  style={[styles.pill, noFlowering && styles.pillActive]}
-                >
-                  <Text style={[styles.pillText, noFlowering && styles.pillTextActive]}>Non applicable</Text>
+                  onPress={() => {
+                    setNoFlowering(true);
+                    setField('bloomStartMonth', '');
+                    setField('bloomEndMonth', '');
+                  }}
+                  style={[styles.pill, noFlowering && styles.pillActive]}>
+                  <Text style={[styles.pillText, noFlowering && styles.pillTextActive]}>
+                    Non applicable
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -359,8 +384,12 @@ export default function EditPlantScreen() {
                   />
                 </View>
               )}
-              {errors.bloomStartMonth ? <Text style={styles.fieldError}>{errors.bloomStartMonth}</Text> : null}
-              {errors.bloomEndMonth ? <Text style={styles.fieldError}>{errors.bloomEndMonth}</Text> : null}
+              {errors.bloomStartMonth ? (
+                <Text style={styles.fieldError}>{errors.bloomStartMonth}</Text>
+              ) : null}
+              {errors.bloomEndMonth ? (
+                <Text style={styles.fieldError}>{errors.bloomEndMonth}</Text>
+              ) : null}
 
               <Text style={styles.label}>Hauteur (cm)</Text>
               <TextInput
@@ -386,21 +415,25 @@ export default function EditPlantScreen() {
               <View style={styles.pills}>
                 <TouchableOpacity
                   onPress={() => setField('deciduous', null)}
-                  style={[styles.pill, form.deciduous === null && styles.pillActive]}
-                >
-                  <Text style={[styles.pillText, form.deciduous === null && styles.pillTextActive]}>?</Text>
+                  style={[styles.pill, form.deciduous === null && styles.pillActive]}>
+                  <Text style={[styles.pillText, form.deciduous === null && styles.pillTextActive]}>
+                    ?
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => setField('deciduous', false)}
-                  style={[styles.pill, form.deciduous === false && styles.pillActive]}
-                >
-                  <Text style={[styles.pillText, form.deciduous === false && styles.pillTextActive]}>Persistante</Text>
+                  style={[styles.pill, form.deciduous === false && styles.pillActive]}>
+                  <Text
+                    style={[styles.pillText, form.deciduous === false && styles.pillTextActive]}>
+                    Persistante
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => setField('deciduous', true)}
-                  style={[styles.pill, form.deciduous === true && styles.pillActive]}
-                >
-                  <Text style={[styles.pillText, form.deciduous === true && styles.pillTextActive]}>Caduque</Text>
+                  style={[styles.pill, form.deciduous === true && styles.pillActive]}>
+                  <Text style={[styles.pillText, form.deciduous === true && styles.pillTextActive]}>
+                    Caduque
+                  </Text>
                 </TouchableOpacity>
               </View>
 
@@ -445,8 +478,7 @@ export default function EditPlantScreen() {
                   <TouchableOpacity
                     key={s}
                     onPress={() => setField('soilType', s)}
-                    style={[styles.pill, form.soilType === s && styles.pillActive]}
-                  >
+                    style={[styles.pill, form.soilType === s && styles.pillActive]}>
                     <Text style={[styles.pillText, form.soilType === s && styles.pillTextActive]}>
                       {label}
                     </Text>
@@ -460,8 +492,7 @@ export default function EditPlantScreen() {
                   <TouchableOpacity
                     key={p}
                     onPress={() => setField('soilPH', p)}
-                    style={[styles.pill, form.soilPH === p && styles.pillActive]}
-                  >
+                    style={[styles.pill, form.soilPH === p && styles.pillActive]}>
                     <Text style={[styles.pillText, form.soilPH === p && styles.pillTextActive]}>
                       {label}
                     </Text>
@@ -495,17 +526,27 @@ export default function EditPlantScreen() {
                 <View style={styles.pills}>
                   <TouchableOpacity
                     onPress={() => setField('pruningMonth', null)}
-                    style={[styles.pill, form.pruningMonth === null && styles.pillActive]}
-                  >
-                    <Text style={[styles.pillText, form.pruningMonth === null && styles.pillTextActive]}>—</Text>
+                    style={[styles.pill, form.pruningMonth === null && styles.pillActive]}>
+                    <Text
+                      style={[
+                        styles.pillText,
+                        form.pruningMonth === null && styles.pillTextActive,
+                      ]}>
+                      —
+                    </Text>
                   </TouchableOpacity>
                   {MONTH_SHORT.map((m, i) => (
                     <TouchableOpacity
                       key={i}
                       onPress={() => setField('pruningMonth', i + 1)}
-                      style={[styles.pill, form.pruningMonth === i + 1 && styles.pillActive]}
-                    >
-                      <Text style={[styles.pillText, form.pruningMonth === i + 1 && styles.pillTextActive]}>{m}</Text>
+                      style={[styles.pill, form.pruningMonth === i + 1 && styles.pillActive]}>
+                      <Text
+                        style={[
+                          styles.pillText,
+                          form.pruningMonth === i + 1 && styles.pillTextActive,
+                        ]}>
+                        {m}
+                      </Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -528,17 +569,19 @@ export default function EditPlantScreen() {
               <View style={styles.pills}>
                 <TouchableOpacity
                   onPress={() => setField('propagation', null)}
-                  style={[styles.pill, form.propagation === null && styles.pillActive]}
-                >
-                  <Text style={[styles.pillText, form.propagation === null && styles.pillTextActive]}>—</Text>
+                  style={[styles.pill, form.propagation === null && styles.pillActive]}>
+                  <Text
+                    style={[styles.pillText, form.propagation === null && styles.pillTextActive]}>
+                    —
+                  </Text>
                 </TouchableOpacity>
                 {PROPAGATION.map(({ value: p, label }) => (
                   <TouchableOpacity
                     key={p}
                     onPress={() => setField('propagation', p)}
-                    style={[styles.pill, form.propagation === p && styles.pillActive]}
-                  >
-                    <Text style={[styles.pillText, form.propagation === p && styles.pillTextActive]}>
+                    style={[styles.pill, form.propagation === p && styles.pillActive]}>
+                    <Text
+                      style={[styles.pillText, form.propagation === p && styles.pillTextActive]}>
                       {label}
                     </Text>
                   </TouchableOpacity>
@@ -564,8 +607,7 @@ export default function EditPlantScreen() {
                   <TouchableOpacity
                     key={t}
                     onPress={() => setField('toxicity', t)}
-                    style={[styles.pill, form.toxicity === t && styles.pillActive]}
-                  >
+                    style={[styles.pill, form.toxicity === t && styles.pillActive]}>
                     <Text style={[styles.pillText, form.toxicity === t && styles.pillTextActive]}>
                       {label}
                     </Text>
@@ -607,8 +649,12 @@ export default function EditPlantScreen() {
                   maxLength={2}
                 />
               </View>
-              {errors.harvestMonthStart ? <Text style={styles.fieldError}>{errors.harvestMonthStart}</Text> : null}
-              {errors.harvestMonthEnd ? <Text style={styles.fieldError}>{errors.harvestMonthEnd}</Text> : null}
+              {errors.harvestMonthStart ? (
+                <Text style={styles.fieldError}>{errors.harvestMonthStart}</Text>
+              ) : null}
+              {errors.harvestMonthEnd ? (
+                <Text style={styles.fieldError}>{errors.harvestMonthEnd}</Text>
+              ) : null}
 
               {/* --- Section Autres --- */}
               <Text style={styles.sectionTitle}>Autres informations</Text>
@@ -639,11 +685,8 @@ export default function EditPlantScreen() {
         <TouchableOpacity
           style={[styles.saveBtn, (!form.name.trim() || saving) && styles.saveBtnDisabled]}
           onPress={save}
-          disabled={!form.name.trim() || saving}
-        >
-          <Text style={styles.saveBtnText}>
-            {saving ? 'Enregistrement…' : 'Enregistrer'}
-          </Text>
+          disabled={!form.name.trim() || saving}>
+          <Text style={styles.saveBtnText}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Text>
         </TouchableOpacity>
         <View style={{ height: 60 }} />
       </ScrollView>

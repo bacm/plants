@@ -77,7 +77,9 @@ function loadTickets() {
     }
     if (fields.id) {
       if (seenIds.has(fields.id)) {
-        errors.push(`${file}: duplicate id "${fields.id}", already used by ${seenIds.get(fields.id)}`);
+        errors.push(
+          `${file}: duplicate id "${fields.id}", already used by ${seenIds.get(fields.id)}`
+        );
       }
       seenIds.set(fields.id, file);
     }

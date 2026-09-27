@@ -33,6 +33,7 @@ as they stand.
 One of the two, not a middle state:
 
 **Option A — finish the migration**
+
 - [ ] A theme accessor (hook or context) is the single way a component gets colors
 - [ ] No screen references `colors.dark.*` or `colors.light.*` directly
 - [ ] `app.json` uses `"userInterfaceStyle": "automatic"`
@@ -41,6 +42,7 @@ One of the two, not a middle state:
       detail screens
 
 **Option B — revert to dark-only**
+
 - [x] `GlassCard` and `GradientHero` go back to `colors.dark.*`
 - [x] `colors.light` is deleted from `lib/theme.js`, or a comment records that it
       is reserved for a future migration with this ticket's number
@@ -51,7 +53,6 @@ Resolved with option B. The components were already back on `colors.dark.*`
 when this was picked up; `colors.light` is deleted, `app.json` now declares
 `dark` so native chrome matches, and `_layout.js` reads the background from the
 theme instead of a raw hex.
-
 
 Option B is the smaller, safer change and nothing currently asks for light mode.
 Option A is a real piece of work touching every screen — if that is the goal, it

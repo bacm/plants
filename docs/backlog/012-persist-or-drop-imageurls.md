@@ -29,6 +29,7 @@ emoji for every plant that has no user-taken photo, and the reader at
 One of the two:
 
 **Option A — persist them**
+
 - [x] `normalizeToForm` keeps `image_urls`
 - [x] `createPlant` and `updatePlant` write `imageUrls` as JSON
 - [x] The zones thumbnail actually renders a remote image — code path in place;
@@ -36,6 +37,7 @@ One of the two:
 - [x] Depends on 013: today's URLs are fabricated and would mostly 404
 
 **Option B — remove the column**
+
 - [ ] `imageUrls` is dropped from the migration and from every `SELECT`
 - [ ] The reader in `app/(tabs)/zones/index.js` and its `getPlantImage` helper go
 - [ ] `lib/plantSearch.js` stops returning `image_urls`

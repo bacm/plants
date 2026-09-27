@@ -25,13 +25,13 @@ type: bug
 ---
 ```
 
-| Field | Allowed values |
-| --- | --- |
-| `id` | Three digits, unique, never reused. The filename must start with `<id>-`. |
-| `title` | One line, imperative or descriptive. No trailing period. |
-| `status` | `open` · `in-progress` · `blocked` · `done` |
+| Field      | Allowed values                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `id`       | Three digits, unique, never reused. The filename must start with `<id>-`.                                                |
+| `title`    | One line, imperative or descriptive. No trailing period.                                                                 |
+| `status`   | `open` · `in-progress` · `blocked` · `done`                                                                              |
 | `priority` | `P0` broken or unsafe in production · `P1` real user-visible defect · `P2` correctness or maintainability · `P3` cleanup |
-| `type` | `bug` · `security` · `refactor` · `feature` · `chore` · `docs` |
+| `type`     | `bug` · `security` · `refactor` · `feature` · `chore` · `docs`                                                           |
 
 `npm run backlog:check` runs in `npm run verify` and in CI. It fails on a missing
 field, an invalid value, a duplicate id, a filename that disagrees with its id, or

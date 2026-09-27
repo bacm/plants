@@ -6,8 +6,7 @@ export function GradientHero({ children, style }) {
   return (
     <LinearGradient
       colors={[colors.dark.gradientStart, colors.dark.gradientEnd]}
-      style={[styles.gradient, style]}
-    >
+      style={[styles.gradient, style]}>
       {children}
     </LinearGradient>
   );

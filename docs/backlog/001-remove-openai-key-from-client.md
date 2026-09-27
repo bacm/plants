@@ -38,7 +38,6 @@ Resolved with option 1: a FastAPI proxy in `server/`. It builds the prompt
 itself, so it is not an open OpenAI relay, and rate-limits per IP. Revoking the
 old key and deploying the server are outside the repo and moved to 019.
 
-
 Two viable shapes:
 
 1. **Small proxy** (Cloudflare Worker, Vercel function) holding the key

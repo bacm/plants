@@ -12,7 +12,7 @@ type: bug
 
 ```js
 const r = db.getFirstAsync('SELECT * FROM reminders WHERE id = ?', [id]);
-if (!r || !r.nextDueDate) return;   // r is a Promise, so r.nextDueDate is undefined
+if (!r || !r.nextDueDate) return; // r is a Promise, so r.nextDueDate is undefined
 ```
 
 `r` is a truthy Promise, `r.nextDueDate` is `undefined`, and the guard returns

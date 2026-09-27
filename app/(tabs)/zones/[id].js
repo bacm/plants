@@ -1,12 +1,5 @@
 import { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../../components/GradientHero';
 import { GlassCard } from '../../../components/GlassCard';
@@ -61,29 +54,26 @@ export default function ZoneDetailScreen() {
             onRefresh={onRefresh}
             tintColor={colors.dark.accent}
           />
-        }
-      >
+        }>
         <GradientHero>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Text style={styles.backBtnText}>← Retour</Text>
           </TouchableOpacity>
           <Text style={styles.heroTitle}>{zone.name}</Text>
-          {zone.description ? (
-            <Text style={styles.heroSubtitle}>{zone.description}</Text>
-          ) : null}
-          <Text style={styles.plantCount}>{plants.length} plante{plants.length !== 1 ? 's' : ''}</Text>
+          {zone.description ? <Text style={styles.heroSubtitle}>{zone.description}</Text> : null}
+          <Text style={styles.plantCount}>
+            {plants.length} plante{plants.length !== 1 ? 's' : ''}
+          </Text>
         </GradientHero>
 
         <View style={styles.section}>
           {plants.length === 0 ? (
             <GlassCard>
               <Text style={styles.emptyText}>
-                Aucune plante dans cette zone. Ajoutez des plantes et assignez-les à « {zone.name} ».
+                Aucune plante dans cette zone. Ajoutez des plantes et assignez-les à « {zone.name}{' '}
+                ».
               </Text>
-              <TouchableOpacity
-                style={styles.addBtn}
-                onPress={() => router.push('/plant/new')}
-              >
+              <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/plant/new')}>
                 <Text style={styles.addBtnText}>+ Ajouter une plante</Text>
               </TouchableOpacity>
             </GlassCard>
@@ -93,16 +83,13 @@ export default function ZoneDetailScreen() {
                 key={p.id}
                 activeOpacity={0.9}
                 onPress={() => router.push(`/plant/${p.id}`)}
-                style={styles.cardWrap}
-              >
+                style={styles.cardWrap}>
                 <GlassCard>
                   <View style={styles.row}>
                     <View style={[styles.colorDot, { backgroundColor: colorHex(p.flowerColor) }]} />
                     <View style={styles.plantInfo}>
                       <Text style={styles.plantName}>{p.name}</Text>
-                      {p.latinName ? (
-                        <Text style={styles.latin}>{p.latinName}</Text>
-                      ) : null}
+                      {p.latinName ? <Text style={styles.latin}>{p.latinName}</Text> : null}
                     </View>
                     <Text style={styles.chevron}>→</Text>
                   </View>
@@ -128,7 +115,11 @@ const styles = StyleSheet.create({
   heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary },
   plantCount: { ...typography.caption, color: colors.dark.accent, marginTop: 8 },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary, marginBottom: spacing.md },
+  emptyText: {
+    ...typography.bodySmall,
+    color: colors.dark.textSecondary,
+    marginBottom: spacing.md,
+  },
   addBtn: {
     alignSelf: 'flex-start',
     paddingVertical: 10,

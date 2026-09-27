@@ -20,28 +20,19 @@ function getContextLine(info) {
   const { lastWatering, nextReminder, sunInfo } = info;
 
   if (lastWatering?.date) {
-    const days = Math.floor(
-      (Date.now() - new Date(lastWatering.date).getTime()) / 86400000
-    );
+    const days = Math.floor((Date.now() - new Date(lastWatering.date).getTime()) / 86400000);
     if (days <= 14) {
       const label =
-        days === 0
-          ? "aujourd'hui"
-          : days === 1
-          ? 'il y a 1 jour'
-          : `il y a ${days} jours`;
+        days === 0 ? "aujourd'hui" : days === 1 ? 'il y a 1 jour' : `il y a ${days} jours`;
       return `Dernier arrosage : ${label}`;
     }
   }
 
   if (nextReminder?.nextDueDate) {
-    const days = Math.floor(
-      (new Date(nextReminder.nextDueDate).getTime() - Date.now()) / 86400000
-    );
+    const days = Math.floor((new Date(nextReminder.nextDueDate).getTime() - Date.now()) / 86400000);
     const kind =
       REMINDER_KINDS.find((k) => k.value === nextReminder.kind)?.noun || nextReminder.kind;
-    if (days <= 0)
-      return `${kind.charAt(0).toUpperCase() + kind.slice(1)} : aujourd'hui`;
+    if (days <= 0) return `${kind.charAt(0).toUpperCase() + kind.slice(1)} : aujourd'hui`;
     return `Prochain ${kind} : ${days} jour${days > 1 ? 's' : ''}`;
   }
 
@@ -74,10 +65,7 @@ export default function ZonesScreen() {
     setZones(z);
     const results = await Promise.all(
       z.map((zone) =>
-        Promise.all([
-          getPlantsByZoneWithImages(zone.id),
-          getZoneContextInfo(zone.id),
-        ])
+        Promise.all([getPlantsByZoneWithImages(zone.id), getZoneContextInfo(zone.id)])
       )
     );
     const plants = {};
@@ -113,15 +101,12 @@ export default function ZonesScreen() {
             onRefresh={onRefresh}
             tintColor={colors.dark.accent}
           />
-        }
-      >
+        }>
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.heroTitle}>Mes Zones de Jardin</Text>
-            <Text style={styles.heroSubtitle}>
-              Organisez les zones de votre jardin
-            </Text>
+            <Text style={styles.heroSubtitle}>Organisez les zones de votre jardin</Text>
           </View>
         </View>
 
@@ -129,13 +114,10 @@ export default function ZonesScreen() {
           {zones.length === 0 ? (
             <GlassCard>
               <Text style={styles.emptyText}>
-                Aucune zone. Créez une zone (ex. « Balcon », « Potager ») puis
-                assignez-y des plantes.
+                Aucune zone. Créez une zone (ex. « Balcon », « Potager ») puis assignez-y des
+                plantes.
               </Text>
-              <TouchableOpacity
-                style={styles.primaryBtn}
-                onPress={() => router.push('/zone/new')}
-              >
+              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/zone/new')}>
                 <Text style={styles.primaryBtnText}>+ Créer une zone</Text>
               </TouchableOpacity>
             </GlassCard>
@@ -148,22 +130,17 @@ export default function ZonesScreen() {
                   key={zone.id}
                   activeOpacity={0.85}
                   onPress={() => router.push(`/zones/${zone.id}`)}
-                  style={styles.cardWrap}
-                >
+                  style={styles.cardWrap}>
                   <GlassCard>
                     {/* Zone header: icon + name + count */}
                     <View style={styles.cardHeader}>
                       <View style={styles.zoneInfo}>
                         <View style={styles.zoneNameRow}>
-                          <Text style={styles.zoneIcon}>
-                            {zone.icon || '🌱'}
-                          </Text>
+                          <Text style={styles.zoneIcon}>{zone.icon || '🌱'}</Text>
                           <Text style={styles.zoneName}>{zone.name}</Text>
                         </View>
                         {zone.description ? (
-                          <Text style={styles.zoneDesc}>
-                            ({zone.description})
-                          </Text>
+                          <Text style={styles.zoneDesc}>({zone.description})</Text>
                         ) : null}
                       </View>
                       <View style={styles.countBadge}>
@@ -178,8 +155,7 @@ export default function ZonesScreen() {
                         horizontal
                         showsHorizontalScrollIndicator={false}
                         style={styles.plantsScroll}
-                        contentContainerStyle={styles.plantsRow}
-                      >
+                        contentContainerStyle={styles.plantsRow}>
                         {plants.map((plant, idx) => {
                           const img = imageLoadErrors[plant.id] ? null : getPlantImage(plant);
                           return (
@@ -191,21 +167,11 @@ export default function ZonesScreen() {
                                   onError={() => markImageLoadError(plant.id)}
                                 />
                               ) : (
-                                <View
-                                  style={[
-                                    styles.plantThumb,
-                                    styles.plantPlaceholder,
-                                  ]}
-                                >
-                                  <Text style={styles.plantPlaceholderText}>
-                                    🌿
-                                  </Text>
+                                <View style={[styles.plantThumb, styles.plantPlaceholder]}>
+                                  <Text style={styles.plantPlaceholderText}>🌿</Text>
                                 </View>
                               )}
-                              <Text
-                                style={styles.plantName}
-                                numberOfLines={1}
-                              >
+                              <Text style={styles.plantName} numberOfLines={1}>
                                 {plant.name}
                               </Text>
                             </View>
@@ -215,9 +181,7 @@ export default function ZonesScreen() {
                     )}
 
                     {/* Context info line */}
-                    {context && (
-                      <Text style={styles.contextLine}>{context}</Text>
-                    )}
+                    {context && <Text style={styles.contextLine}>{context}</Text>}
                   </GlassCard>
                 </TouchableOpacity>
               );
@@ -230,11 +194,8 @@ export default function ZonesScreen() {
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => router.push('/zone/new')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.addButtonText}>
-              + AJOUTER UNE NOUVELLE ZONE
-            </Text>
+            activeOpacity={0.7}>
+            <Text style={styles.addButtonText}>+ AJOUTER UNE NOUVELLE ZONE</Text>
           </TouchableOpacity>
         </View>
 

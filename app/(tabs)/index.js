@@ -98,8 +98,7 @@ export default function Dashboard() {
             onRefresh={onRefresh}
             tintColor={colors.dark.accent}
           />
-        }
-      >
+        }>
         <GradientHero>
           <View style={styles.heroTextWrap}>
             <Text style={styles.heroTitle}>Votre jardin</Text>
@@ -110,9 +109,7 @@ export default function Dashboard() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Tâches du jour</Text>
-            {tasks.length > 0 && (
-              <Text style={styles.sectionCount}>({tasks.length})</Text>
-            )}
+            {tasks.length > 0 && <Text style={styles.sectionCount}>({tasks.length})</Text>}
           </View>
           {tasks.length === 0 ? (
             <GlassCard>
@@ -124,8 +121,7 @@ export default function Dashboard() {
                 key={r.id}
                 activeOpacity={0.8}
                 onPress={() => handleDone(r)}
-                style={styles.taskWrap}
-              >
+                style={styles.taskWrap}>
                 <GlassCard>
                   <View style={styles.taskRow}>
                     {r.photoUri ? (
@@ -168,22 +164,24 @@ export default function Dashboard() {
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.bloomScrollContent}
-              >
+                contentContainerStyle={styles.bloomScrollContent}>
                 {blooming.map((p) => (
                   <TouchableOpacity
                     key={p.id}
                     activeOpacity={0.9}
                     onPress={() => router.push(`/plant/${p.id}`)}
-                    style={styles.bloomCardWrap}
-                  >
+                    style={styles.bloomCardWrap}>
                     <GlassCard style={styles.bloomCard} noPadding>
                       <View style={styles.bloomImageWrap}>
                         {p.photoUri ? (
                           <Image source={{ uri: p.photoUri }} style={styles.bloomImage} />
                         ) : (
                           <View style={[styles.bloomImage, styles.bloomImagePlaceholder]}>
-                            <Ionicons name="flower-outline" size={40} color={colors.dark.textSecondary} />
+                            <Ionicons
+                              name="flower-outline"
+                              size={40}
+                              color={colors.dark.textSecondary}
+                            />
                           </View>
                         )}
                         <TouchableOpacity
@@ -191,12 +189,13 @@ export default function Dashboard() {
                           onPress={(e) => {
                             e.stopPropagation();
                             router.push(`/plant/${p.id}`);
-                          }}
-                        >
+                          }}>
                           <Ionicons name="information-circle" size={20} color={colors.dark.text} />
                         </TouchableOpacity>
                       </View>
-                      <Text style={styles.bloomName} numberOfLines={1}>{p.name}</Text>
+                      <Text style={styles.bloomName} numberOfLines={1}>
+                        {p.name}
+                      </Text>
                       {periodLabel(p) ? (
                         <Text style={styles.bloomPeriod}>Période : {periodLabel(p)}</Text>
                       ) : null}
@@ -309,8 +308,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bloomName: { ...typography.title, color: colors.dark.text, paddingHorizontal: spacing.md, paddingTop: spacing.sm },
-  bloomPeriod: { ...typography.bodySmall, color: colors.dark.textSecondary, paddingHorizontal: spacing.md, paddingTop: 2 },
-  bloomVoir: { ...typography.caption, color: colors.dark.text, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  bloomName: {
+    ...typography.title,
+    color: colors.dark.text,
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  bloomPeriod: {
+    ...typography.bodySmall,
+    color: colors.dark.textSecondary,
+    paddingHorizontal: spacing.md,
+    paddingTop: 2,
+  },
+  bloomVoir: {
+    ...typography.caption,
+    color: colors.dark.text,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
   bloomHint: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: spacing.md },
 });

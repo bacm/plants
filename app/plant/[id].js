@@ -32,11 +32,22 @@ import {
   deletePlant,
   deleteCareLog,
 } from '../../lib/db';
-import { CARE_TYPES, REMINDER_KINDS, SUN, WATER, PLANT_TYPES, SOIL_TYPES, SOIL_PH, PROPAGATION, TOXICITY, labelFor, iconFor } from '../../lib/enums';
+import {
+  CARE_TYPES,
+  REMINDER_KINDS,
+  SUN,
+  WATER,
+  PLANT_TYPES,
+  SOIL_TYPES,
+  SOIL_PH,
+  PROPAGATION,
+  TOXICITY,
+  labelFor,
+  iconFor,
+} from '../../lib/enums';
 import { monthShort } from '../../lib/months';
 import { parseISODate } from '../../lib/validation';
 import { parseImageUrls } from '../../lib/plantFields';
-
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HERO_HEIGHT = SCREEN_HEIGHT * 0.38;
@@ -45,7 +56,10 @@ const INFO_CARD_WIDTH = (SCREEN_WIDTH - spacing.lg * 2 - spacing.sm * 2) / 3;
 function getQuickTags(plant) {
   const tags = [];
   if (plant.type && labelFor(PLANT_TYPES, plant.type)) {
-    tags.push({ icon: iconFor(PLANT_TYPES, plant.type) || '🌱', label: labelFor(PLANT_TYPES, plant.type) });
+    tags.push({
+      icon: iconFor(PLANT_TYPES, plant.type) || '🌱',
+      label: labelFor(PLANT_TYPES, plant.type),
+    });
   }
   if (plant.minTemperature != null) {
     if (plant.minTemperature <= -15) tags.push({ icon: '❄️', label: 'Très rustique' });
@@ -90,7 +104,7 @@ export default function PlantDetailScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [zoomScale, setZoomScale] = useState(1);
   const [remoteImageError, setRemoteImageError] = useState(false);
-  
+
   const load = useCallback(async () => {
     if (id === 'new') return;
     const [p, c, r, ph] = await Promise.all([
@@ -155,7 +169,7 @@ export default function PlantDetailScreen() {
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission refusée', 'Autorisez l\'accès aux photos pour en ajouter une.');
+        Alert.alert('Permission refusée', "Autorisez l'accès aux photos pour en ajouter une.");
         return;
       }
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -204,32 +218,42 @@ export default function PlantDetailScreen() {
   const handleDeletePhoto = (photo) => {
     Alert.alert('Supprimer la photo', 'Cette photo sera supprimée.', [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: async () => { await deletePhoto(photo.id); await load(); } },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          await deletePhoto(photo.id);
+          await load();
+        },
+      },
     ]);
   };
 
   const handleDelete = () => {
-    Alert.alert(
-      'Supprimer la plante',
-      'Cette plante et tout son historique seront supprimés.',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        {
-          text: 'Supprimer',
-          style: 'destructive',
-          onPress: async () => {
-            deletePlant(id);
-            router.replace('/(tabs)');
-          },
+    Alert.alert('Supprimer la plante', 'Cette plante et tout son historique seront supprimés.', [
+      { text: 'Annuler', style: 'cancel' },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          deletePlant(id);
+          router.replace('/(tabs)');
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const handleDeleteCareLog = (log) => {
     Alert.alert('Supprimer le soin', 'Ce soin sera supprimé.', [
       { text: 'Annuler', style: 'cancel' },
-      { text: 'Supprimer', style: 'destructive', onPress: async () => { deleteCareLog(log.id); await load(); } },
+      {
+        text: 'Supprimer',
+        style: 'destructive',
+        onPress: async () => {
+          deleteCareLog(log.id);
+          await load();
+        },
+      },
     ]);
   };
 
@@ -247,292 +271,348 @@ export default function PlantDetailScreen() {
   }
 
   const coverPhoto = photos[0];
-  const remoteImageUrl = !coverPhoto && !remoteImageError ? parseImageUrls(plant.imageUrls)[0] : null;
+  const remoteImageUrl =
+    !coverPhoto && !remoteImageError ? parseImageUrls(plant.imageUrls)[0] : null;
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'info':
         return (
-          <ScrollView style={styles.tabScroll} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.dark.accent} />}>
+          <ScrollView
+            style={styles.tabScroll}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.dark.accent}
+              />
+            }>
             <View style={styles.tabContentInner}>
-            <View style={styles.section}>
-              <Text style={styles.ficheTechTitle}>FICHE TECHNIQUE</Text>
-              <View style={styles.infoGrid}>
-                <InfoCard icon="☀️" value={labelFor(SUN, plant.sun) || '—'} />
-                <InfoCard icon="💧" value={labelFor(WATER, plant.water) || '—'} />
-                <InfoCard
-                  icon="📅"
-                  value={
-                    plant.bloomStartMonth != null && plant.bloomEndMonth != null
-                      ? `${monthShort(plant.bloomStartMonth)} — ${monthShort(plant.bloomEndMonth)}`
-                      : '—'
-                  }
-                />
-                <InfoCard icon="🌡️" value={buildDimensionsText(plant)} />
-                <InfoCard
-                  icon="🍃"
-                  value={
-                    plant.deciduous !== null
-                      ? plant.deciduous ? 'Caduque' : 'Persistant'
-                      : '—'
-                  }
-                />
-                <InfoCard icon="🌸" value={plant.flowerColor || '—'} />
+              <View style={styles.section}>
+                <Text style={styles.ficheTechTitle}>FICHE TECHNIQUE</Text>
+                <View style={styles.infoGrid}>
+                  <InfoCard icon="☀️" value={labelFor(SUN, plant.sun) || '—'} />
+                  <InfoCard icon="💧" value={labelFor(WATER, plant.water) || '—'} />
+                  <InfoCard
+                    icon="📅"
+                    value={
+                      plant.bloomStartMonth != null && plant.bloomEndMonth != null
+                        ? `${monthShort(plant.bloomStartMonth)} — ${monthShort(plant.bloomEndMonth)}`
+                        : '—'
+                    }
+                  />
+                  <InfoCard icon="🌡️" value={buildDimensionsText(plant)} />
+                  <InfoCard
+                    icon="🍃"
+                    value={
+                      plant.deciduous !== null ? (plant.deciduous ? 'Caduque' : 'Persistant') : '—'
+                    }
+                  />
+                  <InfoCard icon="🌸" value={plant.flowerColor || '—'} />
+                </View>
+                {plant.notes ? (
+                  <GlassCard style={styles.notesCard}>
+                    <View style={styles.notesRow}>
+                      <Text style={styles.notesIcon}>📝</Text>
+                      <Text style={styles.notesLabel}>Notes :</Text>
+                    </View>
+                    <Text style={styles.notesTextNew}>{plant.notes}</Text>
+                  </GlassCard>
+                ) : null}
+
+                {/* Section Sol */}
+                {(plant.soilType || plant.soilPH) && (
+                  <>
+                    <Text style={styles.ficheTechTitle}>SOL</Text>
+                    <View style={styles.infoGrid}>
+                      <InfoCard icon="🪨" value={labelFor(SOIL_TYPES, plant.soilType) || '—'} />
+                      <InfoCard icon="⚗️" value={labelFor(SOIL_PH, plant.soilPH) || '—'} />
+                    </View>
+                  </>
+                )}
+
+                {/* Section Entretien */}
+                {(plant.fertilizer || plant.pruning || plant.pruningMonth || plant.winterCare) && (
+                  <>
+                    <Text style={styles.ficheTechTitle}>ENTRETIEN</Text>
+                    {plant.fertilizer && (
+                      <GlassCard style={styles.notesCard}>
+                        <View style={styles.notesRow}>
+                          <Text style={styles.notesIcon}>🧪</Text>
+                          <Text style={styles.notesLabel}>Engrais :</Text>
+                        </View>
+                        <Text style={styles.notesTextNew}>{plant.fertilizer}</Text>
+                      </GlassCard>
+                    )}
+                    {plant.pruning && (
+                      <GlassCard style={styles.notesCard}>
+                        <View style={styles.notesRow}>
+                          <Text style={styles.notesIcon}>✂️</Text>
+                          <Text style={styles.notesLabel}>
+                            Taille{plant.pruningMonth ? ` (${monthShort(plant.pruningMonth)})` : ''}{' '}
+                            :
+                          </Text>
+                        </View>
+                        <Text style={styles.notesTextNew}>{plant.pruning}</Text>
+                      </GlassCard>
+                    )}
+                    {plant.winterCare && (
+                      <GlassCard style={styles.notesCard}>
+                        <View style={styles.notesRow}>
+                          <Text style={styles.notesIcon}>❄️</Text>
+                          <Text style={styles.notesLabel}>Entretien hivernal :</Text>
+                        </View>
+                        <Text style={styles.notesTextNew}>{plant.winterCare}</Text>
+                      </GlassCard>
+                    )}
+                  </>
+                )}
+
+                {/* Section Santé */}
+                {(plant.pests || plant.toxicity) && (
+                  <>
+                    <Text style={styles.ficheTechTitle}>SANTÉ</Text>
+                    <View style={styles.infoGrid}>
+                      {plant.toxicity && plant.toxicity !== 'none' && (
+                        <InfoCard
+                          icon="⚠️"
+                          value={`Toxique: ${labelFor(TOXICITY, plant.toxicity)}`}
+                        />
+                      )}
+                      {plant.toxicity === 'none' && <InfoCard icon="✅" value="Non toxique" />}
+                    </View>
+                    {plant.pests && (
+                      <GlassCard style={styles.notesCard}>
+                        <View style={styles.notesRow}>
+                          <Text style={styles.notesIcon}>🐛</Text>
+                          <Text style={styles.notesLabel}>Ravageurs / Maladies :</Text>
+                        </View>
+                        <Text style={styles.notesTextNew}>{plant.pests}</Text>
+                      </GlassCard>
+                    )}
+                  </>
+                )}
+
+                {/* Section Multiplication */}
+                {plant.propagation && (
+                  <>
+                    <Text style={styles.ficheTechTitle}>MULTIPLICATION</Text>
+                    <View style={styles.infoGrid}>
+                      <InfoCard icon="🌱" value={labelFor(PROPAGATION, plant.propagation) || '—'} />
+                    </View>
+                  </>
+                )}
+
+                {/* Section Récolte */}
+                {(plant.harvest || plant.harvestMonthStart) && (
+                  <>
+                    <Text style={styles.ficheTechTitle}>RÉCOLTE</Text>
+                    <View style={styles.infoGrid}>
+                      {plant.harvestMonthStart != null && plant.harvestMonthEnd != null && (
+                        <InfoCard
+                          icon="📅"
+                          value={`${monthShort(plant.harvestMonthStart)} — ${monthShort(plant.harvestMonthEnd)}`}
+                        />
+                      )}
+                    </View>
+                    {plant.harvest && (
+                      <GlassCard style={styles.notesCard}>
+                        <View style={styles.notesRow}>
+                          <Text style={styles.notesIcon}>🍎</Text>
+                          <Text style={styles.notesLabel}>Récolte :</Text>
+                        </View>
+                        <Text style={styles.notesTextNew}>{plant.harvest}</Text>
+                      </GlassCard>
+                    )}
+                  </>
+                )}
+
+                {/* Section Autres */}
+                {(plant.companionPlants || plant.origin) && (
+                  <>
+                    <Text style={styles.ficheTechTitle}>AUTRES</Text>
+                    {plant.companionPlants && (
+                      <GlassCard style={styles.notesCard}>
+                        <View style={styles.notesRow}>
+                          <Text style={styles.notesIcon}>🤝</Text>
+                          <Text style={styles.notesLabel}>Plantes compagnes :</Text>
+                        </View>
+                        <Text style={styles.notesTextNew}>{plant.companionPlants}</Text>
+                      </GlassCard>
+                    )}
+                    {plant.origin && (
+                      <GlassCard style={styles.notesCard}>
+                        <View style={styles.notesRow}>
+                          <Text style={styles.notesIcon}>🌍</Text>
+                          <Text style={styles.notesLabel}>Origine :</Text>
+                        </View>
+                        <Text style={styles.notesTextNew}>{plant.origin}</Text>
+                      </GlassCard>
+                    )}
+                  </>
+                )}
               </View>
-              {plant.notes ? (
-                <GlassCard style={styles.notesCard}>
-                  <View style={styles.notesRow}>
-                    <Text style={styles.notesIcon}>📝</Text>
-                    <Text style={styles.notesLabel}>Notes :</Text>
-                  </View>
-                  <Text style={styles.notesTextNew}>{plant.notes}</Text>
-                </GlassCard>
-              ) : null}
-
-              {/* Section Sol */}
-              {(plant.soilType || plant.soilPH) && (
-                <>
-                  <Text style={styles.ficheTechTitle}>SOL</Text>
-                  <View style={styles.infoGrid}>
-                    <InfoCard icon="🪨" value={labelFor(SOIL_TYPES, plant.soilType) || '—'} />
-                    <InfoCard icon="⚗️" value={labelFor(SOIL_PH, plant.soilPH) || '—'} />
-                  </View>
-                </>
-              )}
-
-              {/* Section Entretien */}
-              {(plant.fertilizer || plant.pruning || plant.pruningMonth || plant.winterCare) && (
-                <>
-                  <Text style={styles.ficheTechTitle}>ENTRETIEN</Text>
-                  {plant.fertilizer && (
-                    <GlassCard style={styles.notesCard}>
-                      <View style={styles.notesRow}>
-                        <Text style={styles.notesIcon}>🧪</Text>
-                        <Text style={styles.notesLabel}>Engrais :</Text>
-                      </View>
-                      <Text style={styles.notesTextNew}>{plant.fertilizer}</Text>
-                    </GlassCard>
-                  )}
-                  {plant.pruning && (
-                    <GlassCard style={styles.notesCard}>
-                      <View style={styles.notesRow}>
-                        <Text style={styles.notesIcon}>✂️</Text>
-                        <Text style={styles.notesLabel}>Taille{plant.pruningMonth ? ` (${monthShort(plant.pruningMonth)})` : ''} :</Text>
-                      </View>
-                      <Text style={styles.notesTextNew}>{plant.pruning}</Text>
-                    </GlassCard>
-                  )}
-                  {plant.winterCare && (
-                    <GlassCard style={styles.notesCard}>
-                      <View style={styles.notesRow}>
-                        <Text style={styles.notesIcon}>❄️</Text>
-                        <Text style={styles.notesLabel}>Entretien hivernal :</Text>
-                      </View>
-                      <Text style={styles.notesTextNew}>{plant.winterCare}</Text>
-                    </GlassCard>
-                  )}
-                </>
-              )}
-
-              {/* Section Santé */}
-              {(plant.pests || plant.toxicity) && (
-                <>
-                  <Text style={styles.ficheTechTitle}>SANTÉ</Text>
-                  <View style={styles.infoGrid}>
-                    {plant.toxicity && plant.toxicity !== 'none' && (
-                      <InfoCard icon="⚠️" value={`Toxique: ${labelFor(TOXICITY, plant.toxicity)}`} />
-                    )}
-                    {plant.toxicity === 'none' && (
-                      <InfoCard icon="✅" value="Non toxique" />
-                    )}
-                  </View>
-                  {plant.pests && (
-                    <GlassCard style={styles.notesCard}>
-                      <View style={styles.notesRow}>
-                        <Text style={styles.notesIcon}>🐛</Text>
-                        <Text style={styles.notesLabel}>Ravageurs / Maladies :</Text>
-                      </View>
-                      <Text style={styles.notesTextNew}>{plant.pests}</Text>
-                    </GlassCard>
-                  )}
-                </>
-              )}
-
-              {/* Section Multiplication */}
-              {plant.propagation && (
-                <>
-                  <Text style={styles.ficheTechTitle}>MULTIPLICATION</Text>
-                  <View style={styles.infoGrid}>
-                    <InfoCard icon="🌱" value={labelFor(PROPAGATION, plant.propagation) || '—'} />
-                  </View>
-                </>
-              )}
-
-              {/* Section Récolte */}
-              {(plant.harvest || plant.harvestMonthStart) && (
-                <>
-                  <Text style={styles.ficheTechTitle}>RÉCOLTE</Text>
-                  <View style={styles.infoGrid}>
-                    {plant.harvestMonthStart != null && plant.harvestMonthEnd != null && (
-                      <InfoCard icon="📅" value={`${monthShort(plant.harvestMonthStart)} — ${monthShort(plant.harvestMonthEnd)}`} />
-                    )}
-                  </View>
-                  {plant.harvest && (
-                    <GlassCard style={styles.notesCard}>
-                      <View style={styles.notesRow}>
-                        <Text style={styles.notesIcon}>🍎</Text>
-                        <Text style={styles.notesLabel}>Récolte :</Text>
-                      </View>
-                      <Text style={styles.notesTextNew}>{plant.harvest}</Text>
-                    </GlassCard>
-                  )}
-                </>
-              )}
-
-              {/* Section Autres */}
-              {(plant.companionPlants || plant.origin) && (
-                <>
-                  <Text style={styles.ficheTechTitle}>AUTRES</Text>
-                  {plant.companionPlants && (
-                    <GlassCard style={styles.notesCard}>
-                      <View style={styles.notesRow}>
-                        <Text style={styles.notesIcon}>🤝</Text>
-                        <Text style={styles.notesLabel}>Plantes compagnes :</Text>
-                      </View>
-                      <Text style={styles.notesTextNew}>{plant.companionPlants}</Text>
-                    </GlassCard>
-                  )}
-                  {plant.origin && (
-                    <GlassCard style={styles.notesCard}>
-                      <View style={styles.notesRow}>
-                        <Text style={styles.notesIcon}>🌍</Text>
-                        <Text style={styles.notesLabel}>Origine :</Text>
-                      </View>
-                      <Text style={styles.notesTextNew}>{plant.origin}</Text>
-                    </GlassCard>
-                  )}
-                </>
-              )}
-            </View>
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.editButton} onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
-                <Text style={styles.editButtonText}>Modifier la fiche</Text>
-              </TouchableOpacity>
-            </View>
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
+                  <Text style={styles.editButtonText}>Modifier la fiche</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </ScrollView>
         );
       case 'photos':
         return (
-          <ScrollView style={styles.tabScroll} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.dark.accent} />}>
+          <ScrollView
+            style={styles.tabScroll}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.dark.accent}
+              />
+            }>
             <View style={styles.tabContentInner}>
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Mes photos</Text>
-                <TouchableOpacity onPress={showAddPhotoOptions}>
-                  <Text style={styles.sectionLink}>+ Ajouter</Text>
-                </TouchableOpacity>
-              </View>
-              {photos.length === 0 ? (
-                <GlassCard>
-                  <TouchableOpacity style={styles.emptyPhotos} onPress={showAddPhotoOptions}>
-                    <Text style={styles.emptyPhotosText}>📷</Text>
-                    <Text style={styles.emptyPhotosHint}>Appuyez pour ajouter une photo</Text>
-                  </TouchableOpacity>
-                </GlassCard>
-              ) : (
-                <View style={styles.timeline}>
-                  {photos.map((photo, index) => (
-                    <View key={photo.id} style={styles.timelineItem}>
-                      <View style={styles.timelineLeft}>
-                        <View style={styles.timelineDot} />
-                        {index < photos.length - 1 && <View style={styles.timelineLine} />}
-                      </View>
-                      <View style={styles.timelineContent}>
-                        <Text style={styles.timelineDate}>{photo.date}</Text>
-                        <TouchableOpacity 
-                          style={styles.timelinePhotoWrap} 
-                          onPress={() => setSelectedPhoto(photo)}
-                          onLongPress={() => handleDeletePhoto(photo)} 
-                          activeOpacity={1}
-                        >
-                          <Image source={{ uri: photo.uri }} style={styles.timelinePhoto} resizeMode="contain" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ))}
-                  <TouchableOpacity style={styles.addPhotoItem} onPress={showAddPhotoOptions}>
-                    <Text style={styles.addPhotoItemText}>+</Text>
-                    <Text style={styles.addPhotoItemLabel}>Ajouter</Text>
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Mes photos</Text>
+                  <TouchableOpacity onPress={showAddPhotoOptions}>
+                    <Text style={styles.sectionLink}>+ Ajouter</Text>
                   </TouchableOpacity>
                 </View>
-              )}
-            </View>
+                {photos.length === 0 ? (
+                  <GlassCard>
+                    <TouchableOpacity style={styles.emptyPhotos} onPress={showAddPhotoOptions}>
+                      <Text style={styles.emptyPhotosText}>📷</Text>
+                      <Text style={styles.emptyPhotosHint}>Appuyez pour ajouter une photo</Text>
+                    </TouchableOpacity>
+                  </GlassCard>
+                ) : (
+                  <View style={styles.timeline}>
+                    {photos.map((photo, index) => (
+                      <View key={photo.id} style={styles.timelineItem}>
+                        <View style={styles.timelineLeft}>
+                          <View style={styles.timelineDot} />
+                          {index < photos.length - 1 && <View style={styles.timelineLine} />}
+                        </View>
+                        <View style={styles.timelineContent}>
+                          <Text style={styles.timelineDate}>{photo.date}</Text>
+                          <TouchableOpacity
+                            style={styles.timelinePhotoWrap}
+                            onPress={() => setSelectedPhoto(photo)}
+                            onLongPress={() => handleDeletePhoto(photo)}
+                            activeOpacity={1}>
+                            <Image
+                              source={{ uri: photo.uri }}
+                              style={styles.timelinePhoto}
+                              resizeMode="contain"
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ))}
+                    <TouchableOpacity style={styles.addPhotoItem} onPress={showAddPhotoOptions}>
+                      <Text style={styles.addPhotoItemText}>+</Text>
+                      <Text style={styles.addPhotoItemLabel}>Ajouter</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
             </View>
           </ScrollView>
         );
       case 'actions':
         return (
-          <ScrollView style={styles.tabScroll} contentContainerStyle={styles.scrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.dark.accent} />}>
+          <ScrollView
+            style={styles.tabScroll}
+            contentContainerStyle={styles.scrollContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.dark.accent}
+              />
+            }>
             <View style={styles.tabContentInner}>
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Rappels</Text>
-                <TouchableOpacity onPress={() => router.push({ pathname: '/plant/reminders', params: { plantId: id } })}>
-                  <Text style={styles.sectionLink}>Gérer</Text>
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Rappels</Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push({ pathname: '/plant/reminders', params: { plantId: id } })
+                    }>
+                    <Text style={styles.sectionLink}>Gérer</Text>
+                  </TouchableOpacity>
+                </View>
+                {reminders.filter((r) => r.enabled).length === 0 ? (
+                  <GlassCard>
+                    <Text style={styles.emptyText}>Aucun rappel.</Text>
+                  </GlassCard>
+                ) : (
+                  reminders
+                    .filter((r) => r.enabled)
+                    .map((r) => (
+                      <GlassCard key={r.id} style={styles.reminderCard}>
+                        <View style={styles.reminderRow}>
+                          <View style={styles.reminderInfo}>
+                            <Text style={styles.reminderKind}>
+                              {labelFor(REMINDER_KINDS, r.kind)}
+                            </Text>
+                            <Text style={styles.reminderDue}>Prochaine : {r.nextDueDate}</Text>
+                          </View>
+                          <TouchableOpacity
+                            onPress={() => handleReminderDone(r)}
+                            style={styles.doneBtn}>
+                            <Text style={styles.doneBtnText}>Fait</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </GlassCard>
+                    ))
+                )}
+              </View>
+              <View style={styles.section}>
+                <View style={styles.sectionHeader}>
+                  <Text style={styles.sectionTitle}>Historique</Text>
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push({ pathname: '/plant/log', params: { plantId: id } })
+                    }>
+                    <Text style={styles.sectionLink}>+ Log</Text>
+                  </TouchableOpacity>
+                </View>
+                {careLogs.length === 0 ? (
+                  <GlassCard>
+                    <Text style={styles.emptyText}>Aucun soin enregistré.</Text>
+                  </GlassCard>
+                ) : (
+                  careLogs.slice(0, 10).map((log) => (
+                    <GlassCard key={log.id} style={styles.logCard}>
+                      <View style={styles.logRow}>
+                        <View style={styles.logInfo}>
+                          <Text style={styles.logType}>{labelFor(CARE_TYPES, log.type)}</Text>
+                          <Text style={styles.logDate}>{log.date}</Text>
+                        </View>
+                        <TouchableOpacity onPress={() => handleDeleteCareLog(log)}>
+                          <Text style={styles.logDeleteText}>Supprimer</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </GlassCard>
+                  ))
+                )}
+              </View>
+              <View style={styles.actions}>
+                <TouchableOpacity
+                  style={styles.primaryButton}
+                  onPress={() => router.push({ pathname: '/plant/log', params: { plantId: id } })}>
+                  <Text style={styles.primaryButtonText}>Enregistrer un soin</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
+                  <Text style={styles.deleteBtnText}>Supprimer la plante</Text>
                 </TouchableOpacity>
               </View>
-              {reminders.filter((r) => r.enabled).length === 0 ? (
-                <GlassCard><Text style={styles.emptyText}>Aucun rappel.</Text></GlassCard>
-              ) : (
-                reminders.filter((r) => r.enabled).map((r) => (
-                  <GlassCard key={r.id} style={styles.reminderCard}>
-                    <View style={styles.reminderRow}>
-                      <View style={styles.reminderInfo}>
-                        <Text style={styles.reminderKind}>{labelFor(REMINDER_KINDS, r.kind)}</Text>
-                        <Text style={styles.reminderDue}>Prochaine : {r.nextDueDate}</Text>
-                      </View>
-                      <TouchableOpacity onPress={() => handleReminderDone(r)} style={styles.doneBtn}>
-                        <Text style={styles.doneBtnText}>Fait</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </GlassCard>
-                ))
-              )}
-            </View>
-            <View style={styles.section}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Historique</Text>
-                <TouchableOpacity onPress={() => router.push({ pathname: '/plant/log', params: { plantId: id } })}>
-                  <Text style={styles.sectionLink}>+ Log</Text>
-                </TouchableOpacity>
-              </View>
-              {careLogs.length === 0 ? (
-                <GlassCard><Text style={styles.emptyText}>Aucun soin enregistré.</Text></GlassCard>
-              ) : (
-                careLogs.slice(0, 10).map((log) => (
-                  <GlassCard key={log.id} style={styles.logCard}>
-                    <View style={styles.logRow}>
-                      <View style={styles.logInfo}>
-                        <Text style={styles.logType}>{labelFor(CARE_TYPES, log.type)}</Text>
-                        <Text style={styles.logDate}>{log.date}</Text>
-                      </View>
-                      <TouchableOpacity onPress={() => handleDeleteCareLog(log)}>
-                        <Text style={styles.logDeleteText}>Supprimer</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </GlassCard>
-                ))
-              )}
-            </View>
-            <View style={styles.actions}>
-              <TouchableOpacity style={styles.primaryButton} onPress={() => router.push({ pathname: '/plant/log', params: { plantId: id } })}>
-                <Text style={styles.primaryButtonText}>Enregistrer un soin</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn}>
-                <Text style={styles.deleteBtnText}>Supprimer la plante</Text>
-              </TouchableOpacity>
-            </View>
             </View>
           </ScrollView>
         );
@@ -541,10 +621,22 @@ export default function PlantDetailScreen() {
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      <ScrollView style={styles.mainScroll} contentContainerStyle={styles.mainScrollContent} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.dark.accent} />}>
+      <ScrollView
+        style={styles.mainScroll}
+        contentContainerStyle={styles.mainScrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.dark.accent}
+          />
+        }>
         <View style={styles.heroContainer}>
           {coverPhoto ? (
-            <TouchableOpacity style={styles.heroImageWrap} onLongPress={() => handleDeletePhoto(coverPhoto)} activeOpacity={1}>
+            <TouchableOpacity
+              style={styles.heroImageWrap}
+              onLongPress={() => handleDeletePhoto(coverPhoto)}
+              activeOpacity={1}>
               <Image source={{ uri: coverPhoto.uri }} style={styles.heroImage} />
               <LinearGradient
                 colors={['transparent', 'rgba(28,25,23,0.9)']}
@@ -552,7 +644,10 @@ export default function PlantDetailScreen() {
               />
             </TouchableOpacity>
           ) : remoteImageUrl ? (
-            <TouchableOpacity style={styles.heroImageWrap} onPress={showAddPhotoOptions} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.heroImageWrap}
+              onPress={showAddPhotoOptions}
+              activeOpacity={0.8}>
               <Image
                 source={{ uri: remoteImageUrl }}
                 style={styles.heroImage}
@@ -564,7 +659,10 @@ export default function PlantDetailScreen() {
               />
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity style={styles.heroPlaceholder} onPress={showAddPhotoOptions} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={styles.heroPlaceholder}
+              onPress={showAddPhotoOptions}
+              activeOpacity={0.8}>
               <Text style={styles.heroPlaceholderEmoji}>📷</Text>
               <Text style={styles.heroPlaceholderHint}>Appuyez pour ajouter une photo</Text>
             </TouchableOpacity>
@@ -572,11 +670,11 @@ export default function PlantDetailScreen() {
           <View style={[styles.heroOverlay, { paddingTop: insets.top + 8 }]}>
             <TouchableOpacity
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
-              style={styles.heroBackBtn}
-            >
+              style={styles.heroBackBtn}>
               <Text style={styles.heroBackText}>‹ Retour</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
               <Text style={styles.heroSettingsIcon}>⚙️</Text>
             </TouchableOpacity>
           </View>
@@ -604,14 +702,24 @@ export default function PlantDetailScreen() {
         </View>
 
         <View style={styles.tabBar}>
-          <TouchableOpacity style={[styles.tab, activeTab === 'info' && styles.tabActive]} onPress={() => setActiveTab('info')}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'info' && styles.tabActive]}
+            onPress={() => setActiveTab('info')}>
             <Text style={[styles.tabText, activeTab === 'info' && styles.tabTextActive]}>Info</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, activeTab === 'photos' && styles.tabActive]} onPress={() => setActiveTab('photos')}>
-            <Text style={[styles.tabText, activeTab === 'photos' && styles.tabTextActive]}>Photos</Text>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'photos' && styles.tabActive]}
+            onPress={() => setActiveTab('photos')}>
+            <Text style={[styles.tabText, activeTab === 'photos' && styles.tabTextActive]}>
+              Photos
+            </Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, activeTab === 'actions' && styles.tabActive]} onPress={() => setActiveTab('actions')}>
-            <Text style={[styles.tabText, activeTab === 'actions' && styles.tabTextActive]}>Actions</Text>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'actions' && styles.tabActive]}
+            onPress={() => setActiveTab('actions')}>
+            <Text style={[styles.tabText, activeTab === 'actions' && styles.tabTextActive]}>
+              Actions
+            </Text>
           </TouchableOpacity>
         </View>
 
@@ -625,7 +733,10 @@ export default function PlantDetailScreen() {
             <TextInput
               style={styles.dateInput}
               value={photoDate}
-              onChangeText={(v) => { setPhotoDate(v); setPhotoDateError(''); }}
+              onChangeText={(v) => {
+                setPhotoDate(v);
+                setPhotoDateError('');
+              }}
               placeholder="AAAA-MM-JJ"
               placeholderTextColor={colors.dark.textSecondary}
               keyboardType="numbers-and-punctuation"
@@ -644,7 +755,11 @@ export default function PlantDetailScreen() {
         </View>
       </Modal>
 
-      <Modal visible={!!selectedPhoto} transparent animationType="fade" onRequestClose={() => setSelectedPhoto(null)}>
+      <Modal
+        visible={!!selectedPhoto}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedPhoto(null)}>
         <View style={styles.lightboxOverlay}>
           <View style={styles.lightboxHeader}>
             <TouchableOpacity style={styles.lightboxBackBtn} onPress={() => setSelectedPhoto(null)}>
@@ -652,23 +767,28 @@ export default function PlantDetailScreen() {
             </TouchableOpacity>
           </View>
           {selectedPhoto && (
-            <PinchGestureHandler onGestureEvent={(e) => {
-              if (e.nativeEvent.scale > 1) {
-                setZoomScale(e.nativeEvent.scale);
-              }
-            }} onHandlerStateChange={(e) => {
-              if (e.nativeEvent.oldState === State.ACTIVE) {
-                setZoomScale(1);
-              }
-            }}>
-              <Animated.View style={[styles.lightboxImageContainer, { transform: [{ scale: zoomScale }] }]}>
-                <Image source={{ uri: selectedPhoto.uri }} style={styles.lightboxImage} resizeMode="contain" />
+            <PinchGestureHandler
+              onGestureEvent={(e) => {
+                if (e.nativeEvent.scale > 1) {
+                  setZoomScale(e.nativeEvent.scale);
+                }
+              }}
+              onHandlerStateChange={(e) => {
+                if (e.nativeEvent.oldState === State.ACTIVE) {
+                  setZoomScale(1);
+                }
+              }}>
+              <Animated.View
+                style={[styles.lightboxImageContainer, { transform: [{ scale: zoomScale }] }]}>
+                <Image
+                  source={{ uri: selectedPhoto.uri }}
+                  style={styles.lightboxImage}
+                  resizeMode="contain"
+                />
               </Animated.View>
             </PinchGestureHandler>
           )}
-          {selectedPhoto && (
-            <Text style={styles.lightboxDate}>{selectedPhoto.date}</Text>
-          )}
+          {selectedPhoto && <Text style={styles.lightboxDate}>{selectedPhoto.date}</Text>}
         </View>
       </Modal>
     </GestureHandlerRootView>
@@ -690,7 +810,12 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark.background },
   placeholder: { ...typography.body, color: colors.dark.textSecondary, padding: spacing.lg },
   scrollContent: { paddingBottom: 24 },
-  tabBar: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.dark.border, backgroundColor: colors.dark.surface },
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: colors.dark.border,
+    backgroundColor: colors.dark.surface,
+  },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
   tabActive: { borderBottomWidth: 2, borderBottomColor: colors.dark.accent },
   tabText: { ...typography.caption, color: colors.dark.textSecondary, textTransform: 'uppercase' },
@@ -706,53 +831,84 @@ const styles = StyleSheet.create({
   heroImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   heroGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: '60%' },
   heroOverlay: {
-    position: 'absolute', top: 0, left: 0, right: 0,
-    flexDirection: 'row', justifyContent: 'space-between',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
   },
   heroBackBtn: { paddingVertical: spacing.sm, paddingRight: spacing.lg },
   heroBackText: { ...typography.body, color: '#fff', fontWeight: '600', fontSize: 18 },
   heroSettingsIcon: { fontSize: 22, paddingVertical: spacing.sm },
   heroPlaceholder: {
-    width: '100%', height: HERO_HEIGHT,
+    width: '100%',
+    height: HERO_HEIGHT,
     backgroundColor: colors.dark.surface,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroPlaceholderEmoji: { fontSize: 48 },
   heroPlaceholderHint: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 8 },
 
   // Name + Quick Tags
   nameTagsSection: {
-    flexDirection: 'row', paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md, alignItems: 'flex-start',
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    alignItems: 'flex-start',
   },
   nameColumn: { flex: 1 },
   plantNameNew: { ...typography.display, color: colors.dark.text },
-  latinNameNew: { ...typography.bodySmall, color: colors.dark.textSecondary, fontStyle: 'italic', marginTop: 2 },
+  latinNameNew: {
+    ...typography.bodySmall,
+    color: colors.dark.textSecondary,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
   zoneTagNew: { ...typography.caption, color: colors.dark.accent, marginTop: 4 },
   quickTagsColumn: { alignItems: 'flex-end', marginLeft: spacing.sm },
   quickTagsHeader: {
-    ...typography.caption, color: colors.dark.textSecondary,
-    textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6, fontSize: 10,
+    ...typography.caption,
+    color: colors.dark.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 6,
+    fontSize: 10,
   },
   quickTagsRow: { flexDirection: 'row', gap: spacing.md },
   quickTagBadge: { alignItems: 'center', width: 56 },
   quickTagIcon: { fontSize: 22, marginBottom: 2 },
-  quickTagLabel: { ...typography.caption, color: colors.dark.textSecondary, fontSize: 10, textAlign: 'center' },
+  quickTagLabel: {
+    ...typography.caption,
+    color: colors.dark.textSecondary,
+    fontSize: 10,
+    textAlign: 'center',
+  },
 
   // Info grid
   ficheTechTitle: {
-    ...typography.title, color: colors.dark.text,
-    textTransform: 'uppercase', letterSpacing: 1, marginBottom: spacing.md,
+    ...typography.title,
+    color: colors.dark.text,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: spacing.md,
   },
   infoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   infoCardOuter: { width: INFO_CARD_WIDTH },
   infoCardInner: {
-    padding: 12, alignItems: 'center', justifyContent: 'center', minHeight: 100,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 100,
   },
   infoCardIcon: { fontSize: 28, marginBottom: 8 },
   infoCardValue: {
-    ...typography.bodySmall, color: colors.dark.text, textAlign: 'center', lineHeight: 18,
+    ...typography.bodySmall,
+    color: colors.dark.text,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 
   // Notes
@@ -770,19 +926,40 @@ const styles = StyleSheet.create({
   timelineLine: { flex: 1, width: 2, backgroundColor: colors.dark.border, marginTop: spacing.xs },
   timelineContent: { flex: 1, marginLeft: spacing.md },
   timelineDate: { ...typography.label, color: colors.dark.text, marginBottom: spacing.sm },
-  timelinePhotoWrap: { width: '100%', aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.dark.surface },
+  timelinePhotoWrap: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.dark.surface,
+  },
   timelinePhoto: { width: '100%', height: '100%' },
   addPhotoItem: {
-    width: '100%', aspectRatio: 1, borderRadius: radius.md,
-    borderWidth: 2, borderColor: colors.dark.border, borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm,
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: radius.md,
+    borderWidth: 2,
+    borderColor: colors.dark.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
   },
   addPhotoItemText: { fontSize: 48, color: colors.dark.textSecondary, lineHeight: 56 },
-  addPhotoItemLabel: { ...typography.body, color: colors.dark.textSecondary, marginTop: spacing.xs },
+  addPhotoItemLabel: {
+    ...typography.body,
+    color: colors.dark.textSecondary,
+    marginTop: spacing.xs,
+  },
 
   // Sections
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
   sectionTitle: { ...typography.title, color: colors.dark.text },
   sectionLink: { ...typography.caption, color: colors.dark.accent },
   emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
@@ -794,7 +971,12 @@ const styles = StyleSheet.create({
   reminderInfo: { flex: 1 },
   reminderKind: { ...typography.label, color: colors.dark.text },
   reminderDue: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 2 },
-  doneBtn: { paddingVertical: 8, paddingHorizontal: 14, backgroundColor: colors.dark.accent, borderRadius: radius.sm },
+  doneBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    backgroundColor: colors.dark.accent,
+    borderRadius: radius.sm,
+  },
   doneBtnText: { ...typography.caption, color: '#fff' },
   logCard: { marginBottom: spacing.sm },
   logRow: { flexDirection: 'row', alignItems: 'flex-start' },
@@ -820,22 +1002,94 @@ const styles = StyleSheet.create({
   editButtonText: { ...typography.label, color: colors.dark.textSecondary },
   deleteBtn: { paddingVertical: 12, alignItems: 'center' },
   deleteBtnText: { ...typography.caption, color: colors.dark.textSecondary },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center' },
-  modalContent: { backgroundColor: colors.dark.surface, borderRadius: radius.lg, padding: spacing.lg, width: '85%', maxWidth: 340 },
-  modalTitle: { ...typography.title, color: colors.dark.text, textAlign: 'center', marginBottom: spacing.md },
-  dateInput: { ...typography.body, color: colors.dark.text, backgroundColor: colors.dark.background, borderRadius: radius.sm, padding: 14, borderWidth: 1, borderColor: colors.dark.border, textAlign: 'center' },
-  dateHint: { ...typography.caption, color: colors.dark.textSecondary, textAlign: 'center', marginTop: spacing.xs, marginBottom: spacing.md },
-  fieldError: { ...typography.caption, color: colors.dark.danger, textAlign: 'center', marginBottom: spacing.md },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.dark.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    width: '85%',
+    maxWidth: 340,
+  },
+  modalTitle: {
+    ...typography.title,
+    color: colors.dark.text,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  dateInput: {
+    ...typography.body,
+    color: colors.dark.text,
+    backgroundColor: colors.dark.background,
+    borderRadius: radius.sm,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    textAlign: 'center',
+  },
+  dateHint: {
+    ...typography.caption,
+    color: colors.dark.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  fieldError: {
+    ...typography.caption,
+    color: colors.dark.danger,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
   modalButtons: { flexDirection: 'row', gap: spacing.sm },
-  modalCancelBtn: { flex: 1, paddingVertical: 14, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.dark.border, alignItems: 'center' },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    alignItems: 'center',
+  },
   modalCancelText: { ...typography.label, color: colors.dark.textSecondary },
-  modalConfirmBtn: { flex: 1, paddingVertical: 14, borderRadius: radius.sm, backgroundColor: colors.dark.accent, alignItems: 'center' },
+  modalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.sm,
+    backgroundColor: colors.dark.accent,
+    alignItems: 'center',
+  },
   modalConfirmText: { ...typography.label, color: '#fff' },
-  lightboxOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', justifyContent: 'center', alignItems: 'center' },
-  lightboxHeader: { position: 'absolute', top: 50, left: 0, right: 0, paddingHorizontal: spacing.lg, zIndex: 10 },
+  lightboxOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lightboxHeader: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.lg,
+    zIndex: 10,
+  },
   lightboxBackBtn: { paddingVertical: spacing.sm, paddingRight: spacing.lg },
   lightboxBackText: { ...typography.body, color: '#fff' },
-  lightboxImageContainer: { width: Dimensions.get('window').width, height: Dimensions.get('window').height * 0.7, justifyContent: 'center', alignItems: 'center' },
+  lightboxImageContainer: {
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height * 0.7,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   lightboxImage: { width: '100%', height: '100%' },
-  lightboxDate: { position: 'absolute', bottom: 50, ...typography.body, color: '#fff', textAlign: 'center' },
+  lightboxDate: {
+    position: 'absolute',
+    bottom: 50,
+    ...typography.body,
+    color: '#fff',
+    textAlign: 'center',
+  },
 });

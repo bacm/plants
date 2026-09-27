@@ -32,11 +32,11 @@ python -m pytest -q
 
 ## Environment variables
 
-| Variable | Required | Description |
-| --- | --- | --- |
-| `OPENAI_API_KEY` | yes | OpenAI key used server-side to call the Chat Completions API. The server fails to start without it. |
-| `ALLOWED_ORIGINS` | no | Comma-separated list of origins allowed to call this server via CORS (e.g. `https://example.com`). Native apps don't need this; the web build does. Defaults to empty (no CORS). |
-| `SEARCH_DAILY_BUDGET` | no | Maximum number of upstream OpenAI calls served per UTC calendar day, across all clients. Beyond it `/search` answers 503 without calling OpenAI. Must be a positive integer if set; the server fails to start otherwise. Defaults to 500. |
+| Variable              | Required | Description                                                                                                                                                                                                                               |
+| --------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`      | yes      | OpenAI key used server-side to call the Chat Completions API. The server fails to start without it.                                                                                                                                       |
+| `ALLOWED_ORIGINS`     | no       | Comma-separated list of origins allowed to call this server via CORS (e.g. `https://example.com`). Native apps don't need this; the web build does. Defaults to empty (no CORS).                                                          |
+| `SEARCH_DAILY_BUDGET` | no       | Maximum number of upstream OpenAI calls served per UTC calendar day, across all clients. Beyond it `/search` answers 503 without calling OpenAI. Must be a positive integer if set; the server fails to start otherwise. Defaults to 500. |
 
 ## Notes
 

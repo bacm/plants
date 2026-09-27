@@ -13,7 +13,7 @@ with a loop over the keys of the `updates` object:
 
 ```js
 for (const key in updates) {
-  set.push(`${key} = ?`);   // key becomes a column name, unvalidated
+  set.push(`${key} = ?`); // key becomes a column name, unvalidated
 }
 ```
 
