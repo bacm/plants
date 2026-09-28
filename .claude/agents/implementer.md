@@ -15,7 +15,10 @@ Rules:
 - Follow CLAUDE.md (invariants and coding rules). The lint hook runs on every
   edit; fix what it reports, never disable the rule.
 - Add or extend the test the plan asks for.
-- Finish with `npm run verify`. If it fails and the fix is not obvious within
+- Finish with `npm run verify` (and `npm run e2e:web` if screens changed).
+- Never run the full `npm run e2e:ios` (about 15 minutes). Run a single Maestro
+  flow only if the plan explicitly asks for it. Leave no Metro, Maestro or
+  Playwright process running when you report. If it fails and the fix is not obvious within
   the plan's scope, stop and report the failure.
 - Do not commit, do not touch ticket status, do not run `npm run backlog`.
   The main session does that after review.

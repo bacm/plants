@@ -6,20 +6,20 @@ TypeScript), file-based routing via expo-router.
 
 ## Commands
 
-| Command                                      | What it does                                                                                                    |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `npm run verify`                             | **Run before every commit.** lint + tests + secret scan + backlog index. ~5s.                                   |
-| `npm run verify:full`                        | `verify` plus the three-platform bundle. What CI runs.                                                          |
-| `npm run lint` / `lint:fix`                  | ESLint. Rules live in `eslint.config.js`.                                                                       |
-| `npm run format` / `format:check`            | Prettier. `format:check` runs in `verify` and CI; run `format` before committing.                               |
-| `npm run test`                               | Jest. Tests are in `lib/__tests__/`.                                                                            |
-| `npm run backlog`                            | Regenerate `docs/backlog/INDEX.md` after touching a ticket.                                                     |
-| `npm run bundle`                             | `expo export` for iOS + Android + web into `.bundle-check/`.                                                    |
-| `cd server && .venv/bin/python -m pytest -q` | Server tests. Not in `verify`; CI runs them.                                                                    |
-| `npm run e2e:web`                            | Playwright smoke test of the web build (`e2e/`). Slow; not in `verify` or CI.                                   |
-| `npm run e2e:ios`                            | Maestro flows (`e2e/ios/`) on an iOS simulator in Expo Go. Needs Xcode, Maestro and JDK 17; ~13 min; not in CI. |
-| `npm run deploy:iphone`                      | Release build installed on the connected iPhone; keeps the app's data. See `docs/DEPLOY-IPHONE.md`.             |
-| `npm run setup`                              | One-time: enable the versioned git hooks.                                                                       |
+| Command                                      | What it does                                                                                                                                                      |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run verify`                             | **Run before every commit.** lint + tests + secret scan + backlog index. ~5s.                                                                                     |
+| `npm run verify:full`                        | `verify` plus the three-platform bundle. What CI runs.                                                                                                            |
+| `npm run lint` / `lint:fix`                  | ESLint. Rules live in `eslint.config.js`.                                                                                                                         |
+| `npm run format` / `format:check`            | Prettier. `format:check` runs in `verify` and CI; run `format` before committing.                                                                                 |
+| `npm run test`                               | Jest. Tests are in `lib/__tests__/`.                                                                                                                              |
+| `npm run backlog`                            | Regenerate `docs/backlog/INDEX.md` after touching a ticket.                                                                                                       |
+| `npm run bundle`                             | `expo export` for iOS + Android + web into `.bundle-check/`.                                                                                                      |
+| `cd server && .venv/bin/python -m pytest -q` | Server tests. Not in `verify`; CI runs them.                                                                                                                      |
+| `npm run e2e:web`                            | Playwright smoke test of the web build (`e2e/`). Slow; not in `verify` or CI.                                                                                     |
+| `npm run e2e:ios`                            | Maestro flows (`e2e/ios/`) on an iOS simulator. ~15 min — **run rarely**: before a device deploy, or when native-only code changes. Needs Xcode, Maestro, JDK 17. |
+| `npm run deploy:iphone`                      | Release build installed on the connected iPhone; keeps the app's data. See `docs/DEPLOY-IPHONE.md`.                                                               |
+| `npm run setup`                              | One-time: enable the versioned git hooks.                                                                                                                         |
 
 A `PostToolUse` hook lints every `.js` file right after you edit it and blocks on
 errors. If you see ESLint output come back at you, fix it before continuing —
@@ -128,6 +128,12 @@ decisions.
    code before ticking it — never tick the list in bulk. Then set `status: done`
    and run `npm run backlog`.
 7. Commit. The pre-commit hook re-runs `verify`.
+
+**Test budget.** Per ticket: `npm run verify`, plus `npm run e2e:web` when screens
+change (seconds). The iOS simulator suite is slow and is **not** part of a
+ticket: the main session runs it before deploying to a phone. An implementer
+never runs the full `npm run e2e:ios`; at most one targeted flow, and only when
+the plan asks for it.
 
 Skip the delegation for a change of a few lines — writing the plan would cost
 more than making the edit.

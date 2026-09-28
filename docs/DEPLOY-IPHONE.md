@@ -45,6 +45,9 @@ Without it the app works, but plant search says it is not configured.
 
 ### Deploy
 
+Optional but recommended before a release: `npm run e2e:ios` (about 15
+minutes) checks the native paths in the simulator.
+
 ```bash
 npm run deploy:iphone
 ```
