@@ -1,7 +1,7 @@
 ---
 id: 055
 title: Keep the native iOS simulator checks in the repo with Maestro
-status: open
+status: done
 priority: P2
 type: chore
 ---
@@ -20,13 +20,20 @@ covers web.
 
 ## Acceptance criteria
 
-- [ ] Maestro flows under `e2e/ios/` reproduce the 8 checks and seed a demo
+- [x] Maestro flows under `e2e/ios/` reproduce the 8 checks and seed a demo
       garden, using text and accessibility selectors (no coordinates)
-- [ ] `npm run e2e:ios` boots a simulator, starts Metro on a free port, opens the
+- [x] `npm run e2e:ios` boots a simulator, starts Metro on a free port, opens the
       app in Expo Go and runs the flows; documented in CLAUDE.md (requires Xcode,
       Maestro and a JDK — not in CI for now)
-- [ ] A second run on a fresh simulator passes without manual steps
+- [x] A second run on a fresh simulator passes without manual steps
 
 ## Notes
 
 Maestro 2.10 needs `JAVA_HOME` pointing at a JDK 17 (Homebrew `openjdk@17`).
+
+Two consecutive full runs passed 8/8 (13 min each) on 2026-09-28. Selectors are
+text and accessibility labels (one label added: `Photo du <date>` on photo
+thumbnails); the only coordinates left are two percentage swipes (a nested
+horizontal month row, and dismissing the iOS share sheet). Maestro text
+selectors are regular expressions: escape `+ * ( ) .` in labels. Expo Go's
+dev-menu sheet can appear mid-flow; `_dismiss-dev-menu.yaml` handles it.

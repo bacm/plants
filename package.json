@@ -19,6 +19,7 @@
     "backlog:check": "node scripts/backlog.mjs --check",
     "bundle": "expo export --output-dir .bundle-check --clear",
     "e2e:web": "playwright test",
+    "e2e:ios": "bash scripts/e2e-ios.sh",
     "verify": "npm run lint && npm run format:check && npm run test && npm run secrets && npm run backlog:check",
     "verify:full": "npm run verify && npm run bundle"
   },

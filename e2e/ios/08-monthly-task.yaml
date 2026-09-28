@@ -1,0 +1,29 @@
+# Check 8: "Ce mois-ci au jardin" derives Lavande's pruning task from its
+# pruning month, seeded as the current month (${MONTH_SHORT}, computed by
+# scripts/e2e-ios.sh) so this always matches whichever month this flow
+# actually runs in — see docs/backlog/055 notes. Ticking its "Fait"
+# checkmark removes it from the list.
+appId: host.exp.Exponent
+---
+- clearState
+- runFlow: _open-app.yaml
+- runFlow: _seed-lavande.yaml
+
+# _seed-lavande.yaml ends on Lavande's own detail screen (no tab bar),
+# scrolled down to where "Enregistrer" was — "‹ Retour" is up in the hero,
+# off screen (the iOS accessibility tree only exposes elements actually on
+# screen). Go back to Accueil (which has the shared tab bar) first.
+- scrollUntilVisible:
+    element:
+      text: "‹ Retour"
+    direction: UP
+- tapOn: "‹ Retour"
+- tapOn: "Accueil, tab, 1 of 4"
+- runFlow: _dismiss-dev-menu.yaml
+- scrollUntilVisible:
+    element:
+      text: "Ce mois-ci au jardin"
+    direction: DOWN
+- assertVisible: "Tailler · Lavande"
+- tapOn: "Fait"
+- assertNotVisible: "Tailler · Lavande"

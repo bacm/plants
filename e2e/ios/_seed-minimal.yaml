@@ -1,0 +1,51 @@
+# Reusable subflow: seeds the smallest garden that satisfies the numbered
+# checks that don't care about zone/bloom variety — one zone ("Massif sud")
+# and one plant ("Rosier rouge", assigned to that zone, bloom 5-7). Creating
+# a plant also auto-creates its watering reminder (see app/plant/new.js), so
+# this single plant covers checks that just need "a plant with a reminder"
+# too.
+#
+# Ends on Rosier rouge's own detail screen (no tab bar) — saving a plant
+# replaces the stack entry with its detail screen.
+#
+# Run after `clearState` + `_open-app.yaml`. Not listed in config.yaml's
+# `flows:`, so `maestro test e2e/ios/` never runs this standalone — only via
+# `runFlow` from a numbered check.
+appId: host.exp.Exponent
+---
+- tapOn: "Zones, tab, 2 of 4"
+- tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
+- tapOn: "Nom de la zone"
+- inputText: "Massif sud"
+- hideKeyboard
+- tapOn: "Créer la zone"
+
+- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: '+ Ajouter une plante'
+- extendedWaitUntil:
+    visible: 'Nom de la plante *'
+    timeout: 15000
+- tapOn: 'Nom de la plante *'
+- inputText: "Rosier rouge"
+- hideKeyboard
+- tapOn: "Massif sud"
+- tapOn: "Plus de details  ▼"
+- scrollUntilVisible:
+    element:
+      text: "Debut"
+    direction: DOWN
+- tapOn: "Debut"
+- inputText: "5"
+- tapOn: "Fin"
+- inputText: "7"
+# Number-pad fields have no "Done" key, so hideKeyboard has nothing to press;
+# tap a static label instead (the form's ScrollView uses
+# keyboardShouldPersistTaps="handled", so this both dismisses the keyboard
+# and does nothing else).
+- tapOn: "Floraison"
+- scrollUntilVisible:
+    element:
+      text: "Enregistrer"
+    direction: DOWN
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml

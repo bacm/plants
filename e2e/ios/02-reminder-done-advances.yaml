@@ -1,0 +1,21 @@
+# Check 2: tapping "Fait" on a reminder advances its next due date and logs
+# the care event. This is the exact scenario ticket 002 fixed (a missing
+# await made markReminderDone a silent no-op) — regress it here instead of
+# asserting a hardcoded date, since "today" depends on when this flow runs.
+appId: host.exp.Exponent
+---
+- clearState
+- runFlow: _open-app.yaml
+- runFlow: _seed-minimal.yaml
+
+# _seed-minimal.yaml ends on Rosier rouge's own detail screen, and creating a
+# plant auto-creates its watering reminder, so no navigation is needed to
+# reach it.
+- tapOn: "Actions"
+- runFlow: _dismiss-dev-menu.yaml
+- assertVisible: ".*Prochaine :.*"
+- copyTextFrom:
+    text: "Prochaine :.*"
+- tapOn: "Fait"
+- assertNotVisible: "${maestro.copiedText}"
+- assertVisible: "Arrosé"

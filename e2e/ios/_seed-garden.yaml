@@ -1,0 +1,222 @@
+# Reusable subflow: seeds the demo garden from /tmp/ux-ios/report.md — three
+# zones and five plants — so every check flow starts from the same known
+# state. Run after `clearState` + `_open-app.yaml`.
+#
+# Zones: Massif sud, Potager, Ombre nord.
+# Plants: Rosier rouge (Massif sud, bloom 5-7, rouge), Hellébore (Ombre nord,
+# bloom 12-2, wraps the year), Lavande (Potager, bloom 6-8, violette, pruning
+# month = Sep), Framboisier (Potager, harvest 7-9), Mystère (name only, no
+# zone). Plants are always added from the Bibliothèque list's "+ Ajouter une
+# plante" button (reached via the tab once, then via "‹ Retour" — saving a
+# plant replaces the stack entry with its detail screen, which has no tab
+# bar) — a zone's own detail screen only offers that button while the zone
+# has zero plants (see report.md's "UX / layout observations").
+#
+# Not listed in config.yaml's `flows:`, so `maestro test e2e/ios/` never
+# runs this standalone — only via `runFlow` from a numbered check.
+appId: host.exp.Exponent
+---
+
+# --- Zones ---
+- tapOn: "Zones, tab, 2 of 4"
+- tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
+- tapOn: "Nom de la zone"
+- inputText: "Massif sud"
+- hideKeyboard
+- tapOn: "Créer la zone"
+
+- tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
+- tapOn: "Nom de la zone"
+- inputText: "Potager"
+- hideKeyboard
+- tapOn: "Créer la zone"
+
+- tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
+- tapOn: "Nom de la zone"
+- inputText: "Ombre nord"
+- hideKeyboard
+- tapOn: "Créer la zone"
+
+# --- Rosier rouge: Massif sud, bloom 5-7, rouge ---
+- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: '+ Ajouter une plante'
+- extendedWaitUntil:
+    visible: 'Nom de la plante *'
+    timeout: 15000
+- tapOn: 'Nom de la plante *'
+- inputText: "Rosier rouge"
+- hideKeyboard
+- tapOn: "Massif sud"
+- tapOn: "Plus de details  ▼"
+- scrollUntilVisible:
+    element:
+      text: "ex. rose, blanc"
+    direction: DOWN
+- tapOn: "ex. rose, blanc"
+- inputText: "rouge"
+- hideKeyboard
+- tapOn: "Debut"
+- inputText: "5"
+- tapOn: "Fin"
+- inputText: "7"
+# Number-pad fields have no "Done" key, so hideKeyboard has nothing to press;
+# tap a static label instead (the form's ScrollView uses
+# keyboardShouldPersistTaps="handled", so this both dismisses the keyboard
+# and does nothing else).
+- tapOn: "Floraison"
+- scrollUntilVisible:
+    element:
+      text: "Enregistrer"
+    direction: DOWN
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml
+
+# --- Hellébore: Ombre nord, bloom 12-2 (wraps the year) ---
+- tapOn: "‹ Retour"
+- tapOn: '+ Ajouter une plante'
+- extendedWaitUntil:
+    visible: 'Nom de la plante *'
+    timeout: 15000
+- tapOn: 'Nom de la plante *'
+- inputText: "Hellébore"
+- hideKeyboard
+- tapOn: "Ombre nord"
+- tapOn: "Plus de details  ▼"
+- scrollUntilVisible:
+    element:
+      text: "Debut"
+    direction: DOWN
+- tapOn: "Debut"
+- inputText: "12"
+- tapOn: "Fin"
+- inputText: "2"
+- tapOn: "Floraison"
+- scrollUntilVisible:
+    element:
+      text: "Enregistrer"
+    direction: DOWN
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml
+
+# --- Lavande: Potager, bloom 6-8, violette, pruning month = Sep ---
+- tapOn: "‹ Retour"
+- tapOn: '+ Ajouter une plante'
+- extendedWaitUntil:
+    visible: 'Nom de la plante *'
+    timeout: 15000
+- tapOn: 'Nom de la plante *'
+- inputText: "Lavande"
+- hideKeyboard
+- tapOn: "Potager"
+- tapOn: "Plus de details  ▼"
+- scrollUntilVisible:
+    element:
+      text: "ex. rose, blanc"
+    direction: DOWN
+- tapOn: "ex. rose, blanc"
+- inputText: "violette"
+- hideKeyboard
+- tapOn: "Debut"
+- inputText: "6"
+- tapOn: "Fin"
+- inputText: "8"
+- tapOn: "Floraison"
+- scrollUntilVisible:
+    element:
+      text: "Mois de taille"
+    direction: DOWN
+# This pill row is its own horizontal ScrollView nested inside the page's
+# vertical one; a plain scrollUntilVisible/swipe with no anchor swipes the
+# whole screen and never actually moves it. Anchoring on a pill (rather than
+# a fixed coordinate, which turned out not to land at a consistent y across
+# runs) swipes from wherever that pill currently is. A short/fast swipe here
+# is occasionally read as a vertical-scroll attempt instead (nested
+# ScrollViews competing for the gesture) and does nothing, so this uses a
+# slower, longer swipe and repeats it enough times to tolerate a miss.
+- swipe:
+    element:
+      text: "Jan"
+    direction: LEFT
+    duration: 800
+- swipe:
+    element:
+      text: "Fév"
+    direction: LEFT
+    duration: 800
+    optional: true
+- swipe:
+    element:
+      text: "Mar"
+    direction: LEFT
+    duration: 800
+    optional: true
+- swipe:
+    element:
+      text: "Avr"
+    direction: LEFT
+    duration: 800
+    optional: true
+# Catch-all in case none of the above actually moved it.
+- scrollUntilVisible:
+    element:
+      text: "Sep"
+    direction: RIGHT
+    visibilityPercentage: 50
+    timeout: 10000
+    optional: true
+- tapOn: "Sep"
+- scrollUntilVisible:
+    element:
+      text: "Enregistrer"
+    direction: DOWN
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml
+
+# --- Framboisier: Potager, harvest 7-9 ---
+- tapOn: "‹ Retour"
+- tapOn: '+ Ajouter une plante'
+- extendedWaitUntil:
+    visible: 'Nom de la plante *'
+    timeout: 15000
+- tapOn: 'Nom de la plante *'
+- inputText: "Framboisier"
+- hideKeyboard
+- tapOn: "Potager"
+- tapOn: "Plus de details  ▼"
+- scrollUntilVisible:
+    element:
+      text: "Début"
+    direction: DOWN
+- tapOn: "Début"
+- inputText: "7"
+# Bloom's "Fin" field is scrolled far enough off-screen by this point that
+# it's clipped from the hierarchy entirely, so this unambiguously targets
+# harvest's.
+- tapOn: "Fin"
+- inputText: "9"
+# Number-pad has no "Done" key, so hideKeyboard can't press one — but
+# leaving the keyboard up also isn't safe here: the next scrollUntilVisible
+# swipe's start point lands on the on-screen keypad (still showing "9" typed
+# above), and a short/no-op swipe (Enregistrer is already close by) reads as
+# a tap there, silently appending a stray digit to this field. Tap a static,
+# uppercase label instead — its rendered (uppercase) text is what's actually
+# exposed to the accessibility tree, not the mixed-case JSX source.
+- tapOn: "INFORMATIONS DE RÉCOLTE"
+- scrollUntilVisible:
+    element:
+      text: "Enregistrer"
+    direction: DOWN
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml
+
+# --- Mystère: name only, no zone ---
+- tapOn: "‹ Retour"
+- tapOn: '+ Ajouter une plante'
+- extendedWaitUntil:
+    visible: 'Nom de la plante *'
+    timeout: 15000
+- tapOn: 'Nom de la plante *'
+- inputText: "Mystère"
+- hideKeyboard
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml

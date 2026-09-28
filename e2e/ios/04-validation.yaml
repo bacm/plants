@@ -1,0 +1,70 @@
+# Check 4: month 13 and date 2026-02-30 are refused with a message, and both
+# block save (lib/validation.js parseMonth / parseISODate).
+appId: host.exp.Exponent
+---
+- clearState
+- runFlow: _open-app.yaml
+
+# This check only exercises validation on a brand-new plant, so no seeded
+# data is needed — go straight from the dashboard (which already has the
+# shared tab bar) to Bibliothèque.
+- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: '+ Ajouter une plante'
+- extendedWaitUntil:
+    visible: 'Nom de la plante *'
+    timeout: 15000
+- tapOn: 'Nom de la plante *'
+- inputText: "Test Validation"
+- hideKeyboard
+- tapOn: "Plus de details  ▼"
+- scrollUntilVisible:
+    element:
+      text: "Debut"
+    direction: DOWN
+- tapOn: "Debut"
+- inputText: "13"
+- tapOn: "Fin"
+- inputText: "5"
+# Number-pad fields have no "Done" key; tap a static label instead (the
+# form's ScrollView uses keyboardShouldPersistTaps="handled").
+- tapOn: "Floraison"
+- scrollUntilVisible:
+    element:
+      text: "Enregistrer"
+    direction: DOWN
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml
+# The iOS accessibility tree (unlike React Native's own view tree) only
+# exposes elements actually on screen, and we're still scrolled down to
+# "Enregistrer" at this point — scroll back up to where the inline error
+# renders (right under the field) before asserting on it.
+- scrollUntilVisible:
+    element:
+      text: "Mois entre 1 et 12"
+    direction: UP
+- assertVisible: "Mois entre 1 et 12"
+
+- tapOn: "13"
+- eraseText: 2
+- inputText: "5"
+- tapOn: "Floraison"
+- scrollUntilVisible:
+    element:
+      text: "AAAA-MM-JJ"
+    direction: DOWN
+- tapOn: "AAAA-MM-JJ"
+- inputText: "2026-02-30"
+# This field's keyboard has no "Done" key either; tap the label instead.
+- tapOn: "DATE D'AJOUT"
+- scrollUntilVisible:
+    element:
+      text: "Enregistrer"
+    direction: DOWN
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml
+# Same off-screen-elements-aren't-in-the-tree issue as above.
+- scrollUntilVisible:
+    element:
+      text: "Date au format AAAA-MM-JJ"
+    direction: UP
+- assertVisible: "Date au format AAAA-MM-JJ"

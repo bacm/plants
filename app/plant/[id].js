@@ -521,7 +521,11 @@ export default function PlantDetailScreen() {
                             style={styles.timelinePhotoWrap}
                             onPress={() => setSelectedPhoto(photo)}
                             onLongPress={() => handleDeletePhoto(photo)}
-                            activeOpacity={1}>
+                            activeOpacity={1}
+                            // No text sits on the photo itself, so this is the only
+                            // selector Maestro (e2e/ios) has for tapping/long-pressing
+                            // a specific photo. See docs/backlog/055.
+                            accessibilityLabel={`Photo du ${photo.date}`}>
                             <Image
                               source={{ uri: photo.uri }}
                               style={styles.timelinePhoto}

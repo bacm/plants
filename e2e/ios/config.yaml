@@ -1,0 +1,14 @@
+# Workspace config for `maestro test e2e/ios/` (see scripts/e2e-ios.sh).
+#
+# Only the numbered check flows are top-level tests; `_open-app.yaml` and
+# `_seed-garden.yaml` are reusable subflows included via `runFlow` and must
+# not be picked up as standalone flows. Listed in check order.
+flows:
+  - "01-edit-keeps-created-date.yaml"
+  - "02-reminder-done-advances.yaml"
+  - "03-back-after-save.yaml"
+  - "04-validation.yaml"
+  - "05-photo-survives-relaunch.yaml"
+  - "06-export-share-sheet.yaml"
+  - "07-delete-zone-keeps-plants.yaml"
+  - "08-monthly-task.yaml"

@@ -1,0 +1,20 @@
+# Reusable subflow: Expo Go's own "Reload / Go home / TOOLS" dev menu (with
+# a "Close" button) can pop up unpredictably after a save/reload-triggering
+# action, not just on first launch — dismiss it if it showed up, then move
+# on. See docs/backlog/055 notes in _open-app.yaml for the first-launch case
+# this generalizes, and for _open-app.yaml's disabling of Expo Go's floating
+# "Tools" button, which was the main trigger for this case. This is now a
+# cheap safety net rather than the primary defense, and it runs many times
+# per flow — an `optional: true` tapOn still retries for its own ~6s timeout
+# even when the element plainly isn't there (that dwarfed a preceding
+# extendedWaitUntil check and made every no-op call here cost 6s+ regardless
+# of that check's own timeout), so gate the tap behind `when` instead: a
+# `runFlow` with no matching condition is SKIPPED near-instantly rather than
+# retried.
+appId: host.exp.Exponent
+---
+- runFlow:
+    when:
+      visible: "Close"
+    commands:
+      - tapOn: "Close"

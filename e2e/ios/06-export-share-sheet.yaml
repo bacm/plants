@@ -1,0 +1,20 @@
+# Check 6: Réglages -> Exporter mon jardin brings up the native iOS share
+# sheet with the exported JSON file. Swiping it away cancels cleanly.
+appId: host.exp.Exponent
+---
+- clearState
+- runFlow: _open-app.yaml
+- runFlow: _seed-minimal.yaml
+
+# _seed-minimal.yaml ends on Rosier rouge's own detail screen (no tab bar);
+# go back to Accueil (which has the shared tab bar) first. A single plant is
+# enough to exercise a non-empty export.
+- tapOn: "‹ Retour"
+- tapOn: "Accueil, tab, 1 of 4"
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Réglages"
+- tapOn: "Exporter mon jardin"
+- assertVisible: ".*jardin-.*"
+- swipe:
+    start: "50%, 60%"
+    end: "50%, 100%"

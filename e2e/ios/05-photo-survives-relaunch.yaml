@@ -1,0 +1,82 @@
+# Check 5: a photo persists across an app kill + relaunch, and deletes via
+# its long-press confirmation. Sets an explicit photo date (rather than
+# accepting the auto-filled "today") so it stays a stable selector across
+# the relaunch. `stopApp` + `runFlow: _open-app.yaml` relaunches WITHOUT
+# `clearState`, so the seeded garden and the photo file survive — that's the
+# whole point of the check.
+#
+# Steps 2-3 (Galerie / picking a photo) drive iOS's native photo picker,
+# which is system UI outside the app. The simulator's demo photo library is
+# fixed, so its first thumbnail's accessibility label ("Photo, <date>") is a
+# stable text selector — a raw coordinate tap turned out to be unreliable
+# specifically inside this flow (worked standalone, consistently missed the
+# thumbnail here even with a settle delay first), so avoid it.
+appId: host.exp.Exponent
+---
+- clearState
+- runFlow: _open-app.yaml
+- runFlow: _seed-minimal.yaml
+
+# _seed-minimal.yaml ends on Rosier rouge's own detail screen (no tab bar);
+# go back to Bibliothèque (which has the shared tab bar) and back in. It's
+# the only plant, so no search is needed to find it again.
+- tapOn: "‹ Retour"
+- tapOn: "Bibliothèque, tab, 4 of 4"
+- runFlow: _dismiss-dev-menu.yaml
+- extendedWaitUntil:
+    visible: ".*Rosier rouge.*"
+    timeout: 10000
+- tapOn: ".*Rosier rouge.*"
+- tapOn: "Photos"
+- tapOn: ".*Appuyez pour ajouter une photo.*"
+- tapOn: "Galerie"
+- extendedWaitUntil:
+    visible: "Photo, 30 March 2018, 21:14"
+    timeout: 10000
+- tapOn: "Photo, 30 March 2018, 21:14"
+# Picking a photo (allowsEditing: true) opens a "Move and Scale" crop screen
+# with its own presentation animation. It's a separate process from the app
+# under test, so plain waitForAnimationToEnd tracks the wrong app and returns
+# near-instantly instead of actually waiting for it — force a real fixed
+# delay by waiting on a condition that can never become true.
+- extendedWaitUntil:
+    visible: "∎unreachable-settle-marker∎"
+    timeout: 2000
+    optional: true
+- tapOn: "Choose"
+# The date field is centered text auto-filled with today's date, so a plain
+# tap places the cursor wherever that lands within the current text rather
+# than at its end — eraseText then only clears part of it, leaving a mangled
+# value (observed: erasing "2026-" of "2026-09-27" and prepending the typed
+# date gave "2024-06-0109-27"). Long-press for the system "Select All" instead
+# so the whole value is replaced regardless of its length — the field needs a
+# plain tap first to focus it, or the long-press alone doesn't bring up that
+# menu.
+- tapOn:
+    below: "Date de la photo"
+- longPressOn:
+    below: "Date de la photo"
+- tapOn: "Select All"
+- inputText: "2024-06-01"
+# This field's keyboard has no "Done" key either; tap the modal title
+# instead (styles.modalTitle has no uppercase transform, unlike the form
+# labels, so the mixed-case text matches as-is).
+- tapOn: "Date de la photo"
+- tapOn: "Ajouter"
+- assertVisible: "2024-06-01"
+
+- stopApp
+- runFlow: _open-app.yaml
+- tapOn: "Bibliothèque, tab, 4 of 4"
+- runFlow: _dismiss-dev-menu.yaml
+- extendedWaitUntil:
+    visible: ".*Rosier rouge.*"
+    timeout: 10000
+- tapOn: ".*Rosier rouge.*"
+- tapOn: "Photos"
+- assertVisible: "2024-06-01"
+
+- longPressOn: "Photo du 2024-06-01"
+- assertVisible: "Supprimer la photo"
+- tapOn: "Supprimer"
+- assertNotVisible: "2024-06-01"

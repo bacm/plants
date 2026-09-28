@@ -1,0 +1,26 @@
+# Check 7: deleting a zone that still has plants states the plant count in
+# the confirmation, and the plants survive the deletion (unassigned, not
+# removed).
+appId: host.exp.Exponent
+---
+- clearState
+- runFlow: _open-app.yaml
+- runFlow: _seed-minimal.yaml
+
+# _seed-minimal.yaml ends on Rosier rouge's own detail screen (no tab bar);
+# go back to Zones (which has the shared tab bar) first.
+- tapOn: "‹ Retour"
+- tapOn: "Zones, tab, 2 of 4"
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: ".*Massif sud.*"
+- tapOn: "Supprimer la zone"
+- assertVisible: "Les 1 plante de cette zone resteront dans votre jardin, sans zone."
+- tapOn: "Supprimer"
+
+- tapOn: "Bibliothèque, tab, 4 of 4"
+- runFlow: _dismiss-dev-menu.yaml
+# It's the only plant, so no search is needed to find it again.
+- extendedWaitUntil:
+    visible: ".*Rosier rouge.*"
+    timeout: 10000
+- assertVisible: ".*Sans zone.*"

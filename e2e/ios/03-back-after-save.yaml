@@ -1,0 +1,54 @@
+# Check 3: after saving an edit and a care log from a plant reached via
+# Bibliothèque, "‹ Retour" goes back to the Bibliothèque list (no navigation
+# desync, unlike the web router.back() bug from ticket 034).
+appId: host.exp.Exponent
+---
+- clearState
+- runFlow: _open-app.yaml
+- runFlow: _seed-minimal.yaml
+
+# _seed-minimal.yaml ends on Rosier rouge's own detail screen (no tab bar);
+# go back to Bibliothèque (which has the shared tab bar) and back in, so this
+# check exercises the "reached via Bibliothèque" navigation it's about. It's
+# the only plant, so no search is needed to find it again.
+- tapOn: "‹ Retour"
+- tapOn: "Bibliothèque, tab, 4 of 4"
+- runFlow: _dismiss-dev-menu.yaml
+- extendedWaitUntil:
+    visible: ".*Rosier rouge.*"
+    timeout: 10000
+- tapOn: ".*Rosier rouge.*"
+- scrollUntilVisible:
+    element:
+      text: "Modifier la fiche"
+    direction: DOWN
+- tapOn: "Modifier la fiche"
+- scrollUntilVisible:
+    element:
+      text: "Enregistrer"
+    direction: DOWN
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml
+
+- tapOn: "Actions"
+- runFlow: _dismiss-dev-menu.yaml
+# "+ Log" is under Historique, below Rappels — scroll to it; the iOS
+# accessibility tree only exposes elements actually on screen.
+- scrollUntilVisible:
+    element:
+      text: '+ Log'
+    direction: DOWN
+- tapOn: '+ Log'
+- tapOn: "Taillé"
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml
+
+# We're still scrolled down to "Enregistrer" from the log — "‹ Retour" is up
+# in the hero, off screen (the iOS accessibility tree only exposes elements
+# actually on screen).
+- scrollUntilVisible:
+    element:
+      text: "‹ Retour"
+    direction: UP
+- tapOn: "‹ Retour"
+- assertVisible: ".*Rechercher.*"

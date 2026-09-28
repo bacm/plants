@@ -10,3 +10,4 @@ docs/backlog/INDEX.md
 server/.venv/
 test-results/
 playwright-report/
+.maestro-output/

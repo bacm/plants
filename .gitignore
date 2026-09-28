@@ -61,3 +61,6 @@ __pycache__/
 # Playwright (npm run e2e:web)
 /test-results/
 /playwright-report/
+
+# Maestro (npm run e2e:ios)
+/.maestro-output/

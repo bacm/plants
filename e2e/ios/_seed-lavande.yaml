@@ -1,0 +1,46 @@
+# Reusable subflow: seeds the single plant check 08 needs — "Lavande", no
+# zone, with its pruning month set to the current month, so "Ce mois-ci au
+# jardin" always derives a pruning task from it regardless of when this runs.
+# ${MONTH_SHORT} is passed by scripts/e2e-ios.sh (see its lib/months.js
+# MONTH_SHORT mapping) — never hard-code a month here.
+#
+# Ends on Lavande's own detail screen (no tab bar) — saving a plant replaces
+# the stack entry with its detail screen.
+#
+# Run after `clearState` + `_open-app.yaml`. Not listed in config.yaml's
+# `flows:`, so `maestro test e2e/ios/` never runs this standalone — only via
+# `runFlow` from a numbered check.
+appId: host.exp.Exponent
+---
+- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: '+ Ajouter une plante'
+- extendedWaitUntil:
+    visible: 'Nom de la plante *'
+    timeout: 15000
+- tapOn: 'Nom de la plante *'
+- inputText: "Lavande"
+- hideKeyboard
+- tapOn: "Plus de details  ▼"
+- scrollUntilVisible:
+    element:
+      text: "Mois de taille"
+    direction: DOWN
+# This pill row is its own horizontal ScrollView nested inside the page's
+# vertical one; a plain scrollUntilVisible/swipe with no anchor swipes the
+# whole screen and never actually moves it. Anchoring the swipe on a specific
+# pill (e.g. "Jan") turned out unreliable here too — the drag only spans that
+# pill's own width, too short to trigger a fling on this ScrollView, so it
+# silently did nothing. A full-width swipe at the pill row's y (stable across
+# runs: scrollUntilVisible above always leaves "Mois de taille" at the same
+# position) reliably reveals every month from Jan through Déc in one go.
+- swipe:
+    start: "90%,74%"
+    end: "10%,74%"
+    duration: 800
+- tapOn: "${MONTH_SHORT}"
+- scrollUntilVisible:
+    element:
+      text: "Enregistrer"
+    direction: DOWN
+- tapOn: "Enregistrer"
+- runFlow: _dismiss-dev-menu.yaml

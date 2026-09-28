@@ -1,0 +1,65 @@
+# Reusable subflow: open the app in Expo Go and wait for the dashboard.
+#
+# Does NOT clear state itself — callers that want a fresh app do
+# `clearState` as their own first step, before `runFlow: _open-app.yaml`.
+# That split lets 05-photo-survives-relaunch.yaml reuse this same subflow to
+# relaunch WITHOUT wiping the garden it just seeded.
+#
+# ${APP_URL} is passed by scripts/e2e-ios.sh as `exp://127.0.0.1:<port>`.
+#
+# Not listed in config.yaml's `flows:`, so `maestro test e2e/ios/` never
+# runs this standalone — only via `runFlow` from a numbered check.
+appId: host.exp.Exponent
+---
+- launchApp:
+    clearState: false
+- openLink: "${APP_URL}"
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 8000
+    optional: true
+- tapOn:
+    text: "Continue"
+    optional: true
+# On a freshly cleared Expo Go, the project's first successful bundle load
+# also pops Expo Go's own "Reload / Go home / TOOLS" dev menu on top of the
+# dashboard (a first-connection tip sheet, not something we tapped into
+# existence). Close it if it showed up before waiting for the dashboard.
+- extendedWaitUntil:
+    visible: "Close"
+    timeout: 8000
+    optional: true
+- tapOn:
+    text: "Close"
+    optional: true
+- extendedWaitUntil:
+    visible: "Votre jardin"
+    timeout: 30000
+
+# Expo Go also shows its own floating "Tools" button (SF Symbol
+# "gearshape.fill") on top of the app whenever it's attached to a dev
+# server. It isn't part of our view tree, but its hit area sits in the same
+# top-right corner as app content like plant/[id].js's "Actions" tab or
+# settings.js's "Réglages" gear, silently swallowing taps meant for those —
+# turn it off once per fresh Expo Go state. `clearState` wipes this
+# preference, so every clearState + _open-app.yaml needs this again; a
+# caller that relaunches without clearState (05-photo-survives-relaunch.yaml)
+# will find the button already gone and this a no-op.
+- extendedWaitUntil:
+    visible: "gearshape.fill"
+    timeout: 3000
+    optional: true
+- tapOn:
+    text: "gearshape.fill"
+    optional: true
+- extendedWaitUntil:
+    visible: "Tools button"
+    timeout: 3000
+    optional: true
+- tapOn:
+    text: "1"
+    below: "Fast refresh"
+    optional: true
+- tapOn:
+    text: "Close"
+    optional: true
