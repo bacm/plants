@@ -71,11 +71,7 @@ export default function ZoneDetailScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.dark.accent}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
         <GradientHero>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
@@ -144,37 +140,37 @@ export default function ZoneDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
-  placeholder: { ...typography.body, color: colors.dark.textSecondary, padding: spacing.lg },
+  container: { flex: 1, backgroundColor: colors.background },
+  placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
   backBtn: { marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.dark.textSecondary },
-  heroTitle: { ...typography.display, color: colors.dark.text, marginBottom: 4 },
-  heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary },
-  plantCount: { ...typography.caption, color: colors.dark.accent, marginTop: 8 },
+  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
+  heroTitle: { ...typography.display, color: colors.text, marginBottom: 4 },
+  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary },
+  plantCount: { ...typography.caption, color: colors.accent, marginTop: 8 },
   actionRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
   actionBtn: {
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
-  actionBtnText: { ...typography.bodySmall, color: colors.dark.text },
-  deleteBtn: { borderColor: colors.dark.danger },
-  deleteBtnText: { color: colors.dark.danger },
+  actionBtnText: { ...typography.bodySmall, color: colors.text },
+  deleteBtn: { borderColor: colors.danger },
+  deleteBtnText: { color: colors.danger },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   emptyText: {
     ...typography.bodySmall,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   cardWrap: { marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center' },
   colorDot: { width: 12, height: 12, borderRadius: 6, marginRight: spacing.md },
   plantInfo: { flex: 1 },
-  plantName: { ...typography.title, color: colors.dark.text },
-  latin: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 2 },
-  chevron: { ...typography.body, color: colors.dark.textSecondary },
+  plantName: { ...typography.title, color: colors.text },
+  latin: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
+  chevron: { ...typography.body, color: colors.textSecondary },
 });

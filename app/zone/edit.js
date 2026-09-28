@@ -43,6 +43,6 @@ export default function EditZoneScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
-  placeholder: { ...typography.body, color: colors.dark.textSecondary, padding: spacing.lg },
+  container: { flex: 1, backgroundColor: colors.background },
+  placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
 });

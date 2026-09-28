@@ -1,7 +1,7 @@
 ---
 id: 063
 title: Adopt the Herbier theme: light palette, Fraunces and Instrument Sans
-status: open
+status: done
 priority: P2
 type: feature
 ---
@@ -20,22 +20,22 @@ screen tickets small.
 
 ## Acceptance criteria
 
-- [ ] `lib/theme.js` exports one palette, `colors`, with the Herbier tokens:
+- [x] `lib/theme.js` exports one palette, `colors`, with the Herbier tokens:
       paper `#F4F1EA`, surface `#FFFFFF`, border `#E4DFD3`, ink `#1F2A22`,
       muted `#5E6B61`, accent (moss) `#2F5D3A`, highlight (sprout) `#D5EDA8`,
       soft green `#EEF5E0`, blush `#E9D6D0`, terracotta `#B4532A`, danger
       `#A3402F`
-- [ ] No file references `colors.dark` any more
-- [ ] Fraunces (titles) and Instrument Sans (everything else) are installed
+- [x] No file references `colors.dark` any more
+- [x] Fraunces (titles) and Instrument Sans (everything else) are installed
       with `npx expo install` (`@expo-google-fonts/fraunces`,
       `@expo-google-fonts/instrument-sans`, `expo-font`), loaded in
       `app/_layout.js` before the first screen renders, and exposed through
       `typography` in `lib/theme.js`
-- [ ] Radii follow the mock-up (cards 24–28, pills full, fields 18)
-- [ ] `app.json` declares `"userInterfaceStyle": "light"`; the status bar is
+- [x] Radii follow the mock-up (cards 24–28, pills full, fields 18)
+- [x] `app.json` declares `"userInterfaceStyle": "light"`; the status bar is
       dark on the paper background
-- [ ] Body and caption text reach 4.5:1 contrast on paper and surface
-- [ ] `npm run verify` passes; `npm run e2e:web` passes
+- [x] Body and caption text reach 4.5:1 contrast on paper and surface
+- [x] `npm run verify` passes; `npm run e2e:web` passes
 
 ## Notes
 
@@ -47,3 +47,11 @@ with a light/dark switch. A dark variant would be a separate ticket.
 
 `colorHex` (flower swatches) stays in `lib/theme.js`; its fallbacks move to the
 new tokens.
+
+Done. Token names stayed semantic so screens only lost `.dark`: paper =
+`background`, ink = `text`, muted = `textSecondary`, moss = `accent`,
+sprout = `highlight`, soft green = `softGreen`. `accentSoft` is now `#4A7556`
+because screens put `#fff` on it. Font modules live in `lib/fonts.js`, which
+keeps Jest away from native font loading. Screens that override `fontWeight`
+after spreading `typography` still do: the screen tickets 066–071 clean that up.
+The tab bar labels are clipped on a 390-pt-wide web view; 064 replaces that bar.

@@ -96,11 +96,7 @@ export default function ZonesScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.dark.accent}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
         {/* Header */}
         <View style={styles.header}>
@@ -206,7 +202,7 @@ export default function ZonesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
+  container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
 
@@ -222,12 +218,12 @@ const styles = StyleSheet.create({
   headerLeft: { flex: 1 },
   heroTitle: {
     ...typography.display,
-    color: colors.dark.text,
+    color: colors.text,
     marginBottom: 4,
   },
   heroSubtitle: {
     ...typography.bodySmall,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
   },
 
   // Section
@@ -236,14 +232,14 @@ const styles = StyleSheet.create({
   // Empty state
   emptyText: {
     ...typography.bodySmall,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginBottom: spacing.md,
   },
   primaryBtn: {
     alignSelf: 'flex-start',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     borderRadius: radius.md,
   },
   primaryBtnText: { ...typography.label, color: '#fff' },
@@ -264,11 +260,11 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     fontWeight: '700',
-    color: colors.dark.text,
+    color: colors.text,
   },
   zoneDesc: {
     ...typography.bodySmall,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginTop: 2,
     marginLeft: 30,
   },
@@ -276,9 +272,9 @@ const styles = StyleSheet.create({
   countText: {
     fontSize: 24,
     fontWeight: '700',
-    color: colors.dark.accent,
+    color: colors.accent,
   },
-  countLabel: { ...typography.caption, color: colors.dark.textSecondary },
+  countLabel: { ...typography.caption, color: colors.textSecondary },
 
   // Plant thumbnails
   plantsScroll: { marginTop: spacing.md },
@@ -294,16 +290,16 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
   },
   plantPlaceholder: {
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   plantPlaceholderText: { fontSize: 24 },
   plantName: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginTop: 6,
     textAlign: 'center',
     maxWidth: 68,
@@ -312,7 +308,7 @@ const styles = StyleSheet.create({
   // Context line
   contextLine: {
     ...typography.bodySmall,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginTop: spacing.md,
   },
 
@@ -326,12 +322,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
     borderStyle: 'dashed',
   },
   addButtonText: {
     ...typography.label,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     letterSpacing: 0.5,
   },
 });

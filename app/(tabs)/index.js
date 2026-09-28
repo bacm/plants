@@ -211,11 +211,7 @@ export default function Dashboard() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.dark.accent}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
         <GradientHero>
           <View style={styles.heroRow}>
@@ -227,7 +223,7 @@ export default function Dashboard() {
               onPress={() => router.push('/settings')}
               accessibilityLabel="Réglages"
               style={styles.settingsButton}>
-              <Ionicons name="settings-outline" size={22} color={colors.dark.text} />
+              <Ionicons name="settings-outline" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
         </GradientHero>
@@ -278,7 +274,7 @@ export default function Dashboard() {
                               <Ionicons
                                 name="leaf-outline"
                                 size={24}
-                                color={colors.dark.textSecondary}
+                                color={colors.textSecondary}
                               />
                             </View>
                           )}
@@ -327,7 +323,7 @@ export default function Dashboard() {
                         <Ionicons
                           name={isExpanded ? 'chevron-up' : 'chevron-down'}
                           size={20}
-                          color={colors.dark.textSecondary}
+                          color={colors.textSecondary}
                         />
                       </View>
                     </TouchableOpacity>
@@ -434,7 +430,7 @@ export default function Dashboard() {
                             <Ionicons
                               name="flower-outline"
                               size={40}
-                              color={colors.dark.textSecondary}
+                              color={colors.textSecondary}
                             />
                           </View>
                         )}
@@ -444,7 +440,7 @@ export default function Dashboard() {
                             e.stopPropagation();
                             router.push(`/plant/${p.id}`);
                           }}>
-                          <Ionicons name="information-circle" size={20} color={colors.dark.text} />
+                          <Ionicons name="information-circle" size={20} color={colors.text} />
                         </TouchableOpacity>
                       </View>
                       <Text style={styles.bloomName} numberOfLines={1}>
@@ -472,7 +468,7 @@ export default function Dashboard() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
+  container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
   heroRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
@@ -481,19 +477,19 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.dark.surfaceGlass,
+    backgroundColor: colors.surfaceGlass,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.md,
   },
   heroTitle: {
     ...typography.display,
-    color: colors.dark.text,
+    color: colors.text,
     marginBottom: 4,
   },
   heroSubtitle: {
     ...typography.bodySmall,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
   },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
   sectionHeader: {
@@ -503,11 +499,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     ...typography.title,
-    color: colors.dark.text,
+    color: colors.text,
   },
   sectionCount: {
     ...typography.caption,
-    color: colors.dark.accent,
+    color: colors.accent,
     marginLeft: spacing.xs,
   },
   sectionHeaderBetween: { justifyContent: 'space-between' },
@@ -518,20 +514,20 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
   },
-  unsortedCardText: { ...typography.label, color: colors.dark.text },
-  unsortedCardChevron: { ...typography.title, color: colors.dark.textSecondary },
+  unsortedCardText: { ...typography.label, color: colors.text },
+  unsortedCardChevron: { ...typography.title, color: colors.textSecondary },
   monthToggle: {
     paddingVertical: 4,
     paddingHorizontal: spacing.sm,
     borderRadius: 12,
-    backgroundColor: colors.dark.surfaceGlass,
+    backgroundColor: colors.surfaceGlass,
   },
-  monthToggleText: { ...typography.caption, color: colors.dark.text },
+  monthToggleText: { ...typography.caption, color: colors.text },
   taskWrap: { marginBottom: spacing.sm },
   // Tâches du jour cards use noPadding + this inner padding instead of
   // GlassCard's default 20, so four groups fit above the fold (ticket 045).
   taskCardInner: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  taskCardOverdue: { borderWidth: 1, borderColor: colors.dark.danger },
+  taskCardOverdue: { borderWidth: 1, borderColor: colors.danger },
   taskRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -543,19 +539,19 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   taskPhotoPlaceholder: {
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   taskContent: { flex: 1, minWidth: 0 },
-  taskTitle: { ...typography.label, color: colors.dark.text },
-  taskSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 2 },
-  taskSubtitleOverdue: { color: colors.dark.danger },
+  taskTitle: { ...typography.label, color: colors.text },
+  taskSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
+  taskSubtitleOverdue: { color: colors.danger },
   groupExpanded: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: colors.dark.border,
+    borderTopColor: colors.border,
   },
   groupRow: {
     flexDirection: 'row',
@@ -563,11 +559,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: spacing.xs,
   },
-  groupPlantName: { ...typography.bodySmall, color: colors.dark.text, flex: 1, minWidth: 0 },
+  groupPlantName: { ...typography.bodySmall, color: colors.text, flex: 1, minWidth: 0 },
   groupDoneBtn: {
     paddingVertical: 4,
     paddingHorizontal: spacing.sm,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     borderRadius: 10,
     marginLeft: spacing.sm,
   },
@@ -578,12 +574,12 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: spacing.sm,
   },
-  markAllBtnText: { ...typography.caption, color: colors.dark.accent },
+  markAllBtnText: { ...typography.caption, color: colors.accent },
   doneButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,
@@ -591,15 +587,15 @@ const styles = StyleSheet.create({
   doneButtonDisabled: { opacity: 0.35 },
   seasonalActions: { flexDirection: 'row', alignItems: 'center' },
   reminderLinkBtn: { marginLeft: spacing.sm, paddingHorizontal: spacing.xs },
-  reminderLinkText: { ...typography.caption, color: colors.dark.accent },
-  emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  reminderLinkText: { ...typography.caption, color: colors.accent },
+  emptyText: { ...typography.bodySmall, color: colors.textSecondary },
   bloomScrollContent: { paddingRight: spacing.lg },
   bloomCardWrap: { marginRight: spacing.md },
   bloomCard: { width: CARD_WIDTH, padding: 0, overflow: 'hidden' },
   bloomImageWrap: { position: 'relative', width: CARD_WIDTH, height: BLOOM_IMAGE_SIZE },
   bloomImage: { width: CARD_WIDTH, height: BLOOM_IMAGE_SIZE },
   bloomImagePlaceholder: {
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -616,21 +612,21 @@ const styles = StyleSheet.create({
   },
   bloomName: {
     ...typography.title,
-    color: colors.dark.text,
+    color: colors.text,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.sm,
   },
   bloomPeriod: {
     ...typography.bodySmall,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     paddingHorizontal: spacing.md,
     paddingTop: 2,
   },
   bloomVoir: {
     ...typography.caption,
-    color: colors.dark.text,
+    color: colors.text,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  bloomHint: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: spacing.md },
+  bloomHint: { ...typography.bodySmall, color: colors.textSecondary, marginTop: spacing.md },
 });

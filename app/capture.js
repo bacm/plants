@@ -313,7 +313,7 @@ export default function CaptureScreen() {
           onPress={openGallery}
           accessibilityLabel="Importer de la galerie"
           style={styles.iconButton}>
-          <Ionicons name="images-outline" size={20} color={colors.dark.text} />
+          <Ionicons name="images-outline" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         {unsortedCount > 0 && (
@@ -340,7 +340,9 @@ export default function CaptureScreen() {
             style={[styles.pill, bloomedToday && styles.pillActive]}
             disabled={selectedId === UNSORTED_ID}
             onPress={toggleBloom}>
-            <Text style={styles.pillText}>🌸 En fleur{bloomedToday ? ' ✓' : ''}</Text>
+            <Text style={[styles.pillText, bloomedToday && styles.pillTextActive]}>
+              🌸 En fleur{bloomedToday ? ' ✓' : ''}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.pill}
@@ -387,7 +389,7 @@ export default function CaptureScreen() {
               value={noteText}
               onChangeText={setNoteText}
               placeholder="Ex. première fleur ouverte"
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               multiline
               autoFocus
             />
@@ -407,26 +409,26 @@ export default function CaptureScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
+  container: { flex: 1, backgroundColor: colors.background },
   centered: { justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
-  permissionTitle: { ...typography.title, color: colors.dark.text, marginBottom: spacing.sm },
+  permissionTitle: { ...typography.title, color: colors.text, marginBottom: spacing.sm },
   permissionBody: {
     ...typography.body,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
   permissionButton: {
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
     marginBottom: spacing.sm,
   },
-  permissionButtonSecondary: { backgroundColor: colors.dark.surface },
-  permissionButtonText: { ...typography.label, color: colors.dark.text },
+  permissionButtonSecondary: { backgroundColor: colors.surface },
+  permissionButtonText: { ...typography.label, color: colors.text },
   closeLink: { marginTop: spacing.md },
-  closeLinkText: { ...typography.body, color: colors.dark.textSecondary },
+  closeLinkText: { ...typography.body, color: colors.textSecondary },
 
   topBar: {
     position: 'absolute',
@@ -443,18 +445,18 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surfaceGlass,
+    backgroundColor: colors.surfaceGlass,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconButtonText: { color: colors.dark.text, fontSize: 18 },
+  iconButtonText: { color: colors.text, fontSize: 18 },
   sortBadge: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surfaceGlass,
+    backgroundColor: colors.surfaceGlass,
   },
-  sortBadgeText: { ...typography.caption, color: colors.dark.text },
+  sortBadgeText: { ...typography.caption, color: colors.text },
 
   bottomBar: {
     position: 'absolute',
@@ -477,10 +479,11 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surfaceGlass,
+    backgroundColor: colors.surfaceGlass,
   },
-  pillActive: { backgroundColor: colors.dark.accentSoft },
-  pillText: { ...typography.label, color: colors.dark.text },
+  pillActive: { backgroundColor: colors.accentSoft },
+  pillText: { ...typography.label, color: colors.text },
+  pillTextActive: { color: '#fff' },
 
   shutterRow: {
     flexDirection: 'row',
@@ -495,15 +498,19 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
-  undoText: { ...typography.caption, color: colors.dark.text, fontSize: 10 },
+  undoText: { ...typography.caption, color: colors.text, fontSize: 10 },
+  // The shutter ring/fill and the shot counter float directly over the live
+  // camera feed, not over an app background, so they stay colors.surface
+  // (a fixed light tone) rather than colors.text: the theme's text token is
+  // now dark ink and would disappear against a typical viewfinder.
   shutter: {
     width: 72,
     height: 72,
     borderRadius: radius.full,
     borderWidth: 4,
-    borderColor: colors.dark.text,
+    borderColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
     ...shadow.card,
@@ -512,10 +519,10 @@ const styles = StyleSheet.create({
     width: 58,
     height: 58,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.text,
+    backgroundColor: colors.surface,
   },
   counterWrapper: { width: 100, alignItems: 'flex-end' },
-  counterText: { ...typography.caption, color: colors.dark.text },
+  counterText: { ...typography.caption, color: colors.surface },
 
   noteOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -526,15 +533,15 @@ const styles = StyleSheet.create({
   },
   noteCard: {
     width: '100%',
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
   },
-  noteTitle: { ...typography.title, color: colors.dark.text, marginBottom: spacing.sm },
+  noteTitle: { ...typography.title, color: colors.text, marginBottom: spacing.sm },
   noteInput: {
     ...typography.body,
-    color: colors.dark.text,
-    backgroundColor: colors.dark.background,
+    color: colors.text,
+    backgroundColor: colors.background,
     borderRadius: radius.md,
     padding: spacing.sm,
     minHeight: 80,
@@ -547,6 +554,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   noteButton: { paddingVertical: spacing.xs, paddingHorizontal: spacing.md },
-  noteButtonText: { ...typography.label, color: colors.dark.textSecondary },
-  noteButtonTextPrimary: { ...typography.label, color: colors.dark.accent },
+  noteButtonText: { ...typography.label, color: colors.textSecondary },
+  noteButtonTextPrimary: { ...typography.label, color: colors.accent },
 });

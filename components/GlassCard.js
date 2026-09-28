@@ -6,7 +6,7 @@ export function GlassCard({ children, style, intensity = 40, noPadding }) {
   return (
     <View style={[styles.outer, style]}>
       {Platform.OS === 'ios' ? (
-        <BlurView intensity={intensity} tint="dark" style={StyleSheet.absoluteFill} />
+        <BlurView intensity={intensity} tint="light" style={StyleSheet.absoluteFill} />
       ) : null}
       <View
         style={[
@@ -27,14 +27,14 @@ const styles = StyleSheet.create({
     ...shadow.soft,
   },
   inner: {
-    backgroundColor: Platform.OS === 'ios' ? colors.dark.surfaceGlass : colors.dark.surface,
+    backgroundColor: Platform.OS === 'ios' ? colors.surfaceGlass : colors.surface,
     borderRadius: radius.xl,
     padding: 20,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
   innerAndroid: {
-    backgroundColor: 'rgba(41,37,36,0.95)',
+    backgroundColor: colors.surface,
   },
   innerNoPadding: {
     padding: 0,

@@ -185,7 +185,7 @@ export default function NewPlantScreen() {
                 onChangeText={handleNameChange}
                 onSubmitEditing={handleSearch}
                 placeholder="Nom de la plante *"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 autoFocus
               />
               <TouchableOpacity
@@ -206,7 +206,7 @@ export default function NewPlantScreen() {
               value={form.latinName}
               onChangeText={(v) => setField('latinName', v)}
               placeholder="Nom latin (optionnel)"
-              placeholderTextColor={colors.dark.border}
+              placeholderTextColor={colors.textSecondary}
             />
 
             {/* Zone */}
@@ -311,7 +311,7 @@ export default function NewPlantScreen() {
                 value={form.flowerColor}
                 onChangeText={(v) => setField('flowerColor', v)}
                 placeholder="ex. rose, blanc"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
               />
 
               <Text style={styles.label}>Floraison</Text>
@@ -345,7 +345,7 @@ export default function NewPlantScreen() {
                     value={form.bloomStartMonth}
                     onChangeText={(v) => setField('bloomStartMonth', v)}
                     placeholder="Debut"
-                    placeholderTextColor={colors.dark.textSecondary}
+                    placeholderTextColor={colors.textSecondary}
                     keyboardType="number-pad"
                     maxLength={2}
                   />
@@ -355,7 +355,7 @@ export default function NewPlantScreen() {
                     value={form.bloomEndMonth}
                     onChangeText={(v) => setField('bloomEndMonth', v)}
                     placeholder="Fin"
-                    placeholderTextColor={colors.dark.textSecondary}
+                    placeholderTextColor={colors.textSecondary}
                     keyboardType="number-pad"
                     maxLength={2}
                   />
@@ -374,7 +374,7 @@ export default function NewPlantScreen() {
                 value={form.height}
                 onChangeText={(v) => setField('height', v)}
                 placeholder="ex. 150"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="number-pad"
               />
 
@@ -384,7 +384,7 @@ export default function NewPlantScreen() {
                 value={form.width}
                 onChangeText={(v) => setField('width', v)}
                 placeholder="ex. 100"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="number-pad"
               />
 
@@ -420,7 +420,7 @@ export default function NewPlantScreen() {
                 value={form.minTemperature}
                 onChangeText={(v) => setField('minTemperature', v)}
                 placeholder="ex. -10"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="numbers-and-punctuation"
               />
 
@@ -430,7 +430,7 @@ export default function NewPlantScreen() {
                 value={form.notes}
                 onChangeText={(v) => setField('notes', v)}
                 placeholder="Notes..."
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 multiline
               />
 
@@ -440,7 +440,7 @@ export default function NewPlantScreen() {
                 value={form.createdAt}
                 onChangeText={(v) => setField('createdAt', v)}
                 placeholder="AAAA-MM-JJ"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="numbers-and-punctuation"
               />
               <Text style={styles.dateHint}>Laissez vide pour la date du jour</Text>
@@ -486,7 +486,7 @@ export default function NewPlantScreen() {
                 value={form.fertilizer}
                 onChangeText={(v) => setField('fertilizer', v)}
                 placeholder="ex. NPK 10-10-10 au printemps"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
               />
 
               <Text style={styles.label}>Taille</Text>
@@ -495,7 +495,7 @@ export default function NewPlantScreen() {
                 value={form.pruning}
                 onChangeText={(v) => setField('pruning', v)}
                 placeholder="ex. Taille de formation en fin d'hiver"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
               />
 
               <Text style={styles.label}>Mois de taille</Text>
@@ -535,7 +535,7 @@ export default function NewPlantScreen() {
                 value={form.winterCare}
                 onChangeText={(v) => setField('winterCare', v)}
                 placeholder="ex. Paillage, protection hivernale..."
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 multiline
               />
 
@@ -574,7 +574,7 @@ export default function NewPlantScreen() {
                 value={form.pests}
                 onChangeText={(v) => setField('pests', v)}
                 placeholder="ex. Pucerons, oïdium..."
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 multiline
               />
 
@@ -601,7 +601,7 @@ export default function NewPlantScreen() {
                 value={form.harvest}
                 onChangeText={(v) => setField('harvest', v)}
                 placeholder="ex. Fruits mûrs en été"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
               />
 
               <Text style={styles.label}>Période de récolte (mois)</Text>
@@ -611,7 +611,7 @@ export default function NewPlantScreen() {
                   value={form.harvestMonthStart}
                   onChangeText={(v) => setField('harvestMonthStart', v)}
                   placeholder="Début"
-                  placeholderTextColor={colors.dark.textSecondary}
+                  placeholderTextColor={colors.textSecondary}
                   keyboardType="number-pad"
                   maxLength={2}
                 />
@@ -621,7 +621,7 @@ export default function NewPlantScreen() {
                   value={form.harvestMonthEnd}
                   onChangeText={(v) => setField('harvestMonthEnd', v)}
                   placeholder="Fin"
-                  placeholderTextColor={colors.dark.textSecondary}
+                  placeholderTextColor={colors.textSecondary}
                   keyboardType="number-pad"
                   maxLength={2}
                 />
@@ -642,7 +642,7 @@ export default function NewPlantScreen() {
                 value={form.companionPlants}
                 onChangeText={(v) => setField('companionPlants', v)}
                 placeholder="ex. Tomates, basilic..."
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 multiline
               />
 
@@ -652,7 +652,7 @@ export default function NewPlantScreen() {
                 value={form.origin}
                 onChangeText={(v) => setField('origin', v)}
                 placeholder="ex. Méditerranée, Asie..."
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
               />
             </GlassCard>
           )}
@@ -672,12 +672,12 @@ export default function NewPlantScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
+  container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
   backBtn: { marginBottom: 4 },
-  backBtnText: { ...typography.bodySmall, color: colors.dark.textSecondary },
-  heroTitle: { ...typography.display, color: colors.dark.text },
+  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
+  heroTitle: { ...typography.display, color: colors.text },
   section: { paddingHorizontal: spacing.md, marginTop: spacing.md },
 
   searchContainer: {
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   searchButton: {
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: radius.md,
@@ -699,10 +699,10 @@ const styles = StyleSheet.create({
     top: 140,
     left: 20,
     right: 20,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
     zIndex: 100,
     elevation: 5,
     shadowColor: '#000',
@@ -714,33 +714,33 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.dark.border,
+    borderBottomColor: colors.border,
   },
   suggestionName: {
     ...typography.body,
-    color: colors.dark.text,
+    color: colors.text,
     fontWeight: '600',
   },
   suggestionLatin: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginTop: 2,
   },
 
   inputName: {
     ...typography.displaySmall,
-    color: colors.dark.text,
+    color: colors.text,
     paddingVertical: 8,
     paddingHorizontal: 0,
     borderBottomWidth: 1,
-    borderBottomColor: colors.dark.border,
+    borderBottomColor: colors.border,
     marginBottom: 4,
     flex: 1,
   },
   inputLatin: {
     ...typography.bodySmall,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     fontStyle: 'italic',
     paddingVertical: 6,
     paddingHorizontal: 0,
@@ -749,7 +749,7 @@ const styles = StyleSheet.create({
 
   label: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 4,
     marginTop: 10,
     textTransform: 'uppercase',
@@ -757,7 +757,7 @@ const styles = StyleSheet.create({
   },
   labelSmall: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 6,
     textTransform: 'uppercase',
     letterSpacing: 0.8,
@@ -768,15 +768,15 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: 'transparent',
   },
   pillActive: {
-    backgroundColor: colors.dark.accentSoft,
-    borderColor: colors.dark.accent,
+    backgroundColor: colors.accentSoft,
+    borderColor: colors.accent,
   },
-  pillText: { ...typography.caption, color: colors.dark.textSecondary },
+  pillText: { ...typography.caption, color: colors.textSecondary },
   pillTextActive: { color: '#fff', fontWeight: '600' },
 
   dualRow: {
@@ -788,11 +788,11 @@ const styles = StyleSheet.create({
   },
   segmented: {
     flexDirection: 'column',
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.md,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
   segBtn: {
     flexDirection: 'row',
@@ -802,14 +802,14 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   segBtnActive: {
-    backgroundColor: colors.dark.accentSoft,
+    backgroundColor: colors.accentSoft,
   },
   segIcon: {
     fontSize: 14,
   },
   segLabel: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     flexShrink: 1,
   },
   segLabelActive: {
@@ -823,7 +823,7 @@ const styles = StyleSheet.create({
   },
   moreToggleText: {
     ...typography.bodySmall,
-    color: colors.dark.accent,
+    color: colors.accent,
   },
   moreCard: {
     marginTop: 4,
@@ -831,12 +831,12 @@ const styles = StyleSheet.create({
 
   input: {
     ...typography.body,
-    color: colors.dark.text,
-    backgroundColor: colors.dark.surface,
+    color: colors.text,
+    backgroundColor: colors.surface,
     borderRadius: radius.sm,
     padding: 12,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
   inputSmall: { flex: 1 },
   textArea: { minHeight: 70, textAlignVertical: 'top' },
@@ -845,21 +845,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  dash: { ...typography.body, color: colors.dark.textSecondary },
+  dash: { ...typography.body, color: colors.textSecondary },
 
   dateHint: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   fieldError: {
     ...typography.caption,
-    color: colors.dark.danger,
+    color: colors.danger,
     marginTop: 4,
   },
   sectionTitle: {
     ...typography.label,
-    color: colors.dark.accent,
+    color: colors.accent,
     marginTop: 24,
     marginBottom: 8,
     fontWeight: '600',
@@ -868,7 +868,7 @@ const styles = StyleSheet.create({
   saveBtn: {
     marginHorizontal: spacing.md,
     marginTop: spacing.lg,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 14,
     borderRadius: radius.lg,
     alignItems: 'center',

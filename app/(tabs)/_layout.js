@@ -41,8 +41,8 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarActiveTintColor: colors.dark.accent,
-        tabBarInactiveTintColor: colors.dark.textSecondary,
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarLabelStyle: styles.tabLabel,
         tabBarItemStyle: styles.tabItem,
       }}>
@@ -94,8 +94,8 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: colors.dark.surface,
-    borderTopColor: colors.dark.border,
+    backgroundColor: colors.surface,
+    borderTopColor: colors.border,
     borderTopWidth: 1,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -114,9 +114,9 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     borderWidth: 3,
-    borderColor: colors.dark.surface,
+    borderColor: colors.surface,
     ...shadow.card,
   },
   captureButtonIcon: { fontSize: 24 },

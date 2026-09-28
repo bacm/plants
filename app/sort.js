@@ -239,7 +239,7 @@ export default function SortScreen() {
             disabled={importing}
             style={styles.importBtn}>
             {importing ? (
-              <ActivityIndicator color={colors.dark.text} />
+              <ActivityIndicator color={colors.text} />
             ) : (
               <Text style={styles.importBtnText}>Importer de la galerie</Text>
             )}
@@ -249,7 +249,7 @@ export default function SortScreen() {
 
       {loading && (
         <View style={styles.centered}>
-          <ActivityIndicator color={colors.dark.accent} />
+          <ActivityIndicator color={colors.accent} />
         </View>
       )}
 
@@ -281,7 +281,7 @@ export default function SortScreen() {
                   setEditedDateError('');
                 }}
                 placeholder="AAAA-MM-JJ"
-                placeholderTextColor={colors.dark.textSecondary}
+                placeholderTextColor={colors.textSecondary}
               />
               {editedDateError ? <Text style={styles.dateError}>{editedDateError}</Text> : null}
             </View>
@@ -322,43 +322,43 @@ export default function SortScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
+  container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
   backBtn: { marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
   heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  heroTitle: { ...typography.display, color: colors.dark.text },
-  heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 4 },
+  heroTitle: { ...typography.display, color: colors.text },
+  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },
   importBtn: {
-    backgroundColor: colors.dark.surfaceGlass,
+    backgroundColor: colors.surfaceGlass,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
   },
-  importBtnText: { ...typography.label, color: colors.dark.text },
+  importBtnText: { ...typography.label, color: colors.text },
 
   emptyCard: { alignItems: 'center', width: '100%' },
-  emptyTitle: { ...typography.title, color: colors.dark.text, marginBottom: spacing.xs },
+  emptyTitle: { ...typography.title, color: colors.text, marginBottom: spacing.xs },
   emptyBody: {
     ...typography.body,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   emptyBtn: {
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.md,
   },
-  emptyBtnText: { ...typography.label, color: colors.dark.text },
+  emptyBtnText: { ...typography.label, color: '#fff' },
 
   body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   photoWrap: {
     flex: 1,
     borderRadius: radius.lg,
     overflow: 'hidden',
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     marginBottom: spacing.sm,
   },
   photo: { width: '100%', height: '100%', resizeMode: 'cover' },
@@ -368,34 +368,34 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginBottom: spacing.sm,
   },
-  dateText: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  dateText: { ...typography.bodySmall, color: colors.textSecondary },
   unknownDateTag: {
     ...typography.caption,
-    color: colors.dark.text,
-    backgroundColor: colors.dark.danger,
+    color: '#fff',
+    backgroundColor: colors.danger,
     paddingVertical: 2,
     paddingHorizontal: spacing.xs,
     borderRadius: radius.sm,
   },
   dateInput: {
     ...typography.bodySmall,
-    color: colors.dark.text,
-    backgroundColor: colors.dark.surface,
+    color: colors.text,
+    backgroundColor: colors.surface,
     borderRadius: radius.sm,
     paddingVertical: 6,
     paddingHorizontal: spacing.sm,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
-  dateError: { ...typography.caption, color: colors.dark.danger },
+  dateError: { ...typography.caption, color: colors.danger },
   confirmationBanner: {
-    backgroundColor: colors.dark.accentSoft,
+    backgroundColor: colors.accentSoft,
     borderRadius: radius.sm,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.sm,
     marginBottom: spacing.sm,
   },
-  confirmationText: { ...typography.bodySmall, color: colors.dark.text },
+  confirmationText: { ...typography.bodySmall, color: '#fff' },
 
   actionsRow: {
     flexDirection: 'row',
@@ -408,8 +408,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.lg,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
   },
-  actionBtnText: { ...typography.label, color: colors.dark.text },
-  deleteBtnText: { ...typography.label, color: colors.dark.danger },
+  actionBtnText: { ...typography.label, color: colors.text },
+  deleteBtnText: { ...typography.label, color: colors.danger },
 });

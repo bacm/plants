@@ -106,7 +106,7 @@ export default function LogCareScreen() {
                 setDateError('');
               }}
               placeholder="AAAA-MM-JJ"
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
             />
             {dateError ? <Text style={styles.fieldError}>{dateError}</Text> : null}
             <Text style={styles.label}>Notes (optionnel)</Text>
@@ -115,7 +115,7 @@ export default function LogCareScreen() {
               value={notes}
               onChangeText={setNotes}
               placeholder="Notes..."
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               multiline
             />
             <Text style={styles.label}>Photo (optionnel)</Text>
@@ -144,53 +144,53 @@ export default function LogCareScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
-  placeholder: { ...typography.body, color: colors.dark.textSecondary, padding: spacing.lg },
+  container: { flex: 1, backgroundColor: colors.background },
+  placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
   backBtn: { marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.dark.textSecondary },
-  heroTitle: { ...typography.display, color: colors.dark.text },
-  heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 4 },
+  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
+  heroTitle: { ...typography.display, color: colors.text },
+  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  label: { ...typography.label, color: colors.dark.textSecondary, marginBottom: 6, marginTop: 12 },
+  label: { ...typography.label, color: colors.textSecondary, marginBottom: 6, marginTop: 12 },
   input: {
     ...typography.body,
-    color: colors.dark.text,
-    backgroundColor: colors.dark.surface,
+    color: colors.text,
+    backgroundColor: colors.surface,
     borderRadius: radius.sm,
     padding: 14,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
-  fieldError: { ...typography.caption, color: colors.dark.danger, marginTop: 6 },
+  fieldError: { ...typography.caption, color: colors.danger, marginTop: 6 },
   textArea: { minHeight: 80 },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
   },
-  pillActive: { backgroundColor: colors.dark.accent },
-  pillText: { ...typography.caption, color: colors.dark.textSecondary },
+  pillActive: { backgroundColor: colors.accent },
+  pillText: { ...typography.caption, color: colors.textSecondary },
   pillTextActive: { color: '#fff' },
   photoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  photoLabel: { ...typography.bodySmall, color: colors.dark.text },
-  removePhoto: { ...typography.caption, color: colors.dark.accent },
+  photoLabel: { ...typography.bodySmall, color: colors.text },
+  removePhoto: { ...typography.caption, color: colors.accent },
   photoBtn: {
     paddingVertical: 14,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
     borderStyle: 'dashed',
     alignItems: 'center',
   },
-  photoBtnText: { ...typography.caption, color: colors.dark.textSecondary },
+  photoBtnText: { ...typography.caption, color: colors.textSecondary },
   saveBtn: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.xxl,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 16,
     borderRadius: radius.lg,
     alignItems: 'center',

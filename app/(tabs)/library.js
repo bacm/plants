@@ -74,11 +74,7 @@ export default function LibraryScreen() {
           { paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 72 },
         ]}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.dark.accent}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
         <GradientHero>
           <Text style={styles.heroTitle}>Bibliothèque</Text>
@@ -90,7 +86,7 @@ export default function LibraryScreen() {
             <TextInput
               style={styles.searchInput}
               placeholder="Rechercher (nom, couleur…)"
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={search}
               onChangeText={setSearch}
             />
@@ -186,18 +182,18 @@ export default function LibraryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
+  container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  heroTitle: { ...typography.display, color: colors.dark.text, marginBottom: 4 },
-  heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  heroTitle: { ...typography.display, color: colors.text, marginBottom: 4 },
+  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary },
   fab: {
     position: 'absolute',
     right: spacing.lg,
     width: 56,
     height: 56,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -206,7 +202,7 @@ const styles = StyleSheet.create({
   searchCard: { paddingVertical: 12, paddingHorizontal: 16 },
   searchInput: {
     ...typography.body,
-    color: colors.dark.text,
+    color: colors.text,
     padding: 0,
   },
   filters: { marginTop: spacing.md },
@@ -215,11 +211,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     marginRight: spacing.sm,
   },
-  filterPillActive: { backgroundColor: colors.dark.accent },
-  filterPillText: { ...typography.caption, color: colors.dark.textSecondary },
+  filterPillActive: { backgroundColor: colors.accent },
+  filterPillText: { ...typography.caption, color: colors.textSecondary },
   filterPillTextActive: { color: '#fff' },
   sunFilters: {
     flexDirection: 'row',
@@ -232,18 +228,18 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
   },
-  sunPillActive: { backgroundColor: colors.dark.accentSoft },
-  sunPillText: { ...typography.caption, color: colors.dark.textSecondary },
+  sunPillActive: { backgroundColor: colors.accentSoft },
+  sunPillText: { ...typography.caption, color: colors.textSecondary },
   sunPillTextActive: { color: '#fff' },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  emptyText: { ...typography.bodySmall, color: colors.textSecondary },
   cardWrap: { marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center' },
   colorDot: { width: 12, height: 12, borderRadius: 6, marginRight: spacing.md },
   plantInfo: { flex: 1 },
-  plantName: { ...typography.title, color: colors.dark.text },
-  meta: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 2 },
-  chevron: { ...typography.body, color: colors.dark.textSecondary },
+  plantName: { ...typography.title, color: colors.text },
+  meta: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+  chevron: { ...typography.body, color: colors.textSecondary },
 });

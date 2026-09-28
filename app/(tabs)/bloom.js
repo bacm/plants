@@ -61,11 +61,7 @@ export default function BloomScreen() {
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.dark.accent}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
         <GradientHero>
           <Text style={styles.heroTitle}>Floraison</Text>
@@ -253,33 +249,33 @@ export default function BloomScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
+  container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  heroTitle: { ...typography.display, color: colors.dark.text, marginBottom: 4 },
-  heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  heroTitle: { ...typography.display, color: colors.text, marginBottom: 4 },
+  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary },
   monthStrip: { paddingVertical: spacing.md },
   monthStripContent: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   monthPill: {
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     marginRight: spacing.sm,
   },
-  monthPillSelected: { backgroundColor: colors.dark.accent },
-  monthPillText: { ...typography.label, color: colors.dark.textSecondary },
+  monthPillSelected: { backgroundColor: colors.accent },
+  monthPillText: { ...typography.label, color: colors.textSecondary },
   monthPillTextSelected: { color: '#fff' },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.lg },
-  sectionTitle: { ...typography.title, color: colors.dark.text, marginBottom: spacing.md },
-  emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  sectionTitle: { ...typography.title, color: colors.text, marginBottom: spacing.md },
+  emptyText: { ...typography.bodySmall, color: colors.textSecondary },
   cardWrap: { marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center' },
   colorDot: { width: 12, height: 12, borderRadius: 6, marginRight: spacing.md },
   plantInfo: { flex: 1 },
-  plantName: { ...typography.title, color: colors.dark.text },
-  zoneTag: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 2 },
-  chevron: { ...typography.body, color: colors.dark.textSecondary },
+  plantName: { ...typography.title, color: colors.text },
+  zoneTag: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+  chevron: { ...typography.body, color: colors.textSecondary },
   viewSwitch: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,
@@ -290,33 +286,33 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     alignItems: 'center',
   },
-  viewTabSelected: { backgroundColor: colors.dark.accent },
-  viewTabText: { ...typography.label, color: colors.dark.textSecondary },
+  viewTabSelected: { backgroundColor: colors.accent },
+  viewTabText: { ...typography.label, color: colors.textSecondary },
   viewTabTextSelected: { color: '#fff' },
   yearCard: { paddingVertical: spacing.md },
   yearHeaderRow: { flexDirection: 'row', marginBottom: spacing.sm },
   yearLabelCol: { flex: 0.32, justifyContent: 'center', paddingRight: spacing.xs },
   yearGrid: { flex: 0.68, flexDirection: 'row' },
   yearHeaderCell: { flex: 1, alignItems: 'center', paddingVertical: 2, borderRadius: radius.sm },
-  yearHeaderCellGap: { backgroundColor: colors.dark.surface },
-  yearHeaderText: { ...typography.caption, color: colors.dark.textSecondary },
-  yearHeaderTextGap: { color: colors.dark.textSecondary, opacity: 0.55 },
-  yearHeaderTextCurrent: { color: colors.dark.accent, fontWeight: '700' },
+  yearHeaderCellGap: { backgroundColor: colors.surface },
+  yearHeaderText: { ...typography.caption, color: colors.textSecondary },
+  yearHeaderTextGap: { color: colors.textSecondary, opacity: 0.55 },
+  yearHeaderTextCurrent: { color: colors.accent, fontWeight: '700' },
   yearRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.xs,
   },
-  yearRowName: { ...typography.bodySmall, color: colors.dark.text },
+  yearRowName: { ...typography.bodySmall, color: colors.text },
   yearBarCell: { flex: 1, height: 16, paddingHorizontal: 1, justifyContent: 'center' },
-  yearBarCellCurrent: { backgroundColor: colors.dark.surface },
+  yearBarCellCurrent: { backgroundColor: colors.surface },
   yearBar: { height: 10, borderRadius: radius.sm },
   yearLegend: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginTop: spacing.sm,
   },
 });

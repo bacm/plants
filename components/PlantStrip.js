@@ -29,14 +29,18 @@ export function PlantStrip({
         <TouchableOpacity
           style={[styles.zoneChip, zoneId === null && styles.zoneChipActive]}
           onPress={() => onSelectZone(null)}>
-          <Text style={styles.zoneChipText}>Sans zone</Text>
+          <Text style={[styles.zoneChipText, zoneId === null && styles.zoneChipTextActive]}>
+            Sans zone
+          </Text>
         </TouchableOpacity>
         {zones.map((z) => (
           <TouchableOpacity
             key={z.id}
             style={[styles.zoneChip, zoneId === z.id && styles.zoneChipActive]}
             onPress={() => onSelectZone(z.id)}>
-            <Text style={styles.zoneChipText}>{z.name}</Text>
+            <Text style={[styles.zoneChipText, zoneId === z.id && styles.zoneChipTextActive]}>
+              {z.name}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -90,11 +94,12 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surfaceGlass,
+    backgroundColor: colors.surfaceGlass,
     marginRight: spacing.xs,
   },
-  zoneChipActive: { backgroundColor: colors.dark.accent },
-  zoneChipText: { ...typography.caption, color: colors.dark.text },
+  zoneChipActive: { backgroundColor: colors.accent },
+  zoneChipText: { ...typography.caption, color: colors.text },
+  zoneChipTextActive: { color: '#fff' },
 
   plantStrip: { marginBottom: spacing.sm },
   plantItem: { alignItems: 'center', marginRight: spacing.md, width: 64 },
@@ -103,7 +108,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     borderWidth: 2,
     borderColor: 'transparent',
     justifyContent: 'center',
@@ -111,6 +116,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   plantThumbImage: { width: '100%', height: '100%' },
-  plantThumbInitial: { ...typography.title, color: colors.dark.text },
-  plantName: { ...typography.caption, color: colors.dark.text, marginTop: 4 },
+  plantThumbInitial: { ...typography.title, color: colors.text },
+  plantName: { ...typography.caption, color: colors.text, marginTop: 4 },
 });

@@ -267,6 +267,10 @@ export default function PlantDetailScreen() {
   const coverPhoto = photos[0];
   const remoteImageUrl =
     !coverPhoto && !remoteImageError ? parseImageUrls(plant.imageUrls)[0] : null;
+  // The hero overlay's back/settings controls are white text, which reads
+  // fine over a photo (or its bottom gradient) but disappears over the
+  // placeholder's now-light surface background.
+  const hasHeroImage = Boolean(coverPhoto || remoteImageUrl);
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -279,7 +283,7 @@ export default function PlantDetailScreen() {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor={colors.dark.accent}
+                tintColor={colors.accent}
               />
             }>
             <View style={styles.tabContentInner}>
@@ -489,7 +493,7 @@ export default function PlantDetailScreen() {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor={colors.dark.accent}
+                tintColor={colors.accent}
               />
             }>
             <View style={styles.tabContentInner}>
@@ -554,7 +558,7 @@ export default function PlantDetailScreen() {
               <RefreshControl
                 refreshing={refreshing}
                 onRefresh={onRefresh}
-                tintColor={colors.dark.accent}
+                tintColor={colors.accent}
               />
             }>
             <View style={styles.tabContentInner}>
@@ -646,11 +650,7 @@ export default function PlantDetailScreen() {
         style={styles.mainScroll}
         contentContainerStyle={styles.mainScrollContent}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.dark.accent}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
         <View style={styles.heroContainer}>
           {coverPhoto ? (
@@ -692,7 +692,9 @@ export default function PlantDetailScreen() {
             <TouchableOpacity
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
               style={styles.heroBackBtn}>
-              <Text style={styles.heroBackText}>‹ Retour</Text>
+              <Text style={[styles.heroBackText, !hasHeroImage && styles.heroBackTextOnLight]}>
+                ‹ Retour
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
@@ -759,7 +761,7 @@ export default function PlantDetailScreen() {
                 setPhotoDateError('');
               }}
               placeholder="AAAA-MM-JJ"
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               keyboardType="numbers-and-punctuation"
             />
             <Text style={styles.dateHint}>Format: AAAA-MM-JJ (ex: 2024-05-15)</Text>
@@ -829,19 +831,19 @@ function InfoCard({ icon, label, value }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
-  placeholder: { ...typography.body, color: colors.dark.textSecondary, padding: spacing.lg },
+  container: { flex: 1, backgroundColor: colors.background },
+  placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
   scrollContent: { paddingBottom: 24 },
   tabBar: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: colors.dark.border,
-    backgroundColor: colors.dark.surface,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.surface,
   },
   tab: { flex: 1, paddingVertical: 14, alignItems: 'center' },
-  tabActive: { borderBottomWidth: 2, borderBottomColor: colors.dark.accent },
-  tabText: { ...typography.caption, color: colors.dark.textSecondary, textTransform: 'uppercase' },
-  tabTextActive: { color: colors.dark.accent, fontWeight: '600' },
+  tabActive: { borderBottomWidth: 2, borderBottomColor: colors.accent },
+  tabText: { ...typography.caption, color: colors.textSecondary, textTransform: 'uppercase' },
+  tabTextActive: { color: colors.accent, fontWeight: '600' },
   tabScroll: { flex: 1 },
   mainScroll: { flex: 1 },
   mainScrollContent: { paddingBottom: 20 },
@@ -863,16 +865,19 @@ const styles = StyleSheet.create({
   },
   heroBackBtn: { paddingVertical: spacing.sm, paddingRight: spacing.lg },
   heroBackText: { ...typography.body, color: '#fff', fontWeight: '600', fontSize: 18 },
+  // Placeholder-only: it sits on the now-light heroPlaceholder background
+  // instead of a photo, so white text would disappear.
+  heroBackTextOnLight: { color: colors.text },
   heroSettingsIcon: { fontSize: 22, paddingVertical: spacing.sm },
   heroPlaceholder: {
     width: '100%',
     height: HERO_HEIGHT,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   heroPlaceholderEmoji: { fontSize: 48 },
-  heroPlaceholderHint: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 8 },
+  heroPlaceholderHint: { ...typography.caption, color: colors.textSecondary, marginTop: 8 },
 
   // Name + Quick Tags
   nameTagsSection: {
@@ -882,18 +887,18 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   nameColumn: { flex: 1 },
-  plantNameNew: { ...typography.display, color: colors.dark.text },
+  plantNameNew: { ...typography.display, color: colors.text },
   latinNameNew: {
     ...typography.bodySmall,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     fontStyle: 'italic',
     marginTop: 2,
   },
-  zoneTagNew: { ...typography.caption, color: colors.dark.accent, marginTop: 4 },
+  zoneTagNew: { ...typography.caption, color: colors.accent, marginTop: 4 },
   quickTagsColumn: { alignItems: 'flex-end', marginLeft: spacing.sm },
   quickTagsHeader: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: 6,
@@ -904,7 +909,7 @@ const styles = StyleSheet.create({
   quickTagIcon: { fontSize: 22, marginBottom: 2 },
   quickTagLabel: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     fontSize: 10,
     textAlign: 'center',
   },
@@ -912,7 +917,7 @@ const styles = StyleSheet.create({
   // Info grid
   ficheTechTitle: {
     ...typography.title,
-    color: colors.dark.text,
+    color: colors.text,
     textTransform: 'uppercase',
     letterSpacing: 1,
     marginBottom: spacing.md,
@@ -928,7 +933,7 @@ const styles = StyleSheet.create({
   infoCardIcon: { fontSize: 28, marginBottom: 8 },
   infoCardLabel: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     textTransform: 'uppercase',
     fontSize: 10,
     letterSpacing: 0.5,
@@ -936,37 +941,37 @@ const styles = StyleSheet.create({
   },
   infoCardValue: {
     ...typography.bodySmall,
-    color: colors.dark.text,
+    color: colors.text,
     textAlign: 'center',
     lineHeight: 18,
   },
   missingLink: { marginTop: spacing.sm },
   missingLinkText: {
     ...typography.caption,
-    color: colors.dark.accent,
+    color: colors.accent,
   },
 
   // Notes
   notesCard: { marginTop: spacing.md },
   notesRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
   notesIcon: { fontSize: 18, marginRight: 8 },
-  notesLabel: { ...typography.label, color: colors.dark.text, fontWeight: '600' },
-  notesTextNew: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  notesLabel: { ...typography.label, color: colors.text, fontWeight: '600' },
+  notesTextNew: { ...typography.bodySmall, color: colors.textSecondary },
 
   // Photos
   timeline: { paddingLeft: spacing.sm },
   timelineItem: { flexDirection: 'row', marginBottom: spacing.md },
   timelineLeft: { alignItems: 'center', width: 24 },
-  timelineDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.dark.accent },
-  timelineLine: { flex: 1, width: 2, backgroundColor: colors.dark.border, marginTop: spacing.xs },
+  timelineDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.accent },
+  timelineLine: { flex: 1, width: 2, backgroundColor: colors.border, marginTop: spacing.xs },
   timelineContent: { flex: 1, marginLeft: spacing.md },
-  timelineDate: { ...typography.label, color: colors.dark.text, marginBottom: spacing.sm },
+  timelineDate: { ...typography.label, color: colors.text, marginBottom: spacing.sm },
   timelinePhotoWrap: {
     width: '100%',
     aspectRatio: 1,
     borderRadius: radius.md,
     overflow: 'hidden',
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
   },
   timelinePhoto: { width: '100%', height: '100%' },
   addPhotoItem: {
@@ -974,16 +979,16 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: radius.md,
     borderWidth: 2,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
     borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.sm,
   },
-  addPhotoItemText: { fontSize: 48, color: colors.dark.textSecondary, lineHeight: 56 },
+  addPhotoItemText: { fontSize: 48, color: colors.textSecondary, lineHeight: 56 },
   addPhotoItemLabel: {
     ...typography.body,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     marginTop: spacing.xs,
   },
 
@@ -995,33 +1000,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  sectionTitle: { ...typography.title, color: colors.dark.text },
-  sectionLink: { ...typography.caption, color: colors.dark.accent },
-  emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  sectionTitle: { ...typography.title, color: colors.text },
+  sectionLink: { ...typography.caption, color: colors.accent },
+  emptyText: { ...typography.bodySmall, color: colors.textSecondary },
   emptyPhotos: { alignItems: 'center', justifyContent: 'center', paddingVertical: 40 },
   emptyPhotosText: { fontSize: 48, marginBottom: 8 },
-  emptyPhotosHint: { ...typography.caption, color: colors.dark.textSecondary },
+  emptyPhotosHint: { ...typography.caption, color: colors.textSecondary },
   reminderCard: { marginBottom: spacing.sm },
   reminderRow: { flexDirection: 'row', alignItems: 'center' },
   reminderInfo: { flex: 1 },
-  reminderKind: { ...typography.label, color: colors.dark.text },
-  reminderDue: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 2 },
+  reminderKind: { ...typography.label, color: colors.text },
+  reminderDue: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
   doneBtn: {
     paddingVertical: 8,
     paddingHorizontal: 14,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     borderRadius: radius.sm,
   },
   doneBtnText: { ...typography.caption, color: '#fff' },
   logCard: { marginBottom: spacing.sm },
   logRow: { flexDirection: 'row', alignItems: 'flex-start' },
   logInfo: { flex: 1 },
-  logType: { ...typography.label, color: colors.dark.text },
-  logDate: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 2 },
-  logDeleteText: { ...typography.caption, color: colors.dark.accent },
+  logType: { ...typography.label, color: colors.text },
+  logDate: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
+  logDeleteText: { ...typography.caption, color: colors.accent },
   actions: { paddingHorizontal: spacing.lg, marginTop: spacing.xxl, gap: spacing.md },
   primaryButton: {
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 16,
     borderRadius: radius.lg,
     alignItems: 'center',
@@ -1032,11 +1037,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
-  editButtonText: { ...typography.label, color: colors.dark.textSecondary },
+  editButtonText: { ...typography.label, color: colors.textSecondary },
   deleteBtn: { paddingVertical: 12, alignItems: 'center' },
-  deleteBtnText: { ...typography.caption, color: colors.dark.textSecondary },
+  deleteBtnText: { ...typography.caption, color: colors.textSecondary },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -1044,7 +1049,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.lg,
     width: '85%',
@@ -1052,30 +1057,30 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     ...typography.title,
-    color: colors.dark.text,
+    color: colors.text,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   dateInput: {
     ...typography.body,
-    color: colors.dark.text,
-    backgroundColor: colors.dark.background,
+    color: colors.text,
+    backgroundColor: colors.background,
     borderRadius: radius.sm,
     padding: 14,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
     textAlign: 'center',
   },
   dateHint: {
     ...typography.caption,
-    color: colors.dark.textSecondary,
+    color: colors.textSecondary,
     textAlign: 'center',
     marginTop: spacing.xs,
     marginBottom: spacing.md,
   },
   fieldError: {
     ...typography.caption,
-    color: colors.dark.danger,
+    color: colors.danger,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
@@ -1085,15 +1090,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: radius.sm,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
     alignItems: 'center',
   },
-  modalCancelText: { ...typography.label, color: colors.dark.textSecondary },
+  modalCancelText: { ...typography.label, color: colors.textSecondary },
   modalConfirmBtn: {
     flex: 1,
     paddingVertical: 14,
     borderRadius: radius.sm,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     alignItems: 'center',
   },
   modalConfirmText: { ...typography.label, color: '#fff' },

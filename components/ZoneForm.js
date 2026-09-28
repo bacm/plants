@@ -98,7 +98,7 @@ export function ZoneForm({
               value={name}
               onChangeText={setName}
               placeholder="ex. Massif nord, Balcon"
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               accessibilityLabel="Nom de la zone"
             />
             <Text style={styles.label}>Description (optionnel)</Text>
@@ -107,7 +107,7 @@ export function ZoneForm({
               value={description}
               onChangeText={setDescription}
               placeholder="ex. Potager Carré, Plein Sud-Est…"
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               multiline
               accessibilityLabel="Description de la zone"
             />
@@ -128,23 +128,23 @@ export function ZoneForm({
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
+  container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
   backBtn: { marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.dark.textSecondary },
-  heroTitle: { ...typography.display, color: colors.dark.text },
-  heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 4 },
+  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
+  heroTitle: { ...typography.display, color: colors.text },
+  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  label: { ...typography.label, color: colors.dark.textSecondary, marginBottom: 6, marginTop: 12 },
+  label: { ...typography.label, color: colors.textSecondary, marginBottom: 6, marginTop: 12 },
   input: {
     ...typography.body,
-    color: colors.dark.text,
-    backgroundColor: colors.dark.surface,
+    color: colors.text,
+    backgroundColor: colors.surface,
     borderRadius: radius.sm,
     padding: 14,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
   textArea: { minHeight: 80 },
   iconGrid: {
@@ -156,22 +156,22 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: radius.sm,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconOptionSelected: {
-    borderColor: colors.dark.accent,
+    borderColor: colors.accent,
     borderWidth: 2,
-    backgroundColor: 'rgba(107,155,122,0.15)',
+    backgroundColor: colors.softGreen,
   },
   iconEmoji: { fontSize: 24 },
   saveBtn: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.xxl,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     paddingVertical: 16,
     borderRadius: radius.lg,
     alignItems: 'center',

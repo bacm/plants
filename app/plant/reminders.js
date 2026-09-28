@@ -178,7 +178,7 @@ export default function RemindersScreen() {
               value={frequencyDays}
               onChangeText={setFrequencyDays}
               placeholder="7"
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               keyboardType="number-pad"
             />
             <Text style={styles.label}>Prochaine échéance</Text>
@@ -187,7 +187,7 @@ export default function RemindersScreen() {
               value={nextDueDate}
               onChangeText={setNextDueDate}
               placeholder="AAAA-MM-JJ"
-              placeholderTextColor={colors.dark.textSecondary}
+              placeholderTextColor={colors.textSecondary}
             />
             <TouchableOpacity style={styles.addBtn} onPress={addReminder}>
               <Text style={styles.addBtnText}>+ Ajouter</Text>
@@ -234,58 +234,58 @@ export default function RemindersScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.dark.background },
-  placeholder: { ...typography.body, color: colors.dark.textSecondary, padding: spacing.lg },
+  container: { flex: 1, backgroundColor: colors.background },
+  placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
   backBtn: { marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.dark.textSecondary },
-  heroTitle: { ...typography.display, color: colors.dark.text },
-  heroSubtitle: { ...typography.bodySmall, color: colors.dark.textSecondary, marginTop: 4 },
+  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
+  heroTitle: { ...typography.display, color: colors.text },
+  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  sectionTitle: { ...typography.title, color: colors.dark.text, marginBottom: spacing.md },
-  label: { ...typography.label, color: colors.dark.textSecondary, marginBottom: 6, marginTop: 12 },
+  sectionTitle: { ...typography.title, color: colors.text, marginBottom: spacing.md },
+  label: { ...typography.label, color: colors.textSecondary, marginBottom: 6, marginTop: 12 },
   input: {
     ...typography.body,
-    color: colors.dark.text,
-    backgroundColor: colors.dark.surface,
+    color: colors.text,
+    backgroundColor: colors.surface,
     borderRadius: radius.sm,
     padding: 14,
     borderWidth: 1,
-    borderColor: colors.dark.border,
+    borderColor: colors.border,
   },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   pill: {
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
+    backgroundColor: colors.surface,
   },
-  pillActive: { backgroundColor: colors.dark.accent },
-  pillText: { ...typography.caption, color: colors.dark.textSecondary },
+  pillActive: { backgroundColor: colors.accent },
+  pillText: { ...typography.caption, color: colors.textSecondary },
   pillTextActive: { color: '#fff' },
   addBtn: {
     marginTop: 16,
     alignSelf: 'flex-start',
     paddingVertical: 10,
     paddingHorizontal: 16,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     borderRadius: radius.md,
   },
   addBtnText: { ...typography.label, color: '#fff' },
-  emptyText: { ...typography.bodySmall, color: colors.dark.textSecondary },
+  emptyText: { ...typography.bodySmall, color: colors.textSecondary },
   reminderCard: { marginBottom: spacing.sm },
   reminderRow: { flexDirection: 'row', alignItems: 'center' },
   reminderInfo: { flex: 1 },
-  reminderKind: { ...typography.label, color: colors.dark.text },
-  reminderMeta: { ...typography.caption, color: colors.dark.textSecondary, marginTop: 2 },
+  reminderKind: { ...typography.label, color: colors.text },
+  reminderMeta: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
   reminderActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   doneBtn: {
     paddingVertical: 6,
     paddingHorizontal: 12,
-    backgroundColor: colors.dark.accent,
+    backgroundColor: colors.accent,
     borderRadius: radius.sm,
   },
   doneBtnText: { ...typography.caption, color: '#fff' },
-  deleteBtnText: { ...typography.caption, color: colors.dark.textSecondary },
+  deleteBtnText: { ...typography.caption, color: colors.textSecondary },
 });
