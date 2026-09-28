@@ -9,6 +9,7 @@ type: bug
 ## Problem
 
 - "Plus de details" lacks its accent (new/edit plant)
+- The dashboard section reads "En fleurs ce mois" (should be "En fleur ce mois-ci")
 - Zone deletion says "Les 1 plante de cette zone resteront…"
 - Dashboard subtitle wraps awkwardly on narrow screens
 - Section titles are all-caps bold ("FICHE TECHNIQUE", "SOL"), heavy to read

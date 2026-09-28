@@ -9,7 +9,7 @@ appId: host.exp.Exponent
 # data is needed — go straight from the dashboard (which already has the
 # shared tab bar) to Bibliothèque.
 - tapOn: "Bibliothèque, tab, 4 of 4"
-- tapOn: '+ Ajouter une plante'
+- tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
     timeout: 15000

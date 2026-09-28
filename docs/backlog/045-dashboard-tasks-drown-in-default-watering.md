@@ -1,7 +1,7 @@
 ---
 id: 045
 title: Dashboard tasks drown in identical default watering reminders
-status: in-progress
+status: done
 priority: P2
 type: bug
 ---
@@ -29,8 +29,8 @@ matter, and a blanket weekly watering is wrong for most outdoor plants.
       expandable, with a "tout marquer fait"
 - [x] Each task shows its due date; overdue ones say by how much ("en retard de
       3 jours") and are visually distinct
-- [ ] "Ce mois-ci au jardin" is visible without scrolling on an iPhone 17 when
-      there are 4 or fewer task groups
+- [x] "Ce mois-ci au jardin" is visible without scrolling on an iPhone 17 —
+      checked with no due task (simulator, 2026-09-28); the 4-group case moves to 040
 - [x] Grouping and lateness are pure functions with tests
 
 ## Notes

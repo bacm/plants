@@ -39,7 +39,7 @@ appId: host.exp.Exponent
 
 # --- Rosier rouge: Massif sud, bloom 5-7, rouge ---
 - tapOn: "Bibliothèque, tab, 4 of 4"
-- tapOn: '+ Ajouter une plante'
+- tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
     timeout: 15000
@@ -73,7 +73,7 @@ appId: host.exp.Exponent
 
 # --- Hellébore: Ombre nord, bloom 12-2 (wraps the year) ---
 - tapOn: "‹ Retour"
-- tapOn: '+ Ajouter une plante'
+- tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
     timeout: 15000
@@ -100,7 +100,7 @@ appId: host.exp.Exponent
 
 # --- Lavande: Potager, bloom 6-8, violette, pruning month = Sep ---
 - tapOn: "‹ Retour"
-- tapOn: '+ Ajouter une plante'
+- tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
     timeout: 15000
@@ -174,7 +174,7 @@ appId: host.exp.Exponent
 
 # --- Framboisier: Potager, harvest 7-9 ---
 - tapOn: "‹ Retour"
-- tapOn: '+ Ajouter une plante'
+- tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
     timeout: 15000
@@ -211,7 +211,7 @@ appId: host.exp.Exponent
 
 # --- Mystère: name only, no zone ---
 - tapOn: "‹ Retour"
-- tapOn: '+ Ajouter une plante'
+- tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
     timeout: 15000

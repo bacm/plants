@@ -13,7 +13,7 @@
 appId: host.exp.Exponent
 ---
 - tapOn: "Bibliothèque, tab, 4 of 4"
-- tapOn: '+ Ajouter une plante'
+- tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
     timeout: 15000

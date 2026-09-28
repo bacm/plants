@@ -41,6 +41,8 @@ install, so the migrations run on real data):
       reinstalling) restores plants, zones, reminders, logs and photos (020)
 - [ ] "Ce mois-ci au jardin" lists this month's tasks; ticking one logs care and
       removes it; a suggested yearly reminder can be added (022, 031)
+- [ ] With 4 grouped task cards, "Ce mois-ci au jardin" still starts on the
+      first screen (045)
 - [ ] Any defect becomes its own ticket
 
 ## Notes
