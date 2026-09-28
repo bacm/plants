@@ -20,13 +20,16 @@ module.exports = defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      testIgnore: /capture\.spec\.js/,
+      testIgnore: /(capture|sort)\.spec\.js/,
     },
     {
       // Ticket 056: the in-app camera needs a real (if fake) camera stream.
       // Chromium's fake device flags give every getUserMedia() call a
       // synthetic video track instead of prompting for a real camera, so the
-      // capture screen (and only it) is exercised on this project.
+      // capture screen is exercised on this project. sort.spec.js (ticket
+      // 061) joined it once its import flow started going through the
+      // camera screen's "Galerie" button rather than a direct /sort
+      // navigation -- opening that screen needs the same fake camera.
       name: 'chromium-fake-camera',
       use: {
         ...devices['Desktop Chrome'],
@@ -34,7 +37,7 @@ module.exports = defineConfig({
           args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
         },
       },
-      testMatch: /capture\.spec\.js/,
+      testMatch: /(capture|sort)\.spec\.js/,
     },
   ],
   webServer: {

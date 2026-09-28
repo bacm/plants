@@ -10,17 +10,17 @@ import {
   Image,
   StyleSheet,
   TouchableOpacity,
-  ScrollView,
   Platform,
   Linking,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { colors, spacing, typography, radius, shadow } from '../lib/theme';
-import { targetSize } from '../lib/targetSize';
+import { prepareForStorage } from '../lib/photoPipeline';
 import { showMessage } from '../lib/dialogs';
+import { PlantStrip, UNSORTED_ID } from '../components/PlantStrip';
 import {
   getZones,
   getPlantsByZoneWithImages,
@@ -28,6 +28,7 @@ import {
   setSetting,
   addPhoto,
   addUnsortedPhoto,
+  getUnsortedPhotos,
   deletePhoto,
   deleteUnsortedPhoto,
   setPhotoCaption,
@@ -37,8 +38,6 @@ import {
 
 const LAST_ZONE_SETTING_KEY = 'captureLastZoneId';
 const NO_ZONE_SENTINEL = '__none__';
-const UNSORTED_ID = '__unsorted__';
-const MAX_LONG_SIDE = 2048;
 
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -70,6 +69,19 @@ export default function CaptureScreen() {
   const [busy, setBusy] = useState(false);
   const [lastShot, setLastShot] = useState(null); // { photoId, kind, uri, label }
   const [counts, setCounts] = useState({}); // id -> shots this session
+  const [unsortedCount, setUnsortedCount] = useState(0);
+
+  // --- "À trier" badge count (ticket 061) ---
+  const reloadUnsortedCount = useCallback(async () => {
+    const rows = await getUnsortedPhotos();
+    setUnsortedCount(rows.length);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      reloadUnsortedCount();
+    }, [reloadUnsortedCount])
+  );
 
   // --- zone: load once, restore the last one used ---
   useFocusEffect(
@@ -155,19 +167,15 @@ export default function CaptureScreen() {
         quality: 0.8,
         skipProcessing: false,
       });
-      const { width, height } = targetSize(photo.width, photo.height, MAX_LONG_SIDE);
-      const resized = await manipulateAsync(photo.uri, [{ resize: { width, height } }], {
-        compress: 0.8,
-        format: SaveFormat.JPEG,
-      });
+      const resizedUri = await prepareForStorage(photo.uri, photo.width, photo.height);
 
       let photoId;
       let kind;
       if (selectedId === UNSORTED_ID) {
-        photoId = await addUnsortedPhoto({ uri: resized.uri, takenAt: new Date().toISOString() });
+        photoId = await addUnsortedPhoto({ uri: resizedUri, takenAt: new Date().toISOString() });
         kind = 'unsorted';
       } else {
-        photoId = await addPhoto({ plantId: selectedId, uri: resized.uri, date: todayISO() });
+        photoId = await addPhoto({ plantId: selectedId, uri: resizedUri, date: todayISO() });
         kind = 'plant';
       }
 
@@ -178,8 +186,9 @@ export default function CaptureScreen() {
       }
 
       setCounts((c) => ({ ...c, [selectedId]: (c[selectedId] ?? 0) + 1 }));
-      setLastShot({ photoId, kind, uri: resized.uri, label: selectedLabel, countKey: selectedId });
+      setLastShot({ photoId, kind, uri: resizedUri, label: selectedLabel, countKey: selectedId });
       if (kind === 'plant') reloadPlants();
+      if (kind === 'unsorted') reloadUnsortedCount();
     } catch (e) {
       showMessage('Erreur', `Impossible de prendre la photo : ${e.message}`);
     } finally {
@@ -192,6 +201,7 @@ export default function CaptureScreen() {
     try {
       if (lastShot.kind === 'unsorted') {
         await deleteUnsortedPhoto(lastShot.photoId);
+        reloadUnsortedCount();
       } else {
         await deletePhoto(lastShot.photoId);
       }
@@ -220,6 +230,22 @@ export default function CaptureScreen() {
   const addPlant = () => {
     const query = zoneId != null ? `?zoneId=${zoneId}&returnTo=capture` : '?returnTo=capture';
     router.push(`/plant/new${query}`);
+  };
+
+  // "Galerie" (ticket 061): the only always-visible way into "À trier" --
+  // the badge next to it only shows once there is something to sort, so a
+  // first-ever import needs its own entry point.
+  //
+  // Navigates to app/sort.js with autoImport=1 rather than running the
+  // picker from here: launching it while this screen's CameraView is still
+  // mounted never showed a picker in the iOS simulator (see
+  // e2e/ios/10-sort-and-import.yaml's notes on a pre-existing defect, not
+  // introduced by this ticket, where this screen doesn't navigate away
+  // reliably on iOS at all -- same close() is affected). Once app/sort.js
+  // has mounted (no camera), it runs the exact same lib/libraryImport.js
+  // import on its own.
+  const openGallery = () => {
+    router.replace('/sort?autoImport=1');
   };
 
   // The tab bar's central button pushes this screen (see
@@ -283,59 +309,31 @@ export default function CaptureScreen() {
           style={styles.iconButton}>
           <Text style={styles.iconButtonText}>✕</Text>
         </TouchableOpacity>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.zoneScroll}>
-          <TouchableOpacity
-            style={[styles.zoneChip, zoneId === null && styles.zoneChipActive]}
-            onPress={() => selectZone(null)}>
-            <Text style={styles.zoneChipText}>Sans zone</Text>
+        <TouchableOpacity
+          onPress={openGallery}
+          accessibilityLabel="Importer de la galerie"
+          style={styles.iconButton}>
+          <Ionicons name="images-outline" size={20} color={colors.dark.text} />
+        </TouchableOpacity>
+        <View style={{ flex: 1 }} />
+        {unsortedCount > 0 && (
+          <TouchableOpacity onPress={() => router.push('/sort')} style={styles.sortBadge}>
+            <Text style={styles.sortBadgeText}>À trier ({unsortedCount})</Text>
           </TouchableOpacity>
-          {zones.map((z) => (
-            <TouchableOpacity
-              key={z.id}
-              style={[styles.zoneChip, zoneId === z.id && styles.zoneChipActive]}
-              onPress={() => selectZone(z.id)}>
-              <Text style={styles.zoneChipText}>{z.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+        )}
       </View>
 
       <View style={styles.bottomBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.plantStrip}>
-          <TouchableOpacity
-            style={[styles.plantItem, selectedId === UNSORTED_ID && styles.plantItemSelected]}
-            onPress={() => setSelectedId(UNSORTED_ID)}>
-            <View style={styles.plantThumb}>
-              <Text style={styles.plantThumbInitial}>?</Text>
-            </View>
-            <Text style={styles.plantName}>À trier</Text>
-          </TouchableOpacity>
-
-          {plants.map((p) => (
-            <TouchableOpacity
-              key={p.id}
-              style={[styles.plantItem, selectedId === p.id && styles.plantItemSelected]}
-              onPress={() => setSelectedId(p.id)}>
-              <View style={styles.plantThumb}>
-                {p.photoUri ? (
-                  <Image source={{ uri: p.photoUri }} style={styles.plantThumbImage} />
-                ) : (
-                  <Text style={styles.plantThumbInitial}>{p.name?.[0]?.toUpperCase() ?? '?'}</Text>
-                )}
-              </View>
-              <Text style={styles.plantName} numberOfLines={1}>
-                {p.name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-
-          <TouchableOpacity style={styles.plantItem} onPress={addPlant}>
-            <View style={styles.plantThumb}>
-              <Text style={styles.plantThumbInitial}>+</Text>
-            </View>
-            <Text style={styles.plantName}>Nouvelle</Text>
-          </TouchableOpacity>
-        </ScrollView>
+        <PlantStrip
+          zones={zones}
+          zoneId={zoneId}
+          onSelectZone={selectZone}
+          plants={plants}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+          showUnsorted
+          onAddPlant={addPlant}
+        />
 
         <View style={styles.actionsRow}>
           <TouchableOpacity
@@ -450,16 +448,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   iconButtonText: { color: colors.dark.text, fontSize: 18 },
-  zoneScroll: { flex: 1 },
-  zoneChip: {
+  sortBadge: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
     backgroundColor: colors.dark.surfaceGlass,
-    marginRight: spacing.xs,
   },
-  zoneChipActive: { backgroundColor: colors.dark.accent },
-  zoneChipText: { ...typography.caption, color: colors.dark.text },
+  sortBadgeText: { ...typography.caption, color: colors.dark.text },
 
   bottomBar: {
     position: 'absolute',
@@ -468,25 +463,9 @@ const styles = StyleSheet.create({
     bottom: 0,
     paddingBottom: spacing.xl,
     paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
     backgroundColor: 'rgba(28,25,23,0.55)',
   },
-  plantStrip: { paddingHorizontal: spacing.md, marginBottom: spacing.sm },
-  plantItem: { alignItems: 'center', marginRight: spacing.md, width: 64 },
-  plantItemSelected: { opacity: 1 },
-  plantThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.full,
-    backgroundColor: colors.dark.surface,
-    borderWidth: 2,
-    borderColor: 'transparent',
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  plantThumbImage: { width: '100%', height: '100%' },
-  plantThumbInitial: { ...typography.title, color: colors.dark.text },
-  plantName: { ...typography.caption, color: colors.dark.text, marginTop: 4 },
 
   actionsRow: {
     flexDirection: 'row',

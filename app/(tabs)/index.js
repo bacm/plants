@@ -23,6 +23,7 @@ import {
   markReminderDone,
   createCareLog,
   createReminder,
+  getUnsortedPhotos,
 } from '../../lib/db';
 import { monthName } from '../../lib/months';
 import { buildHeroSubtitle, groupDueTasks, latenessLabel } from '../../lib/dashboard';
@@ -71,24 +72,27 @@ export default function Dashboard() {
   const [monthOffset, setMonthOffset] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState(() => new Set());
+  const [unsortedCount, setUnsortedCount] = useState(0);
 
   const currentMonth = new Date().getMonth() + 1;
 
   const load = useCallback(async () => {
     const { month: seasonalMonth, year: seasonalYear } = shiftedMonth(monthOffset);
     const { startISO, endISO } = monthRangeISO(seasonalMonth, seasonalYear);
-    const [o, d, b, plants, careLogs] = await Promise.all([
+    const [o, d, b, plants, careLogs, unsorted] = await Promise.all([
       getOverdueReminders(),
       getDueTodayReminders(),
       getPlantsBloomingInMonth(currentMonth),
       getPlants(),
       getCareLogsBetween(startISO, endISO),
+      getUnsortedPhotos(),
     ]);
     setOverdue(o);
     setDueToday(d);
     setBlooming(b);
     setAllPlants(plants);
     setSeasonalCareLogs(careLogs);
+    setUnsortedCount(unsorted.length);
   }, [currentMonth, monthOffset]);
 
   useFocusEffect(
@@ -227,6 +231,19 @@ export default function Dashboard() {
             </TouchableOpacity>
           </View>
         </GradientHero>
+
+        {unsortedCount > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity onPress={() => router.push('/sort')} activeOpacity={0.8}>
+              <GlassCard noPadding style={styles.unsortedCard}>
+                <Text style={styles.unsortedCardText}>
+                  {unsortedCount} photo{unsortedCount > 1 ? 's' : ''} à trier
+                </Text>
+                <Text style={styles.unsortedCardChevron}>›</Text>
+              </GlassCard>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -494,6 +511,15 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   sectionHeaderBetween: { justifyContent: 'space-between' },
+  unsortedCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  unsortedCardText: { ...typography.label, color: colors.dark.text },
+  unsortedCardChevron: { ...typography.title, color: colors.dark.textSecondary },
   monthToggle: {
     paddingVertical: 4,
     paddingHorizontal: spacing.sm,

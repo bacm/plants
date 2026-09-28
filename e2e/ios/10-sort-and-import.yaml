@@ -1,0 +1,82 @@
+# Check 10: "À trier" (ticket 061) -- import from the photo library via the
+# camera screen's "Galerie" button and assign it to a plant, then check the
+# empty state. The simulator has no camera, so unlike 09 (which only gets as
+# far as the plant strip's contents) this drives the one thing that only the
+# simulator's own photo library can exercise: expo-image-picker's
+# multi-select picker.
+appId: host.exp.Exponent
+---
+- clearState
+- runFlow: _open-app.yaml
+- runFlow: _seed-minimal.yaml
+
+# _seed-minimal.yaml ends on Rosier rouge's own detail screen (no tab bar) --
+# go back to Bibliothèque (shared tab bar) first, same as check 05.
+- tapOn: "‹ Retour"
+- tapOn: "Bibliothèque, tab.*"
+- runFlow: _dismiss-dev-menu.yaml
+
+# --- Open the camera screen (same as check 09) just for its "Galerie"
+# button -- the "À trier (N)" badge next to it, and the dashboard's own
+# card, only show once there is something to sort, so this icon button is
+# the one always-visible way in for a first-ever import.
+- tapOn: "Prendre une photo"
+- tapOn:
+    text: "Autoriser"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- extendedWaitUntil:
+    visible: "Fermer l’appareil photo"
+    timeout: 10000
+
+# openGallery (app/capture.js) navigates to /sort?autoImport=1, which runs
+# the picker only once app/sort.js has mounted (no camera).
+#
+# KNOWN ISSUE, not introduced by this ticket: on this iOS simulator setup,
+# app/capture.js does not reliably navigate away at all -- neither this
+# button nor the pre-existing "✕" close button (plain router.replace, no
+# picker involved) was observed to land on the next screen, reproduced with
+# capture.js reverted to its pre-061 state too. web (e2e/sort.spec.js) and
+# the underlying navigation code are unaffected; this looks like a
+# CameraView/react-native-screens interaction specific to this simulator
+# environment and deserves its own investigation outside 061's scope. If
+# this step hangs, that pre-existing defect is why -- not a regression here.
+- tapOn: "Importer de la galerie"
+- extendedWaitUntil:
+    visible: "Photo, 30 March 2018, 21:14"
+    timeout: 20000
+- tapOn: "Photo, 30 March 2018, 21:14"
+# allowsMultipleSelection (no allowsEditing) opens PHPickerViewController,
+# not the "Move and Scale" crop screen check 05 drives -- selecting a photo
+# just badges its thumbnail; confirm with the picker's own "Done" button
+# (accessibility label "Done", even though the on-screen glyph is a
+# checkmark -- see the screen hierarchy dump for this step).
+- tapOn: "Done"
+
+- extendedWaitUntil:
+    visible: "À trier"
+    timeout: 15000
+- assertVisible: "1 photo à trier"
+
+# --- Assign it to the seeded plant (in "Massif sud") ---
+- tapOn: "Massif sud"
+- extendedWaitUntil:
+    visible: ".*Rosier rouge.*"
+    timeout: 10000
+- tapOn: ".*Rosier rouge.*"
+- extendedWaitUntil:
+    visible: "Tout est trié"
+    timeout: 10000
+
+# --- The photo is really on the plant ---
+- tapOn: "← Retour"
+- tapOn: "Bibliothèque, tab.*"
+- runFlow: _dismiss-dev-menu.yaml
+- extendedWaitUntil:
+    visible: ".*Rosier rouge.*"
+    timeout: 10000
+- tapOn: ".*Rosier rouge.*"
+- tapOn: "Photos"
+- assertVisible: "Mes photos"

@@ -132,6 +132,11 @@ export default function NewPlantScreen() {
         // "+" strip item; go back there with the new plant preselected
         // instead of jumping to its detail screen.
         router.replace(`/capture?selectPlantId=${plantId}`);
+      } else if (returnTo === 'sort') {
+        // Same idea from the "À trier" sorting screen's "+" strip item
+        // (ticket 061): go back there with the new plant preselected so the
+        // photo being sorted can be assigned to it right away.
+        router.replace(`/sort?selectPlantId=${plantId}`);
       } else {
         router.replace(`/plant/${plantId}`);
       }
