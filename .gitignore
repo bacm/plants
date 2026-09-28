@@ -46,7 +46,6 @@ yarn-error.*
 *.tsbuildinfo
 
 # scripts
-deploy-iphone.sh
 
 # generated native folders
 /ios

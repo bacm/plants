@@ -18,6 +18,7 @@ TypeScript), file-based routing via expo-router.
 | `cd server && .venv/bin/python -m pytest -q` | Server tests. Not in `verify`; CI runs them.                                                                    |
 | `npm run e2e:web`                            | Playwright smoke test of the web build (`e2e/`). Slow; not in `verify` or CI.                                   |
 | `npm run e2e:ios`                            | Maestro flows (`e2e/ios/`) on an iOS simulator in Expo Go. Needs Xcode, Maestro and JDK 17; ~13 min; not in CI. |
+| `npm run deploy:iphone`                      | Release build installed on the connected iPhone; keeps the app's data. See `docs/DEPLOY-IPHONE.md`.             |
 | `npm run setup`                              | One-time: enable the versioned git hooks.                                                                       |
 
 A `PostToolUse` hook lints every `.js` file right after you edit it and blocks on
