@@ -19,3 +19,8 @@ May–July bloom reads as three dots rather than one period.
 - [ ] Consecutive bloom months render as one continuous band, a wrapping range
       as two bands
 - [ ] The current month stays highlighted and gap months stay marked
+
+## Notes
+
+The approved Herbier mock-up draws exactly this: https://claude.ai/artifact/1gkwXJGkWRBB2VFmiYx6Ks, artboard
+"Floraison" (one bar per plant, coloured by flower, wrap = two bars).

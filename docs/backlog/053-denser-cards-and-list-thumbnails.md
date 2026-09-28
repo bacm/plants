@@ -14,7 +14,7 @@ colour dot instead of the plant's photo.
 
 ## Acceptance criteria
 
-- [ ] Before implementing, the dashboard, Bibliothèque and plant detail are
+- [x] Before implementing, the dashboard, Bibliothèque and plant detail are
       mocked up and approved by the owner
 - [ ] At least 6 plants fit on the Bibliothèque screen of an iPhone 17
 - [ ] List rows show the plant's photo (user photo, else stored image, else
@@ -28,3 +28,6 @@ Do together with 052 and 046's tile labels; 027 (accessibility) fits in the same
 pass.
 
 The dashboard part is superseded by 058; this ticket keeps lists and detail.
+
+Approved mock-up (2026-09-28): https://claude.ai/artifact/1gkwXJGkWRBB2VFmiYx6Ks. Its Bibliothèque grid shows about 4
+plants, not 6: settle that before 068.
