@@ -14,7 +14,7 @@ const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
 const { test, expect } = require('@playwright/test');
-const { visibleText, expectStoredPhotoLoads } = require('./helpers');
+const { visibleText, tabButton, expectStoredPhotoLoads } = require('./helpers');
 
 test.describe('web smoke', () => {
   test('zone -> plant -> edit -> care log -> reload survives', async ({ page }) => {
@@ -36,7 +36,7 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
     // --- Create a zone ---
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
     await visibleText(page, '+ Créer une zone').click();
 
@@ -157,7 +157,7 @@ test.describe('web smoke', () => {
     await page.goto('/');
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
     await visibleText(page, '+ Créer une zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
@@ -231,7 +231,7 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
     // --- Zone + plant + photo, same as the earlier tests ---
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
     await visibleText(page, '+ Créer une zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
@@ -273,7 +273,7 @@ test.describe('web smoke', () => {
     // page.goto() straight to '/'.
     await visibleText(page, 'Retour').click(); // plant detail -> zone detail
     await expect(visibleText(page, '1 plante')).toBeVisible();
-    await visibleText(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
+    await tabButton(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
     await page.locator('[aria-label="Réglages"]:visible').click();
     await expect(visibleText(page, 'Réglages')).toBeVisible();
@@ -287,7 +287,7 @@ test.describe('web smoke', () => {
 
     // --- Delete the plant through its confirmation (ticket 042) ---
     await visibleText(page, 'Retour').click(); // settings -> dashboard
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await visibleText(page, zoneName).click();
     await visibleText(page, plantName).click();
     await expect(visibleText(page, plantName)).toBeVisible();
@@ -319,7 +319,7 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Réglages')).toBeVisible();
     await page.goto('/');
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await expect(visibleText(page, zoneName)).toBeVisible();
     await visibleText(page, zoneName).click();
     await expect(visibleText(page, plantName)).toBeVisible();
@@ -360,7 +360,7 @@ test.describe('web smoke', () => {
     await page.goto('/');
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
     await visibleText(page, '+ Créer une zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
@@ -387,7 +387,7 @@ test.describe('web smoke', () => {
     // back to the zone detail screen first, which is inside the tabs group.
     await visibleText(page, 'Retour').click(); // plant detail -> zone detail
     await expect(visibleText(page, '1 plante')).toBeVisible();
-    await visibleText(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
+    await tabButton(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
     await expect(visibleText(page, 'Ce mois-ci au jardin')).toBeVisible();
     await expect(visibleText(page, `Tailler · ${plantName}`)).toBeVisible();
@@ -412,7 +412,7 @@ test.describe('web smoke', () => {
     await page.goto('/');
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
     await visibleText(page, '+ Créer une zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
@@ -439,7 +439,7 @@ test.describe('web smoke', () => {
     // --- Bloom tab: "Sur l'année" shows this plant's row ---
     await visibleText(page, 'Retour').click(); // plant detail -> zone detail
     await expect(visibleText(page, '1 plante')).toBeVisible();
-    await visibleText(page, 'Floraison').click(); // zone detail (tabs) -> bloom tab
+    await tabButton(page, 'Floraison').click(); // zone detail (tabs) -> bloom tab
     await expect(visibleText(page, 'Ce qui fleurit par mois')).toBeVisible();
     await visibleText(page, 'Sur l’année').click();
     // The zone-detail screen we came from stays mounted (hidden but not

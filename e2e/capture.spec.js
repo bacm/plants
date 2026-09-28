@@ -6,7 +6,7 @@
 // bar's central button -> select the plant in the strip -> shoot -> close ->
 // the shot shows up on the plant's Photos tab as a real, decodable image.
 const { test, expect } = require('@playwright/test');
-const { visibleText, expectStoredPhotoLoads } = require('./helpers');
+const { visibleText, tabButton, expectStoredPhotoLoads } = require('./helpers');
 
 test.describe('in-app camera (garden walk)', () => {
   test('shoot a photo for a chosen plant -> it lands in the plant Photos tab', async ({ page }) => {
@@ -22,7 +22,7 @@ test.describe('in-app camera (garden walk)', () => {
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
     // --- Zone + plant to shoot into ---
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
     await visibleText(page, '+ Créer une zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
@@ -70,7 +70,7 @@ test.describe('in-app camera (garden walk)', () => {
     // handles the same way -- router.replace('/(tabs)') -- rather than throw.
     await page.locator('[aria-label="Fermer l’appareil photo"]:visible').click();
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await visibleText(page, zoneName).click();
     await visibleText(page, plantName).click();
     await visibleText(page, 'Photos').click();

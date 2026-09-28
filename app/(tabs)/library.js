@@ -7,10 +7,8 @@ import {
   TouchableOpacity,
   TextInput,
   RefreshControl,
-  Platform,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import Icon from '../../components/Icon';
@@ -18,12 +16,8 @@ import { colors, spacing, typography, radius, shadow, colorHex } from '../../lib
 import { getPlants, getZones } from '../../lib/db';
 import { SUN, choices, isUnknown, labelFor } from '../../lib/enums';
 
-// Tab bar height from app/(tabs)/_layout.js -- the floating button sits above it.
-const TAB_BAR_HEIGHT = Platform.OS === 'ios' ? 88 : 64;
-
 export default function LibraryScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [plants, setPlants] = useState([]);
   const [zones, setZones] = useState([]);
   const [search, setSearch] = useState('');
@@ -70,10 +64,7 @@ export default function LibraryScreen() {
     <View style={styles.container}>
       <ScrollView
         style={styles.scroll}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: TAB_BAR_HEIGHT + insets.bottom + 72 },
-        ]}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
@@ -172,7 +163,7 @@ export default function LibraryScreen() {
       </ScrollView>
 
       <TouchableOpacity
-        style={[styles.fab, { bottom: TAB_BAR_HEIGHT + insets.bottom + spacing.md }, shadow.card]}
+        style={[styles.fab, shadow.card]}
         onPress={() => router.push('/plant/new')}
         accessibilityLabel="Ajouter une plante"
         accessibilityRole="button">
@@ -185,12 +176,13 @@ export default function LibraryScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 24 },
+  scrollContent: { paddingBottom: 72 },
   heroTitle: { ...typography.display, color: colors.text, marginBottom: 4 },
   heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary },
   fab: {
     position: 'absolute',
     right: spacing.lg,
+    bottom: spacing.md,
     width: 56,
     height: 56,
     borderRadius: radius.full,

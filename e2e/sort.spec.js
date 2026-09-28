@@ -10,7 +10,7 @@
 // capture.spec.js.
 const path = require('node:path');
 const { test, expect } = require('@playwright/test');
-const { visibleText, expectStoredPhotoLoads } = require('./helpers');
+const { visibleText, tabButton, expectStoredPhotoLoads } = require('./helpers');
 
 test.describe('À trier (sort + import)', () => {
   test('import two photos -> assign one, delete the other -> photo shows on the plant', async ({
@@ -31,7 +31,7 @@ test.describe('À trier (sort + import)', () => {
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
     // --- Zone + plant to assign a photo to ---
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
     await visibleText(page, '+ Créer une zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
@@ -84,7 +84,7 @@ test.describe('À trier (sort + import)', () => {
     // --- The assigned photo is really on the plant ---
     await page.goto('/');
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
-    await visibleText(page, 'Zones').click();
+    await tabButton(page, 'Zones').click();
     await visibleText(page, zoneName).click();
     await visibleText(page, plantName).click();
     await visibleText(page, 'Photos').click();

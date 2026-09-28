@@ -10,6 +10,14 @@ function visibleText(page, text) {
   return page.locator(`:text-is(${JSON.stringify(text)}):visible`);
 }
 
+// The floating tab bar (ticket 064) only renders a visible text label on the
+// active tab -- the others are icon-only, so `visibleText` can't find them.
+// Every tab (active or not) still carries an accessibilityLabel of
+// "<title>, tab, N of M", which react-native-web exposes as `aria-label`.
+function tabButton(page, title) {
+  return page.locator(`[aria-label^=${JSON.stringify(title + ',')}]:visible`);
+}
+
 // A photo row can survive a reload while its image does not (ticket 044: web
 // stored a blob: URL that died with the page). Assert real, decodable bytes.
 async function expectStoredPhotoLoads(page) {
@@ -23,4 +31,4 @@ async function expectStoredPhotoLoads(page) {
   );
 }
 
-module.exports = { visibleText, expectStoredPhotoLoads };
+module.exports = { visibleText, tabButton, expectStoredPhotoLoads };
