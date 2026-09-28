@@ -4,6 +4,7 @@ import { showMessage } from '../../lib/dialogs';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
+import Icon from '../../components/Icon';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import {
   getPlantById,
@@ -127,7 +128,8 @@ export default function RemindersScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <GradientHero>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Retour</Text>
+            <Icon name="chevron-left" size={16} color={colors.textSecondary} />
+            <Text style={styles.backBtnText}>Retour</Text>
           </TouchableOpacity>
           <Text style={styles.heroTitle}>Rappels</Text>
           <Text style={styles.heroSubtitle}>{plant.name}</Text>
@@ -238,7 +240,7 @@ const styles = StyleSheet.create({
   placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  backBtn: { marginBottom: 8 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
   heroTitle: { ...typography.display, color: colors.text },
   heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },

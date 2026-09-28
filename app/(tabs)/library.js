@@ -13,6 +13,7 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
+import Icon from '../../components/Icon';
 import { colors, spacing, typography, radius, shadow, colorHex } from '../../lib/theme';
 import { getPlants, getZones } from '../../lib/db';
 import { SUN, choices, isUnknown, labelFor } from '../../lib/enums';
@@ -161,7 +162,7 @@ export default function LibraryScreen() {
                         {isUnknown(p.sun) ? '' : ` · ${labelFor(SUN, p.sun)}`}
                       </Text>
                     </View>
-                    <Text style={styles.chevron}>→</Text>
+                    <Icon name="chevron-right" size={18} color={colors.textSecondary} />
                   </View>
                 </GlassCard>
               </TouchableOpacity>
@@ -241,5 +242,4 @@ const styles = StyleSheet.create({
   plantInfo: { flex: 1 },
   plantName: { ...typography.title, color: colors.text },
   meta: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
-  chevron: { ...typography.body, color: colors.textSecondary },
 });

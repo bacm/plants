@@ -7,7 +7,7 @@
 # bloom 12-2, wraps the year), Lavande (Potager, bloom 6-8, violette, pruning
 # month = Sep), Framboisier (Potager, harvest 7-9), Mystère (name only, no
 # zone). Plants are always added from the Bibliothèque list's "+ Ajouter une
-# plante" button (reached via the tab once, then via "‹ Retour" — saving a
+# plante" button (reached via the tab once, then via "Retour" — saving a
 # plant replaces the stack entry with its detail screen, which has no tab
 # bar) — a zone's own detail screen only offers that button while the zone
 # has zero plants (see report.md's "UX / layout observations").
@@ -72,7 +72,7 @@ appId: host.exp.Exponent
 - runFlow: _dismiss-dev-menu.yaml
 
 # --- Hellébore: Ombre nord, bloom 12-2 (wraps the year) ---
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
@@ -99,7 +99,7 @@ appId: host.exp.Exponent
 - runFlow: _dismiss-dev-menu.yaml
 
 # --- Lavande: Potager, bloom 6-8, violette, pruning month = Sep ---
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
@@ -173,7 +173,7 @@ appId: host.exp.Exponent
 - runFlow: _dismiss-dev-menu.yaml
 
 # --- Framboisier: Potager, harvest 7-9 ---
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
@@ -210,7 +210,7 @@ appId: host.exp.Exponent
 - runFlow: _dismiss-dev-menu.yaml
 
 # --- Mystère: name only, no zone ---
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'

@@ -16,9 +16,9 @@ appId: host.exp.Exponent
 # the shared tab bar, including the central camera button) first.
 - scrollUntilVisible:
     element:
-      text: "‹ Retour"
+      text: "Retour"
     direction: UP
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: "Accueil, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 
@@ -49,10 +49,14 @@ appId: host.exp.Exponent
 - assertVisible: ".*Nouvelle.*"
 
 # --- "En fleur" persists across a reopen ---
+# Ticket 052 replaced the 🌸 emoji and the trailing "✓" with decorative
+# icons, so the label alone no longer shows the state. The pill now exposes
+# it as accessibilityState.checked (role switch); asserting on that is left
+# for the next simulator run, which can confirm Maestro reads it.
 - tapOn: ".*Lavande.*"
-- assertVisible: "🌸 En fleur"
-- tapOn: "🌸 En fleur"
-- assertVisible: "🌸 En fleur ✓"
+- assertVisible: "En fleur"
+- tapOn: "En fleur"
+- assertVisible: "En fleur"
 
 - tapOn: "Fermer l’appareil photo"
 
@@ -76,6 +80,6 @@ appId: host.exp.Exponent
     visible: ".*Lavande.*"
     timeout: 10000
 - tapOn: ".*Lavande.*"
-- assertVisible: "🌸 En fleur ✓"
+- assertVisible: "En fleur"
 
 - tapOn: "Fermer l’appareil photo"

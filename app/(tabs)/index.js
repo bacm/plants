@@ -9,7 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '../../components/Icon';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
 import { colors, spacing, typography } from '../../lib/theme';
@@ -223,7 +223,7 @@ export default function Dashboard() {
               onPress={() => router.push('/settings')}
               accessibilityLabel="Réglages"
               style={styles.settingsButton}>
-              <Ionicons name="settings-outline" size={22} color={colors.text} />
+              <Icon name="cog-outline" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
         </GradientHero>
@@ -235,7 +235,7 @@ export default function Dashboard() {
                 <Text style={styles.unsortedCardText}>
                   {unsortedCount} photo{unsortedCount > 1 ? 's' : ''} à trier
                 </Text>
-                <Text style={styles.unsortedCardChevron}>›</Text>
+                <Icon name="chevron-right" size={20} color={colors.textSecondary} />
               </GlassCard>
             </TouchableOpacity>
           </View>
@@ -271,11 +271,7 @@ export default function Dashboard() {
                             <Image source={{ uri: r.photoUri }} style={styles.taskPhoto} />
                           ) : (
                             <View style={[styles.taskPhoto, styles.taskPhotoPlaceholder]}>
-                              <Ionicons
-                                name="leaf-outline"
-                                size={24}
-                                color={colors.textSecondary}
-                              />
+                              <Icon name="leaf" size={24} color={colors.textSecondary} />
                             </View>
                           )}
                           <View style={styles.taskContent}>
@@ -291,7 +287,7 @@ export default function Dashboard() {
                             </Text>
                           </View>
                           <View style={styles.doneButton}>
-                            <Ionicons name="checkmark" size={22} color="#fff" />
+                            <Icon name="check" size={22} color="#fff" />
                           </View>
                         </View>
                       </View>
@@ -320,7 +316,7 @@ export default function Dashboard() {
                             {label}
                           </Text>
                         </View>
-                        <Ionicons
+                        <Icon
                           name={isExpanded ? 'chevron-up' : 'chevron-down'}
                           size={20}
                           color={colors.textSecondary}
@@ -385,7 +381,7 @@ export default function Dashboard() {
                       disabled={monthOffset !== 0}
                       accessibilityLabel="Fait"
                       style={[styles.doneButton, monthOffset !== 0 && styles.doneButtonDisabled]}>
-                      <Ionicons name="checkmark" size={20} color="#fff" />
+                      <Icon name="check" size={20} color="#fff" />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => addSeasonalReminder(t)}
@@ -427,20 +423,17 @@ export default function Dashboard() {
                           <Image source={{ uri: p.photoUri }} style={styles.bloomImage} />
                         ) : (
                           <View style={[styles.bloomImage, styles.bloomImagePlaceholder]}>
-                            <Ionicons
-                              name="flower-outline"
-                              size={40}
-                              color={colors.textSecondary}
-                            />
+                            <Icon name="flower-outline" size={40} color={colors.textSecondary} />
                           </View>
                         )}
                         <TouchableOpacity
                           style={styles.bloomInfoBadge}
+                          accessibilityLabel={`Voir la fiche de ${p.name}`}
                           onPress={(e) => {
                             e.stopPropagation();
                             router.push(`/plant/${p.id}`);
                           }}>
-                          <Ionicons name="information-circle" size={20} color={colors.text} />
+                          <Icon name="information-outline" size={20} color={colors.text} />
                         </TouchableOpacity>
                       </View>
                       <Text style={styles.bloomName} numberOfLines={1}>
@@ -515,7 +508,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   unsortedCardText: { ...typography.label, color: colors.text },
-  unsortedCardChevron: { ...typography.title, color: colors.textSecondary },
   monthToggle: {
     paddingVertical: 4,
     paddingHorizontal: spacing.sm,

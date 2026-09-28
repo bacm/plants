@@ -10,14 +10,14 @@ appId: host.exp.Exponent
 - runFlow: _seed-lavande.yaml
 
 # _seed-lavande.yaml ends on Lavande's own detail screen (no tab bar),
-# scrolled down to where "Enregistrer" was — "‹ Retour" is up in the hero,
+# scrolled down to where "Enregistrer" was — "Retour" is up in the hero,
 # off screen (the iOS accessibility tree only exposes elements actually on
 # screen). Go back to Accueil (which has the shared tab bar) first.
 - scrollUntilVisible:
     element:
-      text: "‹ Retour"
+      text: "Retour"
     direction: UP
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: "Accueil, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - scrollUntilVisible:

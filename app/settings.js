@@ -6,6 +6,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import { GradientHero } from '../components/GradientHero';
 import { GlassCard } from '../components/GlassCard';
+import Icon from '../components/Icon';
 import { colors, spacing, typography, radius } from '../lib/theme';
 import { showMessage, confirm } from '../lib/dialogs';
 import { exportGarden, isGardenEmpty, importGarden } from '../lib/db';
@@ -135,7 +136,8 @@ export default function SettingsScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <GradientHero>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Retour</Text>
+            <Icon name="chevron-left" size={16} color={colors.textSecondary} />
+            <Text style={styles.backBtnText}>Retour</Text>
           </TouchableOpacity>
           <Text style={styles.heroTitle}>Réglages</Text>
         </GradientHero>
@@ -190,7 +192,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  backBtn: { marginBottom: 8 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
   heroTitle: { ...typography.display, color: colors.text },
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },

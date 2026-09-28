@@ -4,6 +4,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
+import Icon from '../../components/Icon';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { showMessage } from '../../lib/dialogs';
 import { getPlantById, createCareLog, addPhoto } from '../../lib/db';
@@ -76,7 +77,8 @@ export default function LogCareScreen() {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <GradientHero>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Annuler</Text>
+            <Icon name="chevron-left" size={16} color={colors.textSecondary} />
+            <Text style={styles.backBtnText}>Annuler</Text>
           </TouchableOpacity>
           <Text style={styles.heroTitle}>Enregistrer un soin</Text>
           <Text style={styles.heroSubtitle}>{plant.name}</Text>
@@ -148,7 +150,7 @@ const styles = StyleSheet.create({
   placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  backBtn: { marginBottom: 8 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
   heroTitle: { ...typography.display, color: colors.text },
   heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },

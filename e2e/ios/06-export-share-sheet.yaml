@@ -9,7 +9,7 @@ appId: host.exp.Exponent
 # _seed-minimal.yaml ends on Rosier rouge's own detail screen (no tab bar);
 # go back to Accueil (which has the shared tab bar) first. A single plant is
 # enough to exercise a non-empty export.
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: "Accueil, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - tapOn: "Réglages"

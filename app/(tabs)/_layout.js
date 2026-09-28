@@ -1,15 +1,23 @@
 import { Tabs, useRouter } from 'expo-router';
-import { Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import Icon from '../../components/Icon';
 import { colors, typography, radius, shadow } from '../../lib/theme';
 
+const TAB_ICONS = {
+  home: 'home-outline',
+  zones: 'map-outline',
+  bloom: 'flower-outline',
+  library: 'book-open-variant',
+};
+
 function TabIcon({ name, focused }) {
-  const icons = {
-    home: '🌸',
-    zones: '🗺️',
-    bloom: '📅',
-    library: '📚',
-  };
-  return <Text style={[styles.icon, focused && styles.iconFocused]}>{icons[name] || '•'}</Text>;
+  return (
+    <Icon
+      name={TAB_ICONS[name] || 'circle-outline'}
+      size={22}
+      color={focused ? colors.accent : colors.textSecondary}
+    />
+  );
 }
 
 // Central round button (ticket 056): opens the full-screen in-app camera
@@ -28,7 +36,7 @@ function CaptureTabButton(props) {
       accessibilityLabel="Prendre une photo"
       accessibilityRole="button"
       style={styles.captureButtonWrapper}>
-      <Text style={styles.captureButtonIcon}>📷</Text>
+      <Icon name="camera-outline" size={24} color="#fff" />
     </TouchableOpacity>
   );
 }
@@ -104,8 +112,6 @@ const styles = StyleSheet.create({
   },
   tabLabel: { ...typography.caption },
   tabItem: { paddingVertical: 4 },
-  icon: { fontSize: 22, opacity: 0.7 },
-  iconFocused: { opacity: 1 },
   captureButtonWrapper: {
     top: -20,
     alignSelf: 'center',
@@ -119,5 +125,4 @@ const styles = StyleSheet.create({
     borderColor: colors.surface,
     ...shadow.card,
   },
-  captureButtonIcon: { fontSize: 24 },
 });

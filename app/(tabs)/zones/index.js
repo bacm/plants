@@ -10,9 +10,10 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { GlassCard } from '../../../components/GlassCard';
+import Icon from '../../../components/Icon';
 import { colors, spacing, typography, radius } from '../../../lib/theme';
 import { getZones, getPlantsByZoneWithImages, getZoneContextInfo } from '../../../lib/db';
-import { SUN, REMINDER_KINDS, isUnknown, labelFor } from '../../../lib/enums';
+import { SUN, REMINDER_KINDS, isUnknown, labelFor, DEFAULT_ZONE_ICON } from '../../../lib/enums';
 import { parseImageUrls } from '../../../lib/plantFields';
 
 function getContextLine(info) {
@@ -132,7 +133,7 @@ export default function ZonesScreen() {
                     <View style={styles.cardHeader}>
                       <View style={styles.zoneInfo}>
                         <View style={styles.zoneNameRow}>
-                          <Text style={styles.zoneIcon}>{zone.icon || '🌱'}</Text>
+                          <Text style={styles.zoneIcon}>{zone.icon || DEFAULT_ZONE_ICON}</Text>
                           <Text style={styles.zoneName}>{zone.name}</Text>
                         </View>
                         {zone.description ? (
@@ -164,7 +165,7 @@ export default function ZonesScreen() {
                                 />
                               ) : (
                                 <View style={[styles.plantThumb, styles.plantPlaceholder]}>
-                                  <Text style={styles.plantPlaceholderText}>🌿</Text>
+                                  <Icon name="leaf" size={24} color={colors.textSecondary} />
                                 </View>
                               )}
                               <Text style={styles.plantName} numberOfLines={1}>
@@ -296,7 +297,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plantPlaceholderText: { fontSize: 24 },
   plantName: {
     ...typography.caption,
     color: colors.textSecondary,

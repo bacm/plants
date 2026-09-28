@@ -20,7 +20,7 @@ appId: host.exp.Exponent
 # _seed-minimal.yaml ends on Rosier rouge's own detail screen (no tab bar);
 # go back to Bibliothèque (which has the shared tab bar) and back in. It's
 # the only plant, so no search is needed to find it again.
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: "Bibliothèque, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - extendedWaitUntil:

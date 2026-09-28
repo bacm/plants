@@ -42,7 +42,7 @@ test.describe('in-app camera (garden walk)', () => {
     // plant/[id] is a full-screen route outside the (tabs) group, so the
     // bottom tab bar (and its central camera button) isn't rendered there;
     // go back to the zone detail screen, which is inside (tabs), first.
-    await visibleText(page, '‹ Retour').click();
+    await visibleText(page, 'Retour').click();
     await expect(visibleText(page, '1 plante')).toBeVisible();
 
     // --- Open the camera from the tab bar's central button ---

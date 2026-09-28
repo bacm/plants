@@ -90,7 +90,7 @@ test.describe('web smoke', () => {
     // it instead of trying to tap a "Zones" tab that doesn't exist yet.
     //
     // APP DEFECT found by this test (reported, not fixed -- see ticket 034's
-    // report): tapping "‹ Retour" here is a no-op. It works fine on a plant
+    // report): tapping "Retour" here is a no-op. It works fine on a plant
     // detail screen reached straight from creation, but once you've edited
     // the plant and/or logged a care entry -- both of which save via
     // router.replace(`/plant/${id}`) -- router.back() from that same screen
@@ -100,12 +100,12 @@ test.describe('web smoke', () => {
     // the replace() calls. Since the tab bar isn't rendered on this route
     // either, a user who edits or logs care has no way back to the zones
     // list. Asserting the intended behaviour so this fails loudly.
-    await visibleText(page, '‹ Retour').click(); // plant detail -> zone detail
+    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
     // "N plante(s)" only renders on the zone detail screen, so unlike the
     // plant/zone names (shown on the still-unmoved plant detail too) it
     // actually proves the navigation happened.
     await expect(visibleText(page, '1 plante')).toBeVisible();
-    await visibleText(page, '← Retour').click(); // zone detail -> zones list (tab)
+    await visibleText(page, 'Retour').click(); // zone detail -> zones list (tab)
     await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
     await expect(visibleText(page, zoneName)).toBeVisible();
     await expect(visibleText(page, plantName)).toBeVisible();
@@ -129,7 +129,7 @@ test.describe('web smoke', () => {
     // the zone pill, then check the plant lands in this zone anyway.
     await visibleText(page, 'Enregistrer').click();
     await expect(visibleText(page, secondPlantName)).toBeVisible();
-    await visibleText(page, '‹ Retour').click(); // plant detail -> zone detail
+    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
     await expect(visibleText(page, '2 plantes')).toBeVisible();
     await expect(visibleText(page, plantName)).toBeVisible();
     await expect(visibleText(page, secondPlantName)).toBeVisible();
@@ -271,7 +271,7 @@ test.describe('web smoke', () => {
     // it's still live, so getting there has to stay client-side routing
     // (clicks / router pushes), same as a real user would, rather than
     // page.goto() straight to '/'.
-    await visibleText(page, '‹ Retour').click(); // plant detail -> zone detail
+    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
     await expect(visibleText(page, '1 plante')).toBeVisible();
     await visibleText(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
@@ -286,7 +286,7 @@ test.describe('web smoke', () => {
     expect(fs.existsSync(backupPath)).toBe(true);
 
     // --- Delete the plant through its confirmation (ticket 042) ---
-    await visibleText(page, '← Retour').click(); // settings -> dashboard
+    await visibleText(page, 'Retour').click(); // settings -> dashboard
     await visibleText(page, 'Zones').click();
     await visibleText(page, zoneName).click();
     await visibleText(page, plantName).click();
@@ -313,7 +313,7 @@ test.describe('web smoke', () => {
     // The imported photo now holds a real `data:` URL (importGarden rebuilt
     // it from the archive's base64), not a `blob:` one, so a hard navigation
     // from here on is safe. (After a reload, expo-router's history is empty,
-    // so '← Retour' -- router.back() -- would be a no-op here; go straight
+    // so 'Retour' -- router.back() -- would be a no-op here; go straight
     // to '/' instead.)
     await page.reload();
     await expect(visibleText(page, 'Réglages')).toBeVisible();
@@ -385,7 +385,7 @@ test.describe('web smoke', () => {
     // plant/[id] is a full-screen route outside the (tabs) group, so the tab
     // bar isn't rendered there (see the comment on the first test above); go
     // back to the zone detail screen first, which is inside the tabs group.
-    await visibleText(page, '‹ Retour').click(); // plant detail -> zone detail
+    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
     await expect(visibleText(page, '1 plante')).toBeVisible();
     await visibleText(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
@@ -437,7 +437,7 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, plantName)).toBeVisible();
 
     // --- Bloom tab: "Sur l'année" shows this plant's row ---
-    await visibleText(page, '‹ Retour').click(); // plant detail -> zone detail
+    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
     await expect(visibleText(page, '1 plante')).toBeVisible();
     await visibleText(page, 'Floraison').click(); // zone detail (tabs) -> bloom tab
     await expect(visibleText(page, 'Ce qui fleurit par mois')).toBeVisible();

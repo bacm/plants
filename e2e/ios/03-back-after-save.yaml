@@ -1,5 +1,5 @@
 # Check 3: after saving an edit and a care log from a plant reached via
-# Bibliothèque, "‹ Retour" goes back to the Bibliothèque list (no navigation
+# Bibliothèque, "Retour" goes back to the Bibliothèque list (no navigation
 # desync, unlike the web router.back() bug from ticket 034).
 appId: host.exp.Exponent
 ---
@@ -11,7 +11,7 @@ appId: host.exp.Exponent
 # go back to Bibliothèque (which has the shared tab bar) and back in, so this
 # check exercises the "reached via Bibliothèque" navigation it's about. It's
 # the only plant, so no search is needed to find it again.
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: "Bibliothèque, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - extendedWaitUntil:
@@ -43,12 +43,12 @@ appId: host.exp.Exponent
 - tapOn: "Enregistrer"
 - runFlow: _dismiss-dev-menu.yaml
 
-# We're still scrolled down to "Enregistrer" from the log — "‹ Retour" is up
+# We're still scrolled down to "Enregistrer" from the log — "Retour" is up
 # in the hero, off screen (the iOS accessibility tree only exposes elements
 # actually on screen).
 - scrollUntilVisible:
     element:
-      text: "‹ Retour"
+      text: "Retour"
     direction: UP
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - assertVisible: ".*Rechercher.*"

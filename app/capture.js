@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Haptics from 'expo-haptics';
-import { Ionicons } from '@expo/vector-icons';
+import Icon from '../components/Icon';
 import { Stack, useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { colors, spacing, typography, radius, shadow } from '../lib/theme';
 import { prepareForStorage } from '../lib/photoPipeline';
@@ -307,13 +307,13 @@ export default function CaptureScreen() {
           onPress={() => close()}
           accessibilityLabel="Fermer l’appareil photo"
           style={styles.iconButton}>
-          <Text style={styles.iconButtonText}>✕</Text>
+          <Icon name="close" size={20} color={colors.text} />
         </TouchableOpacity>
         <TouchableOpacity
           onPress={openGallery}
           accessibilityLabel="Importer de la galerie"
           style={styles.iconButton}>
-          <Ionicons name="images-outline" size={20} color={colors.text} />
+          <Icon name="image-multiple-outline" size={20} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }} />
         {unsortedCount > 0 && (
@@ -339,16 +339,19 @@ export default function CaptureScreen() {
           <TouchableOpacity
             style={[styles.pill, bloomedToday && styles.pillActive]}
             disabled={selectedId === UNSORTED_ID}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: bloomedToday, disabled: selectedId === UNSORTED_ID }}
             onPress={toggleBloom}>
-            <Text style={[styles.pillText, bloomedToday && styles.pillTextActive]}>
-              🌸 En fleur{bloomedToday ? ' ✓' : ''}
-            </Text>
+            <Icon name="flower-outline" size={16} color={bloomedToday ? '#fff' : colors.text} />
+            <Text style={[styles.pillText, bloomedToday && styles.pillTextActive]}>En fleur</Text>
+            {bloomedToday && <Icon name="check" size={16} color="#fff" />}
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.pill}
             disabled={!lastShot || lastShot.kind !== 'plant'}
             onPress={openNote}>
-            <Text style={styles.pillText}>✎ Note</Text>
+            <Icon name="pencil-outline" size={16} color={colors.text} />
+            <Text style={styles.pillText}>Note</Text>
           </TouchableOpacity>
         </View>
 
@@ -449,7 +452,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  iconButtonText: { color: colors.text, fontSize: 18 },
   sortBadge: {
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
@@ -476,6 +478,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,

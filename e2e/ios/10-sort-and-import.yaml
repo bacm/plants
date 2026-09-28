@@ -12,7 +12,7 @@ appId: host.exp.Exponent
 
 # _seed-minimal.yaml ends on Rosier rouge's own detail screen (no tab bar) --
 # go back to Bibliothèque (shared tab bar) first, same as check 05.
-- tapOn: "‹ Retour"
+- tapOn: "Retour"
 - tapOn: "Bibliothèque, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 
@@ -71,7 +71,7 @@ appId: host.exp.Exponent
     timeout: 10000
 
 # --- The photo is really on the plant ---
-- tapOn: "← Retour"
+- tapOn: "Retour"
 - tapOn: "Bibliothèque, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - extendedWaitUntil:

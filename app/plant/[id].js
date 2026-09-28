@@ -17,6 +17,7 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard } from '../../components/GlassCard';
+import Icon from '../../components/Icon';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { showMessage, confirm, choose } from '../../lib/dialogs';
 import * as ImagePicker from 'expo-image-picker';
@@ -60,19 +61,19 @@ function getQuickTags(plant) {
   const tags = [];
   if (!isUnknown(plant.type)) {
     tags.push({
-      icon: iconFor(PLANT_TYPES, plant.type) || '🌱',
+      icon: iconFor(PLANT_TYPES, plant.type) || 'sprout-outline',
       label: labelFor(PLANT_TYPES, plant.type),
     });
   }
   if (plant.minTemperature != null) {
-    if (plant.minTemperature <= -15) tags.push({ icon: '❄️', label: 'Très rustique' });
-    else if (plant.minTemperature <= -5) tags.push({ icon: '❄️', label: 'Rustique' });
-    else tags.push({ icon: '🌡️', label: 'Gélif' });
+    if (plant.minTemperature <= -15) tags.push({ icon: 'snowflake', label: 'Très rustique' });
+    else if (plant.minTemperature <= -5) tags.push({ icon: 'snowflake', label: 'Rustique' });
+    else tags.push({ icon: 'thermometer', label: 'Gélif' });
   }
   if (plant.type === 'tree' || plant.type === 'shrub') {
-    tags.push({ icon: '🍎', label: 'Fruitier' });
+    tags.push({ icon: 'food-apple-outline', label: 'Fruitier' });
   } else if (plant.bloomStartMonth != null) {
-    tags.push({ icon: '🌸', label: 'Florifère' });
+    tags.push({ icon: 'flower-outline', label: 'Florifère' });
   }
   return tags.slice(0, 3);
 }
@@ -313,7 +314,12 @@ export default function PlantDetailScreen() {
                 {plant.notes ? (
                   <GlassCard style={styles.notesCard}>
                     <View style={styles.notesRow}>
-                      <Text style={styles.notesIcon}>📝</Text>
+                      <Icon
+                        name="note-text-outline"
+                        size={18}
+                        color={colors.text}
+                        style={styles.notesIcon}
+                      />
                       <Text style={styles.notesLabel}>Notes :</Text>
                     </View>
                     <Text style={styles.notesTextNew}>{plant.notes}</Text>
@@ -355,7 +361,12 @@ export default function PlantDetailScreen() {
                     {plant.fertilizer && (
                       <GlassCard style={styles.notesCard}>
                         <View style={styles.notesRow}>
-                          <Text style={styles.notesIcon}>🧪</Text>
+                          <Icon
+                            name="flask-outline"
+                            size={18}
+                            color={colors.text}
+                            style={styles.notesIcon}
+                          />
                           <Text style={styles.notesLabel}>Engrais :</Text>
                         </View>
                         <Text style={styles.notesTextNew}>{plant.fertilizer}</Text>
@@ -364,7 +375,12 @@ export default function PlantDetailScreen() {
                     {plant.pruning && (
                       <GlassCard style={styles.notesCard}>
                         <View style={styles.notesRow}>
-                          <Text style={styles.notesIcon}>✂️</Text>
+                          <Icon
+                            name="content-cut"
+                            size={18}
+                            color={colors.text}
+                            style={styles.notesIcon}
+                          />
                           <Text style={styles.notesLabel}>
                             Taille{plant.pruningMonth ? ` (${monthShort(plant.pruningMonth)})` : ''}{' '}
                             :
@@ -376,7 +392,12 @@ export default function PlantDetailScreen() {
                     {plant.winterCare && (
                       <GlassCard style={styles.notesCard}>
                         <View style={styles.notesRow}>
-                          <Text style={styles.notesIcon}>❄️</Text>
+                          <Icon
+                            name="snowflake"
+                            size={18}
+                            color={colors.text}
+                            style={styles.notesIcon}
+                          />
                           <Text style={styles.notesLabel}>Entretien hivernal :</Text>
                         </View>
                         <Text style={styles.notesTextNew}>{plant.winterCare}</Text>
@@ -393,20 +414,29 @@ export default function PlantDetailScreen() {
                       <View style={styles.infoGrid}>
                         {plant.toxicity !== 'none' && (
                           <InfoCard
-                            icon="⚠️"
+                            icon="alert-outline"
                             label="Toxicité"
                             value={labelFor(TOXICITY, plant.toxicity)}
                           />
                         )}
                         {plant.toxicity === 'none' && (
-                          <InfoCard icon="✅" label="Toxicité" value="Non toxique" />
+                          <InfoCard
+                            icon="check-circle-outline"
+                            label="Toxicité"
+                            value="Non toxique"
+                          />
                         )}
                       </View>
                     )}
                     {plant.pests && (
                       <GlassCard style={styles.notesCard}>
                         <View style={styles.notesRow}>
-                          <Text style={styles.notesIcon}>🐛</Text>
+                          <Icon
+                            name="bug-outline"
+                            size={18}
+                            color={colors.text}
+                            style={styles.notesIcon}
+                          />
                           <Text style={styles.notesLabel}>Ravageurs / Maladies :</Text>
                         </View>
                         <Text style={styles.notesTextNew}>{plant.pests}</Text>
@@ -420,7 +450,10 @@ export default function PlantDetailScreen() {
                   <>
                     <Text style={styles.ficheTechTitle}>MULTIPLICATION</Text>
                     <View style={styles.infoGrid}>
-                      <InfoCard icon="🌱" value={labelFor(PROPAGATION, plant.propagation) || '—'} />
+                      <InfoCard
+                        icon="sprout-outline"
+                        value={labelFor(PROPAGATION, plant.propagation) || '—'}
+                      />
                     </View>
                   </>
                 )}
@@ -432,7 +465,7 @@ export default function PlantDetailScreen() {
                     <View style={styles.infoGrid}>
                       {plant.harvestMonthStart != null && plant.harvestMonthEnd != null && (
                         <InfoCard
-                          icon="📅"
+                          icon="calendar-month-outline"
                           value={`${monthShort(plant.harvestMonthStart)} — ${monthShort(plant.harvestMonthEnd)}`}
                         />
                       )}
@@ -440,7 +473,12 @@ export default function PlantDetailScreen() {
                     {plant.harvest && (
                       <GlassCard style={styles.notesCard}>
                         <View style={styles.notesRow}>
-                          <Text style={styles.notesIcon}>🍎</Text>
+                          <Icon
+                            name="basket-outline"
+                            size={18}
+                            color={colors.text}
+                            style={styles.notesIcon}
+                          />
                           <Text style={styles.notesLabel}>Récolte :</Text>
                         </View>
                         <Text style={styles.notesTextNew}>{plant.harvest}</Text>
@@ -456,7 +494,12 @@ export default function PlantDetailScreen() {
                     {plant.companionPlants && (
                       <GlassCard style={styles.notesCard}>
                         <View style={styles.notesRow}>
-                          <Text style={styles.notesIcon}>🤝</Text>
+                          <Icon
+                            name="handshake-outline"
+                            size={18}
+                            color={colors.text}
+                            style={styles.notesIcon}
+                          />
                           <Text style={styles.notesLabel}>Plantes compagnes :</Text>
                         </View>
                         <Text style={styles.notesTextNew}>{plant.companionPlants}</Text>
@@ -465,7 +508,12 @@ export default function PlantDetailScreen() {
                     {plant.origin && (
                       <GlassCard style={styles.notesCard}>
                         <View style={styles.notesRow}>
-                          <Text style={styles.notesIcon}>🌍</Text>
+                          <Icon
+                            name="earth"
+                            size={18}
+                            color={colors.text}
+                            style={styles.notesIcon}
+                          />
                           <Text style={styles.notesLabel}>Origine :</Text>
                         </View>
                         <Text style={styles.notesTextNew}>{plant.origin}</Text>
@@ -507,7 +555,7 @@ export default function PlantDetailScreen() {
                 {photos.length === 0 ? (
                   <GlassCard>
                     <TouchableOpacity style={styles.emptyPhotos} onPress={showAddPhotoOptions}>
-                      <Text style={styles.emptyPhotosText}>📷</Text>
+                      <Icon name="camera-outline" size={40} color={colors.textSecondary} />
                       <Text style={styles.emptyPhotosHint}>Appuyez pour ajouter une photo</Text>
                     </TouchableOpacity>
                   </GlassCard>
@@ -684,7 +732,7 @@ export default function PlantDetailScreen() {
               style={styles.heroPlaceholder}
               onPress={showAddPhotoOptions}
               activeOpacity={0.8}>
-              <Text style={styles.heroPlaceholderEmoji}>📷</Text>
+              <Icon name="camera-outline" size={40} color={colors.textSecondary} />
               <Text style={styles.heroPlaceholderHint}>Appuyez pour ajouter une photo</Text>
             </TouchableOpacity>
           )}
@@ -692,13 +740,15 @@ export default function PlantDetailScreen() {
             <TouchableOpacity
               onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)'))}
               style={styles.heroBackBtn}>
+              <Icon name="chevron-left" size={20} color={hasHeroImage ? '#fff' : colors.text} />
               <Text style={[styles.heroBackText, !hasHeroImage && styles.heroBackTextOnLight]}>
-                ‹ Retour
+                Retour
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}>
-              <Text style={styles.heroSettingsIcon}>⚙️</Text>
+              onPress={() => router.push({ pathname: '/plant/edit', params: { id } })}
+              accessibilityLabel="Modifier la fiche">
+              <Icon name="pencil-outline" size={22} color={hasHeroImage ? '#fff' : colors.text} />
             </TouchableOpacity>
           </View>
         </View>
@@ -715,7 +765,12 @@ export default function PlantDetailScreen() {
               <View style={styles.quickTagsRow}>
                 {getQuickTags(plant).map((tag, i) => (
                   <View key={i} style={styles.quickTagBadge}>
-                    <Text style={styles.quickTagIcon}>{tag.icon}</Text>
+                    <Icon
+                      name={tag.icon}
+                      size={22}
+                      color={colors.text}
+                      style={styles.quickTagIcon}
+                    />
                     <Text style={styles.quickTagLabel}>{tag.label}</Text>
                   </View>
                 ))}
@@ -786,7 +841,8 @@ export default function PlantDetailScreen() {
         <View style={styles.lightboxOverlay}>
           <View style={styles.lightboxHeader}>
             <TouchableOpacity style={styles.lightboxBackBtn} onPress={() => setSelectedPhoto(null)}>
-              <Text style={styles.lightboxBackText}>← Retour</Text>
+              <Icon name="chevron-left" size={18} color="#fff" />
+              <Text style={styles.lightboxBackText}>Retour</Text>
             </TouchableOpacity>
           </View>
           {selectedPhoto && (
@@ -822,7 +878,7 @@ function InfoCard({ icon, label, value }) {
   return (
     <GlassCard style={styles.infoCardOuter} noPadding>
       <View style={styles.infoCardInner}>
-        <Text style={styles.infoCardIcon}>{icon}</Text>
+        <Icon name={icon} size={28} color={colors.text} style={styles.infoCardIcon} />
         {label ? <Text style={styles.infoCardLabel}>{label}</Text> : null}
         <Text style={styles.infoCardValue}>{value}</Text>
       </View>
@@ -863,12 +919,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
   },
-  heroBackBtn: { paddingVertical: spacing.sm, paddingRight: spacing.lg },
+  heroBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.lg,
+  },
   heroBackText: { ...typography.body, color: '#fff', fontWeight: '600', fontSize: 18 },
   // Placeholder-only: it sits on the now-light heroPlaceholder background
   // instead of a photo, so white text would disappear.
   heroBackTextOnLight: { color: colors.text },
-  heroSettingsIcon: { fontSize: 22, paddingVertical: spacing.sm },
   heroPlaceholder: {
     width: '100%',
     height: HERO_HEIGHT,
@@ -876,7 +936,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroPlaceholderEmoji: { fontSize: 48 },
   heroPlaceholderHint: { ...typography.caption, color: colors.textSecondary, marginTop: 8 },
 
   // Name + Quick Tags
@@ -1116,7 +1175,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     zIndex: 10,
   },
-  lightboxBackBtn: { paddingVertical: spacing.sm, paddingRight: spacing.lg },
+  lightboxBackBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.lg,
+  },
   lightboxBackText: { ...typography.body, color: '#fff' },
   lightboxImageContainer: {
     width: Dimensions.get('window').width,

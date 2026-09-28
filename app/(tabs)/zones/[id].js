@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../../components/GradientHero';
 import { GlassCard } from '../../../components/GlassCard';
+import Icon from '../../../components/Icon';
 import { colors, spacing, typography, radius, colorHex } from '../../../lib/theme';
 import { showMessage, confirm } from '../../../lib/dialogs';
 import { getZones, getPlants, deleteZone, countPlantsInZone } from '../../../lib/db';
@@ -75,7 +76,8 @@ export default function ZoneDetailScreen() {
         }>
         <GradientHero>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>← Retour</Text>
+            <Icon name="chevron-left" size={16} color={colors.textSecondary} />
+            <Text style={styles.backBtnText}>Retour</Text>
           </TouchableOpacity>
           <Text style={styles.heroTitle}>{zone.name}</Text>
           {zone.description ? <Text style={styles.heroSubtitle}>{zone.description}</Text> : null}
@@ -126,7 +128,7 @@ export default function ZoneDetailScreen() {
                       <Text style={styles.plantName}>{p.name}</Text>
                       {p.latinName ? <Text style={styles.latin}>{p.latinName}</Text> : null}
                     </View>
-                    <Text style={styles.chevron}>→</Text>
+                    <Icon name="chevron-right" size={18} color={colors.textSecondary} />
                   </View>
                 </GlassCard>
               </TouchableOpacity>
@@ -144,7 +146,7 @@ const styles = StyleSheet.create({
   placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  backBtn: { marginBottom: 8 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
   heroTitle: { ...typography.display, color: colors.text, marginBottom: 4 },
   heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary },
@@ -172,5 +174,4 @@ const styles = StyleSheet.create({
   plantInfo: { flex: 1 },
   plantName: { ...typography.title, color: colors.text },
   latin: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
-  chevron: { ...typography.body, color: colors.textSecondary },
 });

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { useRouter, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
+import Icon from '../../components/Icon';
 import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
 import { getPlants, getPlantsBloomingInMonth } from '../../lib/db';
 import { MONTH_SHORT, monthName } from '../../lib/months';
@@ -140,7 +141,7 @@ export default function BloomScreen() {
                           <Text style={styles.plantName}>{p.name}</Text>
                           {p.zoneName ? <Text style={styles.zoneTag}>{p.zoneName}</Text> : null}
                         </View>
-                        <Text style={styles.chevron}>→</Text>
+                        <Icon name="chevron-right" size={18} color={colors.textSecondary} />
                       </View>
                     </GlassCard>
                   </TouchableOpacity>
@@ -275,7 +276,6 @@ const styles = StyleSheet.create({
   plantInfo: { flex: 1 },
   plantName: { ...typography.title, color: colors.text },
   zoneTag: { ...typography.caption, color: colors.textSecondary, marginTop: 2 },
-  chevron: { ...typography.body, color: colors.textSecondary },
   viewSwitch: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,

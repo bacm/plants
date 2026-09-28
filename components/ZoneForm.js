@@ -4,26 +4,9 @@ import { showMessage } from '../lib/dialogs';
 import { useRouter } from 'expo-router';
 import { GradientHero } from './GradientHero';
 import { GlassCard } from './GlassCard';
+import Icon from './Icon';
 import { colors, spacing, typography, radius } from '../lib/theme';
-
-const ZONE_ICONS = [
-  '🌱',
-  '🌳',
-  '🌿',
-  '🪴',
-  '🌺',
-  '🌻',
-  '🌹',
-  '🍅',
-  '🥕',
-  '🌾',
-  '🍃',
-  '🪻',
-  '🌵',
-  '🎋',
-  '🍀',
-  '☘️',
-];
+import { ZONE_ICONS, DEFAULT_ZONE_ICON } from '../lib/enums';
 
 // Shared by app/zone/new.js and app/zone/edit.js: same name/icon/description
 // fields, same save-and-go-back flow. Only the hero copy, save label and
@@ -31,12 +14,12 @@ const ZONE_ICONS = [
 export function ZoneForm({
   heroTitle,
   heroSubtitle,
-  backLabel = '← Annuler',
+  backLabel = 'Annuler',
   saveLabel,
   savingLabel = 'Enregistrement…',
   initialName = '',
   initialDescription = '',
-  initialIcon = '🌱',
+  initialIcon = DEFAULT_ZONE_ICON,
   onSave,
 }) {
   const router = useRouter();
@@ -70,6 +53,7 @@ export function ZoneForm({
             onPress={() => router.back()}
             style={styles.backBtn}
             accessibilityLabel="Annuler et revenir en arrière">
+            <Icon name="chevron-left" size={16} color={colors.textSecondary} />
             <Text style={styles.backBtnText}>{backLabel}</Text>
           </TouchableOpacity>
           <Text style={styles.heroTitle}>{heroTitle}</Text>
@@ -131,7 +115,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  backBtn: { marginBottom: 8 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
   heroTitle: { ...typography.display, color: colors.text },
   heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },

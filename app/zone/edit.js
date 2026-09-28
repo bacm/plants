@@ -4,6 +4,7 @@ import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ZoneForm } from '../../components/ZoneForm';
 import { colors, typography, spacing } from '../../lib/theme';
 import { getZones, updateZone } from '../../lib/db';
+import { DEFAULT_ZONE_ICON } from '../../lib/enums';
 
 export default function EditZoneScreen() {
   const { id } = useLocalSearchParams();
@@ -32,11 +33,11 @@ export default function EditZoneScreen() {
     <ZoneForm
       heroTitle="Modifier la zone"
       heroSubtitle={zone.name}
-      backLabel="← Retour"
+      backLabel="Retour"
       saveLabel="Enregistrer"
       initialName={zone.name}
       initialDescription={zone.description || ''}
-      initialIcon={zone.icon || '🌱'}
+      initialIcon={zone.icon || DEFAULT_ZONE_ICON}
       onSave={(values) => updateZone(id, values)}
     />
   );

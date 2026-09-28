@@ -16,6 +16,7 @@ import { showMessage } from '../../lib/dialogs';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../../components/GradientHero';
 import { GlassCard } from '../../components/GlassCard';
+import Icon from '../../components/Icon';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { getPlantById, updatePlant, getZones } from '../../lib/db';
 import {
@@ -181,7 +182,8 @@ export default function EditPlantScreen() {
         keyboardShouldPersistTaps="handled">
         <GradientHero>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>{'←'} Annuler</Text>
+            <Icon name="chevron-left" size={16} color={colors.textSecondary} />
+            <Text style={styles.backBtnText}>Annuler</Text>
           </TouchableOpacity>
           <Text style={styles.heroTitle}>Modifier</Text>
         </GradientHero>
@@ -200,11 +202,12 @@ export default function EditPlantScreen() {
             <TouchableOpacity
               style={styles.searchButton}
               onPress={handleSearch}
-              disabled={searching || searchQuery.trim().length < 2}>
+              disabled={searching || searchQuery.trim().length < 2}
+              accessibilityLabel="Rechercher la plante">
               {searching ? (
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
-                <Text style={styles.searchButtonText}>{'🔍'}</Text>
+                <Icon name="magnify" size={18} color="#fff" />
               )}
             </TouchableOpacity>
           </View>
@@ -289,7 +292,11 @@ export default function EditPlantScreen() {
                     key={s}
                     onPress={() => setField('sun', toggleChip(form.sun, s))}
                     style={[styles.segBtn, form.sun === s && styles.segBtnActive]}>
-                    <Text style={styles.segIcon}>{icon}</Text>
+                    <Icon
+                      name={icon}
+                      size={14}
+                      color={form.sun === s ? '#fff' : colors.textSecondary}
+                    />
                     <Text
                       style={[styles.segLabel, form.sun === s && styles.segLabelActive]}
                       numberOfLines={1}>
@@ -307,7 +314,11 @@ export default function EditPlantScreen() {
                     key={w}
                     onPress={() => setField('water', toggleChip(form.water, w))}
                     style={[styles.segBtn, form.water === w && styles.segBtnActive]}>
-                    <Text style={styles.segIcon}>{icon}</Text>
+                    <Icon
+                      name={icon}
+                      size={14}
+                      color={form.water === w ? '#fff' : colors.textSecondary}
+                    />
                     <Text
                       style={[styles.segLabel, form.water === w && styles.segLabelActive]}
                       numberOfLines={1}>
@@ -701,7 +712,7 @@ const styles = StyleSheet.create({
   placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  backBtn: { marginBottom: 4 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
   backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
   heroTitle: { ...typography.display, color: colors.text },
   section: { paddingHorizontal: spacing.md, marginTop: spacing.md },
@@ -716,9 +727,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: radius.md,
     marginLeft: 8,
-  },
-  searchButtonText: {
-    fontSize: 18,
   },
   suggestionsOverlay: {
     position: 'absolute',
@@ -832,9 +840,6 @@ const styles = StyleSheet.create({
   },
   segBtnActive: {
     backgroundColor: colors.accentSoft,
-  },
-  segIcon: {
-    fontSize: 14,
   },
   segLabel: {
     ...typography.caption,

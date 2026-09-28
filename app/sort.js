@@ -15,6 +15,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { GradientHero } from '../components/GradientHero';
 import { GlassCard } from '../components/GlassCard';
 import { PlantStrip } from '../components/PlantStrip';
+import Icon from '../components/Icon';
 import { colors, spacing, typography, radius } from '../lib/theme';
 import { importPhotosFromLibrary } from '../lib/libraryImport';
 import { resolveAssignDate } from '../lib/sortAssignDate';
@@ -133,7 +134,7 @@ export default function SortScreen() {
         // addPhoto already succeeded; the row left behind is a harmless
         // duplicate the user can clear from "À trier" manually.
       }
-      showConfirmation(`Ajoutée à ${plant?.name ?? 'la plante'} ✓`);
+      showConfirmation(`Ajoutée à ${plant?.name ?? 'la plante'}`);
       removeFromQueue(current.id);
     },
     [current, plants, editedDate]
@@ -223,7 +224,8 @@ export default function SortScreen() {
     <View style={styles.container}>
       <GradientHero>
         <TouchableOpacity onPress={close} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>← Retour</Text>
+          <Icon name="chevron-left" size={16} color={colors.textSecondary} />
+          <Text style={styles.backBtnText}>Retour</Text>
         </TouchableOpacity>
         <View style={styles.heroRow}>
           <View>
@@ -293,6 +295,7 @@ export default function SortScreen() {
 
           {confirmation && (
             <View style={styles.confirmationBanner}>
+              <Icon name="check" size={16} color="#fff" />
               <Text style={styles.confirmationText}>{confirmation}</Text>
             </View>
           )}
@@ -324,7 +327,7 @@ export default function SortScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  backBtn: { marginBottom: 8 },
+  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
   heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   heroTitle: { ...typography.display, color: colors.text },
@@ -389,6 +392,9 @@ const styles = StyleSheet.create({
   },
   dateError: { ...typography.caption, color: colors.danger },
   confirmationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     backgroundColor: colors.accentSoft,
     borderRadius: radius.sm,
     paddingVertical: spacing.xs,
