@@ -10,14 +10,14 @@ appId: host.exp.Exponent
 # _seed-minimal.yaml ends on Rosier rouge's own detail screen (no tab bar);
 # go back to Zones (which has the shared tab bar) first.
 - tapOn: "‹ Retour"
-- tapOn: "Zones, tab, 2 of 4"
+- tapOn: "Zones, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - tapOn: ".*Massif sud.*"
 - tapOn: "Supprimer la zone"
 - assertVisible: "Les 1 plante de cette zone resteront dans votre jardin, sans zone."
 - tapOn: "Supprimer"
 
-- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: "Bibliothèque, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 # It's the only plant, so no search is needed to find it again.
 - extendedWaitUntil:

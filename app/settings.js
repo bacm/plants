@@ -58,8 +58,8 @@ export default function SettingsScreen() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const { tables, photoData } = await exportGarden();
-      const backup = buildBackup({ tables, photoData });
+      const { tables, photoData, unsortedPhotoData } = await exportGarden();
+      const backup = buildBackup({ tables, photoData, unsortedPhotoData });
       const json = JSON.stringify(backup, null, 2);
       const fileName = todayFileName();
       if (Platform.OS === 'web') {

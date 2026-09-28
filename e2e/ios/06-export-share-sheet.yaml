@@ -10,7 +10,7 @@ appId: host.exp.Exponent
 # go back to Accueil (which has the shared tab bar) first. A single plant is
 # enough to exercise a non-empty export.
 - tapOn: "‹ Retour"
-- tapOn: "Accueil, tab, 1 of 4"
+- tapOn: "Accueil, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - tapOn: "Réglages"
 - tapOn: "Exporter mon jardin"

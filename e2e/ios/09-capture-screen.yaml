@@ -1,0 +1,81 @@
+# Check 9: the garden-walk in-app camera (ticket 056). The simulator has no
+# real camera, so the preview stays black — expected, not asserted here.
+# This covers what only the simulator can: the tab bar's central button
+# opening the camera, the permission grant, the plant strip's contents
+# ("?" / the seeded plant / "+"), and "En fleur" persisting across a
+# reopen. The actual shutter needs a real camera and is 040's job (device
+# only).
+appId: host.exp.Exponent
+---
+- clearState
+- runFlow: _open-app.yaml
+- runFlow: _seed-lavande.yaml
+
+# _seed-lavande.yaml ends on Lavande's own detail screen (no tab bar),
+# scrolled down to where "Enregistrer" was — go back to Accueil (which has
+# the shared tab bar, including the central camera button) first.
+- scrollUntilVisible:
+    element:
+      text: "‹ Retour"
+    direction: UP
+- tapOn: "‹ Retour"
+- tapOn: "Accueil, tab.*"
+- runFlow: _dismiss-dev-menu.yaml
+
+- tapOn: "Prendre une photo"
+# First run on a fresh install: the in-app permission screen's own
+# "Autoriser" button (app/capture.js) triggers the real iOS permission
+# request; accept the system dialog if one appears (a simulator reused
+# across runs may already have it granted -- no dialog, no-op either way).
+- tapOn:
+    text: "Autoriser"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- extendedWaitUntil:
+    visible: "Fermer l’appareil photo"
+    timeout: 10000
+
+# The strip: "?" first, the seeded plant, "+" last. Each item's thumbnail
+# initial and name are grouped by iOS into one accessible label ("?, À
+# trier"), hence the wildcards rather than an exact match. The zone/plant
+# load is also async (getZones/getPlantsByZoneWithImages), hence
+# extendedWaitUntil rather than a bare assertVisible for the first one.
+- extendedWaitUntil:
+    visible: ".*À trier.*"
+    timeout: 5000
+- assertVisible: ".*Lavande.*"
+- assertVisible: ".*Nouvelle.*"
+
+# --- "En fleur" persists across a reopen ---
+- tapOn: ".*Lavande.*"
+- assertVisible: "🌸 En fleur"
+- tapOn: "🌸 En fleur"
+- assertVisible: "🌸 En fleur ✓"
+
+- tapOn: "Fermer l’appareil photo"
+
+# Relaunch (without clearState, so the seeded garden and the bloom
+# observation just recorded survive) rather than reopening the camera
+# in-place: this is the same "reopen and check it stuck" the ticket asks
+# for, and sidesteps an in-app navigation flake this flow hit going
+# camera -> close -> camera a second time within one launch.
+- stopApp
+- runFlow: _open-app.yaml
+- tapOn: "Accueil, tab.*"
+- runFlow: _dismiss-dev-menu.yaml
+- tapOn: "Prendre une photo"
+- tapOn:
+    text: "Autoriser"
+    optional: true
+- tapOn:
+    text: "OK"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Lavande.*"
+    timeout: 10000
+- tapOn: ".*Lavande.*"
+- assertVisible: "🌸 En fleur ✓"
+
+- tapOn: "Fermer l’appareil photo"

@@ -21,7 +21,7 @@ appId: host.exp.Exponent
 # go back to Bibliothèque (which has the shared tab bar) and back in. It's
 # the only plant, so no search is needed to find it again.
 - tapOn: "‹ Retour"
-- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: "Bibliothèque, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - extendedWaitUntil:
     visible: ".*Rosier rouge.*"
@@ -67,7 +67,7 @@ appId: host.exp.Exponent
 
 - stopApp
 - runFlow: _open-app.yaml
-- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: "Bibliothèque, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - extendedWaitUntil:
     visible: ".*Rosier rouge.*"

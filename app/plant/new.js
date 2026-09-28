@@ -40,7 +40,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 
 export default function NewPlantScreen() {
   const router = useRouter();
-  const { zoneId } = useLocalSearchParams();
+  const { zoneId, returnTo } = useLocalSearchParams();
   const [zones, setZones] = useState([]);
   const [form, setForm] = useState(emptyPlantForm);
   const [errors, setErrors] = useState({});
@@ -127,7 +127,14 @@ export default function NewPlantScreen() {
     setSaving(true);
     try {
       const plantId = createPlant(formToPlantValues(form));
-      router.replace(`/plant/${plantId}`);
+      if (returnTo === 'capture') {
+        // The garden-walk camera (ticket 056) opened this screen from its
+        // "+" strip item; go back there with the new plant preselected
+        // instead of jumping to its detail screen.
+        router.replace(`/capture?selectPlantId=${plantId}`);
+      } else {
+        router.replace(`/plant/${plantId}`);
+      }
     } catch (e) {
       showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
     } finally {

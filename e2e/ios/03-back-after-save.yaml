@@ -12,7 +12,7 @@ appId: host.exp.Exponent
 # check exercises the "reached via Bibliothèque" navigation it's about. It's
 # the only plant, so no search is needed to find it again.
 - tapOn: "‹ Retour"
-- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: "Bibliothèque, tab.*"
 - runFlow: _dismiss-dev-menu.yaml
 - extendedWaitUntil:
     visible: ".*Rosier rouge.*"

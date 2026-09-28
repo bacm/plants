@@ -22,7 +22,13 @@
           }
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Pour photographier vos plantes pendant une balade au jardin."
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true,

@@ -43,6 +43,8 @@ install, so the migrations run on real data):
       removes it; a suggested yearly reminder can be added (022, 031)
 - [ ] With 4 grouped task cards, "Ce mois-ci au jardin" still starts on the
       first screen (045)
+- [ ] Camera tab: shots land on the selected plant, "?" shots in "À trier",
+      undo removes the last one, "En fleur" sticks for the day (056)
 - [ ] Any defect becomes its own ticket
 
 ## Notes

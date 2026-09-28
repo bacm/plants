@@ -18,7 +18,7 @@ appId: host.exp.Exponent
 ---
 
 # --- Zones ---
-- tapOn: "Zones, tab, 2 of 4"
+- tapOn: "Zones, tab.*"
 - tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
 - tapOn: "Nom de la zone"
 - inputText: "Massif sud"
@@ -38,7 +38,7 @@ appId: host.exp.Exponent
 - tapOn: "Créer la zone"
 
 # --- Rosier rouge: Massif sud, bloom 5-7, rouge ---
-- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: "Bibliothèque, tab.*"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'

@@ -40,3 +40,7 @@ observations — never automatically. Pairs with 024 (year overview) and 030
 
 Raised with 056: "En fleur" is a one-tap tag on quick capture, and memories
 feed the home screen (058). Together they are the core of the return loop.
+
+Storage done in 056: `bloom_observations` (plantId, date, kind 'open'),
+written by the camera's "En fleur". Left here: recording the end of bloom, the
+year-over-year comparison, memories, and the observed band in the bloom view.

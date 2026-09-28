@@ -8,7 +8,7 @@ appId: host.exp.Exponent
 # This check only exercises validation on a brand-new plant, so no seeded
 # data is needed — go straight from the dashboard (which already has the
 # shared tab bar) to Bibliothèque.
-- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: "Bibliothèque, tab.*"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'

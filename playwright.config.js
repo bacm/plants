@@ -20,6 +20,21 @@ module.exports = defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: /capture\.spec\.js/,
+    },
+    {
+      // Ticket 056: the in-app camera needs a real (if fake) camera stream.
+      // Chromium's fake device flags give every getUserMedia() call a
+      // synthetic video track instead of prompting for a real camera, so the
+      // capture screen (and only it) is exercised on this project.
+      name: 'chromium-fake-camera',
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: {
+          args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'],
+        },
+      },
+      testMatch: /capture\.spec\.js/,
     },
   ],
   webServer: {

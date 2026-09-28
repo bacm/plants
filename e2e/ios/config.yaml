@@ -12,3 +12,4 @@ flows:
   - "06-export-share-sheet.yaml"
   - "07-delete-zone-keeps-plants.yaml"
   - "08-monthly-task.yaml"
+  - "09-capture-screen.yaml"

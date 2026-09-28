@@ -13,14 +13,14 @@
 # `runFlow` from a numbered check.
 appId: host.exp.Exponent
 ---
-- tapOn: "Zones, tab, 2 of 4"
+- tapOn: "Zones, tab.*"
 - tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
 - tapOn: "Nom de la zone"
 - inputText: "Massif sud"
 - hideKeyboard
 - tapOn: "Créer la zone"
 
-- tapOn: "Bibliothèque, tab, 4 of 4"
+- tapOn: "Bibliothèque, tab.*"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
     visible: 'Nom de la plante *'
