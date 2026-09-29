@@ -1,5 +1,5 @@
 # Check 8: "Ce mois-ci au jardin" derives Lavande's pruning task from its
-# pruning month, seeded as the current month (${MONTH_SHORT}, computed by
+# pruning month, seeded as the current month (${MONTH_NAME}, computed by
 # scripts/e2e-ios.sh) so this always matches whichever month this flow
 # actually runs in — see docs/backlog/055 notes. Ticking its "Fait"
 # checkmark removes it from the list.

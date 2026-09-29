@@ -1,5 +1,13 @@
-# Check 4: month 13 and date 2026-02-30 are refused with a message, and both
-# block save (lib/validation.js parseMonth / parseISODate).
+# Check 4: a bloom range missing its end month, and an invalid calendar date,
+# are both refused with an inline message and block save (lib/validation.js
+# checkMonthPair / parseISODate).
+#
+# Ticket 069 restyled the bloom/harvest months from text fields into a
+# MonthRangePicker (a 1-12 tap grid), which makes entering an out-of-range
+# month like "13" impossible through the UI any more -- there is no longer a
+# way to trigger parseMonth's own range check from the form. This flow now
+# exercises the other month-related validation path that is still reachable:
+# picking only a start month and leaving the end unset.
 appId: host.exp.Exponent
 ---
 - clearState
@@ -11,23 +19,21 @@ appId: host.exp.Exponent
 - tapOn: "Bibliothèque, tab.*"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
-    visible: 'Nom de la plante *'
+    visible: 'Nom de la plante'
     timeout: 15000
-- tapOn: 'Nom de la plante *'
+# Ticket 069: the name field is a labelled components/form/Field, so its own
+# label text ("Nom de la plante") sits right above the input and would also
+# match a plain tapOn — target the placeholder instead, which only the
+# TextInput itself carries, to land on the actual field.
+- tapOn: "ex. Rosier grimpant"
 - inputText: "Test Validation"
 - hideKeyboard
-- tapOn: "Plus de details  ▼"
+- tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:
-      text: "Debut"
+      text: "Période"
     direction: DOWN
-- tapOn: "Debut"
-- inputText: "13"
-- tapOn: "Fin"
-- inputText: "5"
-# Number-pad fields have no "Done" key; tap a static label instead (the
-# form's ScrollView uses keyboardShouldPersistTaps="handled").
-- tapOn: "Floraison"
+- tapOn: "Mai"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"
@@ -37,17 +43,16 @@ appId: host.exp.Exponent
 # The iOS accessibility tree (unlike React Native's own view tree) only
 # exposes elements actually on screen, and we're still scrolled down to
 # "Enregistrer" at this point — scroll back up to where the inline error
-# renders (right under the field) before asserting on it.
+# renders (right under the Période picker) before asserting on it.
 - scrollUntilVisible:
     element:
-      text: "Mois entre 1 et 12"
+      text: "Indiquez aussi le mois de fin"
     direction: UP
-- assertVisible: "Mois entre 1 et 12"
+- assertVisible: "Indiquez aussi le mois de fin"
 
-- tapOn: "13"
-- eraseText: 2
-- inputText: "5"
-- tapOn: "Floraison"
+# Tapping "Mai" again closes the range on itself (a single-month 5-5 range),
+# which satisfies checkMonthPair and clears the error.
+- tapOn: "Mai"
 - scrollUntilVisible:
     element:
       text: "AAAA-MM-JJ"
@@ -55,7 +60,7 @@ appId: host.exp.Exponent
 - tapOn: "AAAA-MM-JJ"
 - inputText: "2026-02-30"
 # This field's keyboard has no "Done" key either; tap the label instead.
-- tapOn: "DATE D'AJOUT"
+- tapOn: "Date d'ajout"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"

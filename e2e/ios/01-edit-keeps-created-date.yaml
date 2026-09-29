@@ -21,11 +21,11 @@ appId: host.exp.Exponent
       text: "Date d'ajout"
     direction: DOWN
 - tapOn:
-    below: "DATE D'AJOUT"
+    below: "Date d'ajout"
 - eraseText: 12
 - inputText: "2024-03-15"
 # This field's keyboard has no "Done" key either; tap the label instead.
-- tapOn: "DATE D'AJOUT"
+- tapOn: "Date d'ajout"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"
@@ -45,9 +45,9 @@ appId: host.exp.Exponent
 - assertVisible: "2024-03-15"
 
 - tapOn:
-    below: "DATE D'AJOUT"
+    below: "Date d'ajout"
 - eraseText: 12
-- tapOn: "DATE D'AJOUT"
+- tapOn: "Date d'ajout"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"

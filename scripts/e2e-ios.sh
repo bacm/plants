@@ -167,14 +167,16 @@ fi
 
 APP_URL="exp://127.0.0.1:$PORT"
 
-# Short French month abbreviation for "today", matching lib/months.js's
-# MONTH_SHORT array (index 0 = janvier). 08-monthly-task.yaml needs this to
-# select the current month in the pruning-month picker, so its seeded plant
-# always matches whichever month this actually runs in instead of a
+# Full French month name for "today", matching lib/months.js's MONTH_NAMES
+# array (index 0 = janvier). _seed-lavande.yaml (ticket 069: the pruning
+# month is now picked by tapping a MonthRangePicker cell, whose
+# accessibilityLabel is the full month name, not an abbreviation) needs this
+# to select the current month in the pruning-month picker, so its seeded
+# plant always matches whichever month this actually runs in instead of a
 # hard-coded one.
-MONTH_SHORT_NAMES=(Jan Fév Mar Avr Mai Juin Juil Août Sep Oct Nov Déc)
+MONTH_NAMES=(Janvier Février Mars Avril Mai Juin Juillet Août Septembre Octobre Novembre Décembre)
 MONTH_INDEX=$((10#$(date +%m) - 1))
-MONTH_SHORT="${MONTH_SHORT_NAMES[$MONTH_INDEX]}"
+MONTH_NAME="${MONTH_NAMES[$MONTH_INDEX]}"
 
 echo "Running Maestro flows against $APP_URL on device $SIM_UDID..."
 
@@ -182,7 +184,7 @@ set +e
 maestro test e2e/ios/ \
   --udid "$SIM_UDID" \
   --env "APP_URL=$APP_URL" \
-  --env "MONTH_SHORT=$MONTH_SHORT" \
+  --env "MONTH_NAME=$MONTH_NAME" \
   --test-output-dir "$OUT_DIR/run"
 STATUS=$?
 set -e

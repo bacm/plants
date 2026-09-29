@@ -49,7 +49,7 @@ test.describe('À trier (sort + import)', () => {
     await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
     await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
-    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await page.getByLabel('Nom de la plante', { exact: true }).fill(plantName);
     await visibleText(page, zoneName).click();
     await visibleText(page, 'Enregistrer').click();
     await expect(visibleText(page, plantName)).toBeVisible();

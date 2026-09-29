@@ -26,26 +26,27 @@ appId: host.exp.Exponent
 - tapOn: "Bibliothèque, tab.*"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
-    visible: 'Nom de la plante *'
+    visible: 'Nom de la plante'
     timeout: 15000
-- tapOn: 'Nom de la plante *'
+# Ticket 069: the name field is a labelled components/form/Field, so its own
+# label text ("Nom de la plante") sits right above the input and would also
+# match a plain tapOn — target the placeholder instead, which only the
+# TextInput itself carries, to land on the actual field.
+- tapOn: "ex. Rosier grimpant"
 - inputText: "Rosier rouge"
 - hideKeyboard
 - tapOn: "Massif sud"
-- tapOn: "Plus de details  ▼"
+- tapOn: "Plus de détails"
+# Bloom months are now MonthRangePicker taps (no text entry) — tap the start
+# and end month cells by their accessibilityLabel (the full French month
+# name). "Période" is the bloom picker's own label, scrolled to first so
+# only its row is on screen when "Mai"/"Juillet" are tapped.
 - scrollUntilVisible:
     element:
-      text: "Debut"
+      text: "Période"
     direction: DOWN
-- tapOn: "Debut"
-- inputText: "5"
-- tapOn: "Fin"
-- inputText: "7"
-# Number-pad fields have no "Done" key, so hideKeyboard has nothing to press;
-# tap a static label instead (the form's ScrollView uses
-# keyboardShouldPersistTaps="handled", so this both dismisses the keyboard
-# and does nothing else).
-- tapOn: "Floraison"
+- tapOn: "Mai"
+- tapOn: "Juillet"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"

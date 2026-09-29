@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Icon from '../../../components/Icon';
+import { ZoneCardHeader } from '../../../components/ZoneCardHeader';
 import { colors, spacing, typography, radius } from '../../../lib/theme';
 import { getZones, getPlantsByZoneWithImages, getZoneContextInfo } from '../../../lib/db';
 import {
@@ -126,7 +127,7 @@ export default function ZonesScreen() {
             {zones.map((zone) => {
               const plants = zonePlants[zone.id] || [];
               const context = getContextLine(zoneContexts[zone.id]);
-              const { icon, tint } = zoneIconFor(zone.icon || DEFAULT_ZONE_ICON);
+              const icon = zoneIconFor(zone.icon || DEFAULT_ZONE_ICON);
               const count = plants.length;
               return (
                 <TouchableOpacity
@@ -134,26 +135,12 @@ export default function ZonesScreen() {
                   activeOpacity={0.85}
                   onPress={() => router.push(`/zones/${zone.id}`)}
                   style={styles.card}>
-                  <View style={styles.cardTopRow}>
-                    <View style={[styles.iconSquare, { backgroundColor: colors[tint] }]}>
-                      <Icon name={icon} size={22} color={colors.text} />
-                    </View>
-                    <View style={styles.zoneTextCol}>
-                      <Text style={styles.zoneName} numberOfLines={1}>
-                        {zone.name}
-                      </Text>
-                      {zone.description ? (
-                        <Text style={styles.zoneDesc} numberOfLines={1}>
-                          {zone.description}
-                        </Text>
-                      ) : null}
-                    </View>
-                    <View style={styles.countPill}>
-                      <Text style={styles.countPillText}>
-                        {count} {plural(count, 'plante', 'plantes')}
-                      </Text>
-                    </View>
-                  </View>
+                  <ZoneCardHeader
+                    icon={icon}
+                    name={zone.name}
+                    description={zone.description}
+                    count={count}
+                  />
 
                   {plants.length > 0 && (
                     <View style={styles.thumbRow}>
@@ -253,26 +240,6 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 12,
   },
-  cardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconSquare: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  zoneTextCol: { flex: 1, minWidth: 0, gap: 2 },
-  zoneName: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 17, color: colors.text },
-  zoneDesc: { ...typography.bodySmall, fontSize: 13, color: colors.textSecondary },
-  countPill: {
-    height: 26,
-    paddingHorizontal: 10,
-    borderRadius: 13,
-    backgroundColor: colors.highlight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  countPillText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 12, color: colors.accent },
   thumbRow: { flexDirection: 'row', gap: 8 },
   thumbCol: { flex: 1, gap: 4, minWidth: 0 },
   thumb: { height: 52, borderRadius: 14 },

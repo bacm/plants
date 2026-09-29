@@ -60,7 +60,7 @@ test.describe('web smoke', () => {
     await visibleText(page, 'Ajouter une plante').click();
 
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
-    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await page.getByLabel('Nom de la plante', { exact: true }).fill(plantName);
     // Zone pills only render once zones have loaded; select ours (no AI
     // search -- the search server is not running for this test).
     await visibleText(page, zoneName).click();
@@ -72,7 +72,7 @@ test.describe('web smoke', () => {
     // --- Edit the plant: change one field ---
     await visibleText(page, 'Modifier la fiche').click();
     await expect(visibleText(page, 'Modifier')).toBeVisible();
-    await page.getByPlaceholder('Nom latin (optionnel)').fill(editedLatinName);
+    await page.getByLabel('Nom latin', { exact: true }).fill(editedLatinName);
     await visibleText(page, 'Enregistrer').click();
 
     // Back on the detail screen, the edited field shows.
@@ -131,7 +131,7 @@ test.describe('web smoke', () => {
     const secondPlantName = `E2E Plant 2 ${Date.now()}`;
     await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
-    await page.getByPlaceholder('Nom de la plante *').fill(secondPlantName);
+    await page.getByLabel('Nom de la plante', { exact: true }).fill(secondPlantName);
     // Zone preselected via the zoneId route param -- save without touching
     // the zone pill, then check the plant lands in this zone anyway.
     await visibleText(page, 'Enregistrer').click();
@@ -176,7 +176,7 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
     await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
-    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await page.getByLabel('Nom de la plante', { exact: true }).fill(plantName);
     await visibleText(page, zoneName).click();
     await visibleText(page, 'Enregistrer').click();
     await expect(visibleText(page, plantName)).toBeVisible();
@@ -258,7 +258,7 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
     await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
-    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await page.getByLabel('Nom de la plante', { exact: true }).fill(plantName);
     await visibleText(page, zoneName).click();
     await visibleText(page, 'Enregistrer').click();
     await expect(visibleText(page, plantName)).toBeVisible();
@@ -354,21 +354,21 @@ test.describe('web smoke', () => {
   test("a prune task derived from this month's pruning month disappears once ticked off", async ({
     page,
   }) => {
-    const MONTH_SHORT = [
-      'Jan',
-      'Fév',
-      'Mar',
-      'Avr',
+    const MONTH_NAMES = [
+      'Janvier',
+      'Février',
+      'Mars',
+      'Avril',
       'Mai',
       'Juin',
-      'Juil',
+      'Juillet',
       'Août',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Déc',
+      'Septembre',
+      'Octobre',
+      'Novembre',
+      'Décembre',
     ];
-    const currentMonthShort = MONTH_SHORT[new Date().getMonth()];
+    const currentMonthName = MONTH_NAMES[new Date().getMonth()];
 
     const zoneName = `E2E Seasonal Zone ${Date.now()}`;
     const plantName = `E2E Seasonal Plant ${Date.now()}`;
@@ -388,12 +388,15 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
     await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
-    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await page.getByLabel('Nom de la plante', { exact: true }).fill(plantName);
     await visibleText(page, zoneName).click();
-    // "Mois de taille" pills live in the collapsible "Plus de details" section
-    // (app/plant/new.js); expand it, then set this month.
-    await page.getByText('Plus de details', { exact: false }).click();
-    await visibleText(page, currentMonthShort).click();
+    // "Mois de taille" is a MonthRangePicker in the collapsible "Plus de
+    // détails" section (components/PlantForm.js); expand it, then tap this
+    // month's cell (accessibilityLabel = the full month name). It is the
+    // second MonthRangePicker in DOM order (after Floraison's "Période"),
+    // so scope to the second match of the month's label.
+    await page.getByText('Plus de détails', { exact: false }).click();
+    await page.getByLabel(currentMonthName, { exact: true }).nth(1).click();
     await visibleText(page, 'Enregistrer').click();
     await expect(visibleText(page, plantName)).toBeVisible();
 
@@ -440,15 +443,16 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
     await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
-    await page.getByPlaceholder('Nom de la plante *').fill(plantName);
+    await page.getByLabel('Nom de la plante', { exact: true }).fill(plantName);
     await visibleText(page, zoneName).click();
-    // "Floraison" (start/end month) lives in the collapsible "Plus de
-    // details" section, same as "Mois de taille" in the test above. Its
-    // "Fin" placeholder is shared with the harvest range further down the
-    // same expanded section, so scope to the first (bloom) occurrence.
-    await page.getByText('Plus de details', { exact: false }).click();
-    await page.getByPlaceholder('Debut').fill('5');
-    await page.getByPlaceholder('Fin', { exact: true }).first().fill('7');
+    // "Floraison" (a MonthRangePicker) lives in the collapsible "Plus de
+    // détails" section, same as "Mois de taille" in the test above, and is
+    // the first MonthRangePicker in DOM order, so tapping the first match of
+    // each month's label lands on the bloom picker rather than the harvest
+    // one further down the same expanded section.
+    await page.getByText('Plus de détails', { exact: false }).click();
+    await page.getByLabel('Mai', { exact: true }).first().click();
+    await page.getByLabel('Juillet', { exact: true }).first().click();
     await visibleText(page, 'Enregistrer').click();
     await expect(visibleText(page, plantName)).toBeVisible();
 

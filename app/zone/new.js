@@ -4,8 +4,7 @@ import { createZone } from '../../lib/db';
 export default function NewZoneScreen() {
   return (
     <ZoneForm
-      heroTitle="Nouvelle zone"
-      heroSubtitle="Massif, bac, balcon…"
+      title="Nouvelle zone"
       saveLabel="Créer la zone"
       onSave={(values) => createZone(values)}
     />

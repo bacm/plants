@@ -6,3 +6,5 @@ export { ChoiceTiles } from './ChoiceTiles';
 export { MonthRangePicker } from './MonthRangePicker';
 export { FormSection } from './FormSection';
 export { PrimaryButton } from './PrimaryButton';
+export { Segmented } from './Segmented';
+export { StickyFooter } from './StickyFooter';

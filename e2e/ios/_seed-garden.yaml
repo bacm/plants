@@ -51,13 +51,17 @@ appId: host.exp.Exponent
 - tapOn: "Bibliothèque, tab.*"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
-    visible: 'Nom de la plante *'
+    visible: 'Nom de la plante'
     timeout: 15000
-- tapOn: 'Nom de la plante *'
+# Ticket 069: the name field is a labelled components/form/Field, so its own
+# label text ("Nom de la plante") sits right above the input and would also
+# match a plain tapOn — target the placeholder instead, which only the
+# TextInput itself carries, to land on the actual field.
+- tapOn: "ex. Rosier grimpant"
 - inputText: "Rosier rouge"
 - hideKeyboard
 - tapOn: "Massif sud"
-- tapOn: "Plus de details  ▼"
+- tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:
       text: "ex. rose, blanc"
@@ -65,15 +69,17 @@ appId: host.exp.Exponent
 - tapOn: "ex. rose, blanc"
 - inputText: "rouge"
 - hideKeyboard
-- tapOn: "Debut"
-- inputText: "5"
-- tapOn: "Fin"
-- inputText: "7"
-# Number-pad fields have no "Done" key, so hideKeyboard has nothing to press;
-# tap a static label instead (the form's ScrollView uses
-# keyboardShouldPersistTaps="handled", so this both dismisses the keyboard
-# and does nothing else).
-- tapOn: "Floraison"
+# Ticket 069: bloom months are now MonthRangePicker taps (no text entry) —
+# tap the start month's cell, then the end month's, both by their
+# accessibilityLabel (the full French month name). "Période" is the bloom
+# picker's own label, scrolled to first so only its row (not the pruning or
+# harvest pickers further down) is on screen when "Mai"/"Juillet" are tapped.
+- scrollUntilVisible:
+    element:
+      text: "Période"
+    direction: DOWN
+- tapOn: "Mai"
+- tapOn: "Juillet"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"
@@ -85,22 +91,19 @@ appId: host.exp.Exponent
 - tapOn: "Retour"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
-    visible: 'Nom de la plante *'
+    visible: 'Nom de la plante'
     timeout: 15000
-- tapOn: 'Nom de la plante *'
+- tapOn: "ex. Rosier grimpant"
 - inputText: "Hellébore"
 - hideKeyboard
 - tapOn: "Ombre nord"
-- tapOn: "Plus de details  ▼"
+- tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:
-      text: "Debut"
+      text: "Période"
     direction: DOWN
-- tapOn: "Debut"
-- inputText: "12"
-- tapOn: "Fin"
-- inputText: "2"
-- tapOn: "Floraison"
+- tapOn: "Décembre"
+- tapOn: "Février"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"
@@ -112,13 +115,13 @@ appId: host.exp.Exponent
 - tapOn: "Retour"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
-    visible: 'Nom de la plante *'
+    visible: 'Nom de la plante'
     timeout: 15000
-- tapOn: 'Nom de la plante *'
+- tapOn: "ex. Rosier grimpant"
 - inputText: "Lavande"
 - hideKeyboard
 - tapOn: "Potager"
-- tapOn: "Plus de details  ▼"
+- tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:
       text: "ex. rose, blanc"
@@ -126,55 +129,20 @@ appId: host.exp.Exponent
 - tapOn: "ex. rose, blanc"
 - inputText: "violette"
 - hideKeyboard
-- tapOn: "Debut"
-- inputText: "6"
-- tapOn: "Fin"
-- inputText: "8"
-- tapOn: "Floraison"
+- scrollUntilVisible:
+    element:
+      text: "Période"
+    direction: DOWN
+- tapOn: "Juin"
+- tapOn: "Août"
+# "Mois de taille" (Entretien section) is its own MonthRangePicker further
+# down, all twelve months laid out in one row (no nested horizontal scroll
+# needed any more) — scroll it into view and tap September directly.
 - scrollUntilVisible:
     element:
       text: "Mois de taille"
     direction: DOWN
-# This pill row is its own horizontal ScrollView nested inside the page's
-# vertical one; a plain scrollUntilVisible/swipe with no anchor swipes the
-# whole screen and never actually moves it. Anchoring on a pill (rather than
-# a fixed coordinate, which turned out not to land at a consistent y across
-# runs) swipes from wherever that pill currently is. A short/fast swipe here
-# is occasionally read as a vertical-scroll attempt instead (nested
-# ScrollViews competing for the gesture) and does nothing, so this uses a
-# slower, longer swipe and repeats it enough times to tolerate a miss.
-- swipe:
-    element:
-      text: "Jan"
-    direction: LEFT
-    duration: 800
-- swipe:
-    element:
-      text: "Fév"
-    direction: LEFT
-    duration: 800
-    optional: true
-- swipe:
-    element:
-      text: "Mar"
-    direction: LEFT
-    duration: 800
-    optional: true
-- swipe:
-    element:
-      text: "Avr"
-    direction: LEFT
-    duration: 800
-    optional: true
-# Catch-all in case none of the above actually moved it.
-- scrollUntilVisible:
-    element:
-      text: "Sep"
-    direction: RIGHT
-    visibilityPercentage: 50
-    timeout: 10000
-    optional: true
-- tapOn: "Sep"
+- tapOn: "Septembre"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"
@@ -186,32 +154,19 @@ appId: host.exp.Exponent
 - tapOn: "Retour"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
-    visible: 'Nom de la plante *'
+    visible: 'Nom de la plante'
     timeout: 15000
-- tapOn: 'Nom de la plante *'
+- tapOn: "ex. Rosier grimpant"
 - inputText: "Framboisier"
 - hideKeyboard
 - tapOn: "Potager"
-- tapOn: "Plus de details  ▼"
+- tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:
-      text: "Début"
+      text: "Période de récolte"
     direction: DOWN
-- tapOn: "Début"
-- inputText: "7"
-# Bloom's "Fin" field is scrolled far enough off-screen by this point that
-# it's clipped from the hierarchy entirely, so this unambiguously targets
-# harvest's.
-- tapOn: "Fin"
-- inputText: "9"
-# Number-pad has no "Done" key, so hideKeyboard can't press one — but
-# leaving the keyboard up also isn't safe here: the next scrollUntilVisible
-# swipe's start point lands on the on-screen keypad (still showing "9" typed
-# above), and a short/no-op swipe (Enregistrer is already close by) reads as
-# a tap there, silently appending a stray digit to this field. Tap a static,
-# uppercase label instead — its rendered (uppercase) text is what's actually
-# exposed to the accessibility tree, not the mixed-case JSX source.
-- tapOn: "INFORMATIONS DE RÉCOLTE"
+- tapOn: "Juillet"
+- tapOn: "Septembre"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"
@@ -223,9 +178,9 @@ appId: host.exp.Exponent
 - tapOn: "Retour"
 - tapOn: 'Ajouter une plante'
 - extendedWaitUntil:
-    visible: 'Nom de la plante *'
+    visible: 'Nom de la plante'
     timeout: 15000
-- tapOn: 'Nom de la plante *'
+- tapOn: "ex. Rosier grimpant"
 - inputText: "Mystère"
 - hideKeyboard
 - tapOn: "Enregistrer"

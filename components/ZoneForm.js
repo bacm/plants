@@ -1,28 +1,41 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { showMessage } from '../lib/dialogs';
 import { useRouter } from 'expo-router';
-import { GradientHero } from './GradientHero';
-import { GlassCard } from './GlassCard';
+import { ScreenHeader } from './ScreenHeader';
+import { ZoneCardHeader } from './ZoneCardHeader';
 import Icon from './Icon';
+import { Field, PrimaryButton, StickyFooter } from './form';
 import { colors, spacing, typography, radius } from '../lib/theme';
-import { ZONE_ICONS, DEFAULT_ZONE_ICON } from '../lib/enums';
+import { ZONE_ICONS, DEFAULT_ZONE_ICON, zoneIconFor } from '../lib/enums';
 
-// Shared by app/zone/new.js and app/zone/edit.js: same name/icon/description
-// fields, same save-and-go-back flow. Only the hero copy, save label and
-// initial values differ, plus what onSave actually does (create vs update).
+const ICON_COLUMNS = 6;
+
+// Shared by app/zone/new.js and app/zone/edit.js: same icon/name/description
+// fields, live preview and save-and-go-back flow. Only the title, save
+// label and initial values differ, plus what onSave actually does (create
+// vs update).
 export function ZoneForm({
-  heroTitle,
-  heroSubtitle,
-  backLabel = 'Annuler',
+  title,
   saveLabel,
   savingLabel = 'Enregistrement…',
   initialName = '',
   initialDescription = '',
   initialIcon = DEFAULT_ZONE_ICON,
+  plantCount = 0,
   onSave,
 }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription);
   const [icon, setIcon] = useState(initialIcon);
@@ -46,120 +59,129 @@ export function ZoneForm({
   };
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <GradientHero>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backBtn}
-            accessibilityLabel="Annuler et revenir en arrière">
-            <Icon name="chevron-left" size={16} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>{backLabel}</Text>
-          </TouchableOpacity>
-          <Text style={styles.heroTitle}>{heroTitle}</Text>
-          {heroSubtitle ? <Text style={styles.heroSubtitle}>{heroSubtitle}</Text> : null}
-        </GradientHero>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12 }]}
+        keyboardShouldPersistTaps="handled">
+        <ScreenHeader title={title} />
 
         <View style={styles.section}>
-          <GlassCard>
-            <Text style={styles.label}>Icône</Text>
-            <View style={styles.iconGrid}>
-              {ZONE_ICONS.map((emoji) => (
-                <TouchableOpacity
-                  key={emoji}
-                  style={[styles.iconOption, icon === emoji && styles.iconOptionSelected]}
-                  onPress={() => setIcon(emoji)}
-                  activeOpacity={0.7}
-                  accessibilityLabel={`Choisir l'icône ${emoji}`}>
-                  <Text style={styles.iconEmoji}>{emoji}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <Text style={styles.label}>Nom *</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="ex. Massif nord, Balcon"
-              placeholderTextColor={colors.textSecondary}
-              accessibilityLabel="Nom de la zone"
-            />
-            <Text style={styles.label}>Description (optionnel)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="ex. Potager Carré, Plein Sud-Est…"
-              placeholderTextColor={colors.textSecondary}
-              multiline
-              accessibilityLabel="Description de la zone"
-            />
-          </GlassCard>
+          <Text style={styles.label}>Icône</Text>
+          <View style={styles.iconGrid}>
+            {ZONE_ICONS.map((emoji) => {
+              const selected = icon === emoji;
+              const { icon: glyph, tint } = zoneIconFor(emoji);
+              return (
+                <View key={emoji} style={styles.iconCell}>
+                  <TouchableOpacity
+                    style={[
+                      styles.iconOption,
+                      { backgroundColor: selected ? colors[tint] : colors.surface },
+                      selected && styles.iconOptionSelected,
+                    ]}
+                    onPress={() => setIcon(emoji)}
+                    activeOpacity={0.7}
+                    accessibilityRole="radio"
+                    accessibilityState={{ checked: selected }}
+                    accessibilityLabel={`Choisir l'icône ${emoji}`}>
+                    <Icon name={glyph} size={20} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </View>
         </View>
 
-        <TouchableOpacity
-          style={[styles.saveBtn, (!name.trim() || saving) && styles.saveBtnDisabled]}
-          onPress={save}
-          disabled={!name.trim() || saving}
-          accessibilityLabel={saveLabel}>
-          <Text style={styles.saveBtnText}>{saving ? savingLabel : saveLabel}</Text>
-        </TouchableOpacity>
-        <View style={{ height: 80 }} />
+        <Field
+          label="Nom"
+          required
+          placeholder="ex. Massif nord, Balcon"
+          value={name}
+          onChangeText={setName}
+          accessibilityLabel="Nom de la zone"
+        />
+        <Field
+          label="Description"
+          multiline
+          placeholder="ex. Potager Carré, Plein Sud-Est…"
+          value={description}
+          onChangeText={setDescription}
+          accessibilityLabel="Description de la zone"
+        />
+
+        <View style={styles.section}>
+          <Text style={styles.label}>Aperçu</Text>
+          <View style={styles.previewCard}>
+            <ZoneCardHeader
+              icon={zoneIconFor(icon)}
+              name={name.trim() || 'Sans nom'}
+              description={description}
+              count={plantCount}
+            />
+            {plantCount === 0 && (
+              <View style={styles.previewEmpty}>
+                <Text style={styles.previewEmptyText}>Les plantes de la zone apparaîtront ici</Text>
+              </View>
+            )}
+          </View>
+        </View>
       </ScrollView>
-    </View>
+
+      <StickyFooter>
+        <PrimaryButton
+          label={saveLabel}
+          loadingLabel={savingLabel}
+          loading={saving}
+          disabled={!name.trim()}
+          onPress={save}
+        />
+      </StickyFooter>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 24 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
-  heroTitle: { ...typography.display, color: colors.text },
-  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },
-  section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  label: { ...typography.label, color: colors.textSecondary, marginBottom: 6, marginTop: 12 },
-  input: {
-    ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    borderRadius: radius.sm,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    gap: spacing.md,
   },
-  textArea: { minHeight: 80 },
-  iconGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
+  section: { gap: spacing.sm },
+  label: { ...typography.label, color: colors.text },
+  iconGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  iconCell: { width: `${100 / ICON_COLUMNS}%`, alignItems: 'center', paddingVertical: 4 },
   iconOption: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
+    width: 44,
+    height: 44,
+    borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconOptionSelected: {
-    borderColor: colors.accent,
-    borderWidth: 2,
-    backgroundColor: colors.softGreen,
+    borderWidth: 1.5,
+    borderColor: colors.text,
   },
-  iconEmoji: { fontSize: 24 },
-  saveBtn: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.xxl,
-    backgroundColor: colors.accent,
-    paddingVertical: 16,
-    borderRadius: radius.lg,
+  previewCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    padding: 14,
+    gap: spacing.md,
+  },
+  previewEmpty: {
+    height: 52,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  saveBtnDisabled: { opacity: 0.5 },
-  saveBtnText: { ...typography.label, color: '#fff' },
+  previewEmptyText: { ...typography.caption, color: colors.textSecondary },
 });

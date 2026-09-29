@@ -3,16 +3,18 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ZoneForm } from '../../components/ZoneForm';
 import { colors, typography, spacing } from '../../lib/theme';
-import { getZones, updateZone } from '../../lib/db';
+import { getZones, updateZone, countPlantsInZone } from '../../lib/db';
 import { DEFAULT_ZONE_ICON } from '../../lib/enums';
 
 export default function EditZoneScreen() {
   const { id } = useLocalSearchParams();
   const [zone, setZone] = useState(null);
+  const [plantCount, setPlantCount] = useState(0);
 
   const load = useCallback(async () => {
     const zones = await getZones();
     setZone(zones.find((z) => z.id === id) || null);
+    setPlantCount(await countPlantsInZone(id));
   }, [id]);
 
   useFocusEffect(
@@ -31,13 +33,12 @@ export default function EditZoneScreen() {
 
   return (
     <ZoneForm
-      heroTitle="Modifier la zone"
-      heroSubtitle={zone.name}
-      backLabel="Retour"
+      title="Modifier la zone"
       saveLabel="Enregistrer"
       initialName={zone.name}
       initialDescription={zone.description || ''}
       initialIcon={zone.icon || DEFAULT_ZONE_ICON}
+      plantCount={plantCount}
       onSave={(values) => updateZone(id, values)}
     />
   );

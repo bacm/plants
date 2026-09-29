@@ -1,7 +1,7 @@
 ---
 id: 069
 title: Restyle the plant and zone forms with the shared form components
-status: open
+status: done
 priority: P3
 type: feature
 ---
@@ -18,19 +18,19 @@ style shows the most.
 
 ## Acceptance criteria
 
-- [ ] Plant forms use the 065 components only: name with the search button
+- [x] Plant forms use the 065 components only: name with the search button
       and its suggestion list, latin name, zone chips, type chips, Exposition
       and Arrosage tiles, then "Plus de détails" expanding into section cards
       (Floraison, Dimensions, Sol, Entretien, Multiplication, Santé, Récolte,
       Autres)
-- [ ] Bloom and harvest months use `MonthRangePicker`
-- [ ] "Enregistrer" is a sticky bottom button; save errors still show
+- [x] Bloom and harvest months use `MonthRangePicker`
+- [x] "Enregistrer" is a sticky bottom button; save errors still show
       `Alert.alert('Erreur', …)` and keep the user on the form (CLAUDE.md
       rule 6)
-- [ ] Zone form: icon grid (052 icons, emoji still stored), name,
+- [x] Zone form: icon grid (052 icons, emoji still stored), name,
       description, a live preview card, "Créer la zone" / "Enregistrer"
-- [ ] No field name is listed in a screen (CLAUDE.md rule 3)
-- [ ] `npm run verify` and `npm run e2e:web` pass
+- [x] No field name is listed in a screen (CLAUDE.md rule 3)
+- [x] `npm run verify` and `npm run e2e:web` pass
 
 ## Notes
 
