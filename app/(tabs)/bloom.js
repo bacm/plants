@@ -6,8 +6,12 @@ import { GlassCard } from '../../components/GlassCard';
 import Icon from '../../components/Icon';
 import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
 import { getPlants, getPlantsBloomingInMonth } from '../../lib/db';
-import { MONTH_SHORT, monthName } from '../../lib/months';
-import { bloomMonthsOf, bloomGaps } from '../../lib/bloomCoverage';
+import { MONTH_SHORT, MONTH_LETTERS, monthName } from '../../lib/months';
+import { bloomMonthsOf, bloomSegments, bloomGaps } from '../../lib/bloomCoverage';
+
+// Left edge of month `m` (1-12) on a 12-column track, as a percentage.
+// A width of N months is monthOffset(N + 1).
+const monthOffset = (m) => `${((m - 1) * 100) / 12}%`;
 
 const VIEWS = { month: 'month', year: 'year' };
 
@@ -162,21 +166,24 @@ export default function BloomScreen() {
                 <View style={styles.yearHeaderRow}>
                   <View style={styles.yearLabelCol} />
                   <View style={styles.yearGrid}>
-                    {MONTH_SHORT.map((name, i) => {
+                    {MONTH_LETTERS.map((letter, i) => {
                       const month = i + 1;
                       const isGap = gaps.includes(month);
                       const isCurrent = month === currentMonth;
                       return (
                         <View
                           key={month}
-                          style={[styles.yearHeaderCell, isGap && styles.yearHeaderCellGap]}>
+                          style={[styles.yearHeaderCell, isGap && styles.yearHeaderCellGap]}
+                          accessibilityLabel={
+                            isGap ? `${monthName(month)} : aucune floraison` : monthName(month)
+                          }>
                           <Text
                             style={[
                               styles.yearHeaderText,
                               isGap && styles.yearHeaderTextGap,
                               isCurrent && styles.yearHeaderTextCurrent,
                             ]}>
-                            {name}
+                            {letter}
                           </Text>
                         </View>
                       );
@@ -184,8 +191,7 @@ export default function BloomScreen() {
                   </View>
                 </View>
 
-                {bloomRows.map(({ plant, months }) => {
-                  const monthSet = new Set(months);
+                {bloomRows.map(({ plant }) => {
                   const start = plant.bloomStartMonth;
                   const end = plant.bloomEndMonth;
                   const rangeLabel =
@@ -204,25 +210,29 @@ export default function BloomScreen() {
                           {plant.name}
                         </Text>
                       </View>
-                      <View style={styles.yearGrid}>
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => {
-                          const isCovered = monthSet.has(month);
-                          const isCurrent = month === currentMonth;
-                          return (
-                            <View
-                              key={month}
-                              style={[styles.yearBarCell, isCurrent && styles.yearBarCellCurrent]}>
-                              {isCovered ? (
-                                <View
-                                  style={[
-                                    styles.yearBar,
-                                    { backgroundColor: colorHex(plant.flowerColor) },
-                                  ]}
-                                />
-                              ) : null}
-                            </View>
-                          );
-                        })}
+                      <View style={styles.yearTrack}>
+                        <View
+                          style={[
+                            styles.yearCurrentColumn,
+                            { left: monthOffset(currentMonth), width: monthOffset(2) },
+                          ]}
+                        />
+                        <View style={styles.yearBaseline} />
+                        {/* One band per contiguous period: a range that wraps
+                            the year (Dec–Mar) draws two (ticket 050). */}
+                        {bloomSegments(plant).map((seg) => (
+                          <View
+                            key={seg.start}
+                            style={[
+                              styles.yearBand,
+                              {
+                                left: monthOffset(seg.start),
+                                width: monthOffset(seg.end - seg.start + 2),
+                                backgroundColor: colorHex(plant.flowerColor),
+                              },
+                            ]}
+                          />
+                        ))}
                       </View>
                     </TouchableOpacity>
                   );
@@ -292,24 +302,34 @@ const styles = StyleSheet.create({
   viewTabSelected: { backgroundColor: colors.accent },
   viewTabText: { ...typography.label, color: colors.textSecondary },
   viewTabTextSelected: { color: '#fff' },
-  yearCard: { paddingVertical: spacing.md },
-  yearHeaderRow: { flexDirection: 'row', marginBottom: spacing.sm },
-  yearLabelCol: { flex: 0.32, justifyContent: 'center', paddingRight: spacing.xs },
-  yearGrid: { flex: 0.68, flexDirection: 'row' },
-  yearHeaderCell: { flex: 1, alignItems: 'center', paddingVertical: 2, borderRadius: radius.sm },
-  yearHeaderCellGap: { backgroundColor: colors.surface },
-  yearHeaderText: { ...typography.caption, color: colors.textSecondary },
-  yearHeaderTextGap: { color: colors.textSecondary, opacity: 0.55 },
-  yearHeaderTextCurrent: { color: colors.accent, fontWeight: '700' },
-  yearRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
+  yearCard: { paddingVertical: spacing.md, gap: 6 },
+  yearHeaderRow: { flexDirection: 'row', gap: 10, paddingBottom: 6 },
+  yearLabelCol: { width: 96, justifyContent: 'center' },
+  yearGrid: { flex: 1, flexBasis: 'auto', flexDirection: 'row' },
+  yearHeaderCell: { flex: 1, flexBasis: 'auto', alignItems: 'center', borderRadius: 6 },
+  yearHeaderCellGap: { backgroundColor: colors.track },
+  yearHeaderText: { ...typography.caption, fontSize: 11, color: colors.textSecondary },
+  yearHeaderTextGap: { opacity: 0.55 },
+  yearHeaderTextCurrent: { fontFamily: 'InstrumentSans_600SemiBold', color: colors.text },
+  yearRow: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 44 },
   yearRowName: { ...typography.bodySmall, color: colors.text },
-  yearBarCell: { flex: 1, height: 16, paddingHorizontal: 1, justifyContent: 'center' },
-  yearBarCellCurrent: { backgroundColor: colors.surface },
-  yearBar: { height: 10, borderRadius: radius.sm },
+  yearTrack: { flex: 1, flexBasis: 'auto', height: 44 },
+  yearCurrentColumn: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    backgroundColor: colors.softGreen,
+    borderRadius: 6,
+  },
+  yearBaseline: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 21,
+    height: 1,
+    backgroundColor: colors.track,
+  },
+  yearBand: { position: 'absolute', top: 12, height: 20, borderRadius: 10 },
   yearLegend: {
     ...typography.caption,
     color: colors.textSecondary,
