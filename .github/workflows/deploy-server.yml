@@ -1,0 +1,102 @@
+name: Deploy search server
+
+# Ticket 079: test, then deploy the exact tested commit of server/ to the VPS.
+# Setup (VPS user, forced-command SSH key, GitHub environment and secrets) is
+# in docs/DEPLOY-SERVER.md.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'server/**'
+      - 'deploy/**'
+      - '.github/workflows/deploy-server.yml'
+  workflow_dispatch:
+
+# Two deploys never run at once, and a queued one is not cancelled halfway.
+concurrency:
+  group: deploy-server
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # Third-party actions are pinned by commit SHA (the tag in the comment),
+      # so a moved tag can't change what runs next to the deploy secrets.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: server/requirements-dev.txt
+
+      - name: Install
+        run: pip install -r server/requirements-dev.txt
+
+      - name: Tests
+        working-directory: server
+        run: python -m pytest -q
+
+      - name: Docker image builds
+        run: docker build server
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    # Secrets and variables below are scoped to this environment, readable by
+    # this job only. "Required reviewers" on it turns each deploy into a
+    # manual approval.
+    environment: production
+    steps:
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
+          # Pinned host key: no trust-on-first-use from a runner.
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+
+      # The commit SHA is the SSH "command" (deploy.sh reads it from
+      # SSH_ORIGINAL_COMMAND); the environment file goes over stdin, so no
+      # secret is ever a command-line argument. deploy.sh is the key's forced
+      # command on the VPS, so nothing else can run with it.
+      - name: Deploy
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
+          SEARCH_DAILY_BUDGET: ${{ vars.SEARCH_DAILY_BUDGET }}
+          ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          API_TOKENS: ${{ secrets.API_TOKENS }}
+        run: |
+          {
+            printf 'API_DOMAIN=%s\n' "$API_DOMAIN"
+            printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY"
+            printf 'API_TOKENS=%s\n' "$API_TOKENS"
+            [ -n "$SEARCH_DAILY_BUDGET" ] && printf 'SEARCH_DAILY_BUDGET=%s\n' "$SEARCH_DAILY_BUDGET"
+            printf 'ALLOWED_ORIGINS=%s\n' "$ALLOWED_ORIGINS"
+          } | ssh -i ~/.ssh/deploy_key \
+                -o IdentitiesOnly=yes \
+                -o StrictHostKeyChecking=yes \
+                "deploy@$VPS_HOST" "$GITHUB_SHA"
+
+      - name: Health check
+        env:
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
+        run: |
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors \
+            "https://$API_DOMAIN/health"
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

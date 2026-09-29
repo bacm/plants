@@ -52,6 +52,9 @@ yarn-error.*
 /android
 /dist-release
 
+# deploy/deploy.sh's temporary env file while it validates stdin (ticket 079)
+deploy/.env.tmp.*
+
 # Plant search server (server/)
 server/.venv/
 __pycache__/
