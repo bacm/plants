@@ -118,6 +118,14 @@ git clone git@github.com:bacm/plants.git ~/plants
 Do **not** create `deploy/.env`: the first deploy writes it from the GitHub
 secrets.
 
+If the VPS clone predates `deploy/deploy.sh` (pushed with ticket 079), update
+it once by hand — the forced command of step 7 needs the script to exist; every
+later deploy updates the checkout itself:
+
+```bash
+cd ~/plants && git pull
+```
+
 ## 7. The key GitHub Actions deploys with
 
 On your Mac:
