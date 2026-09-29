@@ -19,7 +19,6 @@
 | P2 | feature | [057 — Send a Saturday-morning "ce week-end au jardin" digest](057-weekend-garden-digest.md) |
 | P2 | feature | [058 — Turn the dashboard into "Aujourd'hui au jardin](058-home-today-in-the-garden.md) |
 | P2 | feature | [059 — Guide the first launch to a first zone, plant and photo](059-first-launch-onboarding.md) |
-| P2 | feature | [080 — Plant search does not know rare cultivars such as Rosier La Fraîcheur](080-search-misses-rare-cultivars.md) |
 | P3 | feature | [025 — Warn before a frost that is colder than a plant tolerates](025-frost-alerts.md) |
 | P3 | feature | [026 — Identify an unknown plant from a photo](026-identify-plant-from-photo.md) |
 | P3 | feature | [027 — Make every screen usable with a screen reader](027-accessibility-labels.md) |
@@ -32,6 +31,12 @@
 | P3 | feature | [060 — Keep a wishlist of plants to buy, with where they would go](060-plant-wishlist.md) |
 | P3 | feature | [074 — Restyle the rest of the Floraison screen to the Herbier mock-up](074-restyle-bloom-screen.md) |
 | P3 | feature | [075 — Restyle the camera screen](075-restyle-camera-screen.md) |
+
+## in-progress
+
+| Pri | Type | Ticket |
+| --- | --- | --- |
+| P2 | feature | [080 — Plant search does not know rare cultivars such as Rosier La Fraîcheur](080-search-misses-rare-cultivars.md) |
 
 ## blocked
 

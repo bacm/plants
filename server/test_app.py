@@ -24,12 +24,16 @@ def client(monkeypatch):
 
 
 def _set_call_openai(monkeypatch, result=None, exc=None):
-    async def fake_call_openai(prompt):
+    precise_calls = []
+
+    async def fake_call_openai(prompt, precise=False):
+        precise_calls.append(precise)
         if exc is not None:
             raise exc
         return result
 
     monkeypatch.setattr(app_module, "call_openai", fake_call_openai)
+    return precise_calls
 
 
 @pytest.fixture(autouse=True)
@@ -318,7 +322,7 @@ def test_daily_budget_under_limit_passes(monkeypatch, client):
 def test_daily_budget_exceeded_returns_503_without_calling_openai(monkeypatch, client):
     calls = []
 
-    async def fake_call_openai(prompt):
+    async def fake_call_openai(prompt, precise=False):
         calls.append(prompt)
         return "[]"
 
@@ -408,7 +412,7 @@ def test_invalid_search_daily_budget_fails_fast(monkeypatch):
 def test_missing_auth_header_rejected_without_calling_openai(client, monkeypatch):
     calls = []
 
-    async def fake_call_openai(prompt):
+    async def fake_call_openai(prompt, precise=False):
         calls.append(prompt)
         return "[]"
 
@@ -489,3 +493,43 @@ def test_startup_fails_with_short_token(monkeypatch):
 def test_health_works_without_auth_header(client):
     res = client.get("/health")
     assert res.status_code == 200
+
+
+def test_precise_flag_is_passed_to_call_openai(monkeypatch, client):
+    seen = _set_call_openai(monkeypatch, result="[]")
+    res = client.post("/search", json={"query": "rosier", "precise": True}, headers=AUTH)
+    assert res.status_code == 200
+    assert seen == [True]
+
+
+def test_precise_defaults_to_false(monkeypatch, client):
+    seen = _set_call_openai(monkeypatch, result="[]")
+    res = client.post("/search", json={"query": "rosier"}, headers=AUTH)
+    assert res.status_code == 200
+    assert seen == [False]
+
+
+def test_non_boolean_precise_is_rejected(monkeypatch, client):
+    seen = _set_call_openai(monkeypatch, result="[]")
+    res = client.post("/search", json={"query": "rosier", "precise": "yes please"}, headers=AUTH)
+    assert res.status_code == 422
+    assert seen == []
+
+
+def test_openai_request_body_default_is_unchanged():
+    assert app_module.openai_request_body("p", False) == {
+        "model": "gpt-4o-mini",
+        "messages": [{"role": "user", "content": "p"}],
+        "temperature": 0.3,
+        "max_tokens": 3000,
+    }
+
+
+def test_openai_request_body_precise_uses_reasoning_model():
+    body = app_module.openai_request_body("p", True)
+    assert body["model"] == "gpt-5.5"
+    assert body["messages"] == [{"role": "user", "content": "p"}]
+    assert body["reasoning_effort"] == "low"
+    assert body["max_completion_tokens"] == 16000
+    assert "temperature" not in body
+    assert "max_tokens" not in body

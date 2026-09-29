@@ -1,7 +1,7 @@
 ---
 id: 080
 title: Plant search does not know rare cultivars such as Rosier La Fraîcheur
-status: open
+status: in-progress
 priority: P2
 type: feature
 ---
@@ -21,18 +21,20 @@ reminders, or types every field by hand.
 
 ## Acceptance criteria
 
-- [ ] "rosier La Fraîcheur" returns that cultivar, or the closest species
-      clearly marked as such, with the cultivar name kept
-- [ ] The answer says when the data is the species' rather than the
-      cultivar's, and the app shows it
-- [ ] Cost per search stays within the 10 EUR prepaid balance at the current
-      `SEARCH_DAILY_BUDGET`
-- [ ] Server tests cover the new behaviour; `npm run verify` and the server
-      tests pass
+- [x] After a search, the form offers "Recherche approfondie", also when the
+      search found nothing; it reruns the same query with a stronger model
+- [x] The app sends only `precise: true`; the model names are fixed in
+      `server/app.py`, so a client cannot pick an arbitrary model
+- [ ] A normal search still uses `gpt-4o-mini` with unchanged parameters; a
+      precise one uses `gpt-5.5` with the parameters that model accepts
+- [x] Server and app tests cover the new field; `npm run verify`, the server
+      tests and `npm run e2e:web` pass
 
 ## Notes
 
-Options, not yet decided: a stronger model; OpenAI's web search tool (Responses
-API), which grounds cultivar answers but costs more per call; or a prompt that
-falls back to the species and keeps the typed cultivar name. Found on
-2026-09-29 while closing 019.
+Owner's choice on 2026-09-29: switch to a stronger model on demand rather than
+always, the app having a single user for now. `gpt-5.5` costs $5 / $30 per 1M
+tokens against about $0.15 / $0.60 for `gpt-4o-mini`, so a precise search costs
+a few cents, against a 10 EUR prepaid balance. Both count as one call against
+`SEARCH_DAILY_BUDGET`. Web search grounding (Responses API) stays an option if
+the stronger model still misses cultivars.

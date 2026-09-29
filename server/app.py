@@ -23,6 +23,9 @@ from pydantic import BaseModel, field_validator
 logger = logging.getLogger("plant_search")
 
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
+# The client only chooses between these two, never the model name.
+SEARCH_MODEL = "gpt-4o-mini"
+PRECISE_SEARCH_MODEL = "gpt-5.5"
 
 RATE_LIMIT_MAX_REQUESTS = 20
 RATE_LIMIT_WINDOW_SECONDS = 60
@@ -61,6 +64,7 @@ def _valid_wikimedia_url(url):
 
 class SearchRequest(BaseModel):
     query: str
+    precise: bool = False
 
     @field_validator("query")
     @classmethod
@@ -184,21 +188,36 @@ RÈGLES:
 """
 
 
-async def call_openai(prompt):
+def openai_request_body(prompt, precise):
+    messages = [{"role": "user", "content": prompt}]
+    if precise:
+        # Reasoning models reject temperature/max_tokens, and reasoning tokens
+        # count against max_completion_tokens, hence the larger cap.
+        return {
+            "model": PRECISE_SEARCH_MODEL,
+            "messages": messages,
+            "reasoning_effort": "low",
+            "max_completion_tokens": 16000,
+        }
+    return {
+        "model": SEARCH_MODEL,
+        "messages": messages,
+        "temperature": 0.3,
+        "max_tokens": 3000,
+    }
+
+
+async def call_openai(prompt, precise=False):
     api_key = os.environ["OPENAI_API_KEY"]
-    async with httpx.AsyncClient(timeout=30) as client:
+    timeout = 90 if precise else 30
+    async with httpx.AsyncClient(timeout=timeout) as client:
         response = await client.post(
             OPENAI_URL,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {api_key}",
             },
-            json={
-                "model": "gpt-4o-mini",
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.3,
-                "max_tokens": 3000,
-            },
+            json=openai_request_body(prompt, precise),
         )
         response.raise_for_status()
         data = response.json()
@@ -397,7 +416,7 @@ def create_app():
 
         prompt = build_prompt(payload.query)
         try:
-            text = await call_openai(prompt)
+            text = await call_openai(prompt, payload.precise)
         except httpx.HTTPStatusError as exc:
             logger.warning("Upstream OpenAI error: status=%s", exc.response.status_code)
             raise HTTPException(status_code=502, detail="Plant search is temporarily unavailable")

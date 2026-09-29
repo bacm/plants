@@ -85,6 +85,7 @@ export function PlantForm({
   const [searching, setSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchError, setSearchError] = useState('');
+  const [lastSearchPrecise, setLastSearchPrecise] = useState(false);
 
   const setField = (key, value) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -105,15 +106,16 @@ export function PlantForm({
     setPreselectedZone(true);
   }, [preselectZoneId, zones, preselectedZone]);
 
-  const handleSearch = async () => {
+  const handleSearch = async ({ precise = false } = {}) => {
     if (form.name.trim().length < 2) return;
 
     setSearching(true);
     setShowSuggestions(true);
     setSearchError('');
     try {
-      const results = await searchPlants(form.name);
+      const results = await searchPlants(form.name, { precise });
       setSuggestions(results);
+      setLastSearchPrecise(precise);
     } catch (err) {
       setSuggestions([]);
       if (err instanceof PlantSearchError) {
@@ -189,13 +191,13 @@ export function PlantForm({
                 placeholder="ex. Rosier grimpant"
                 value={form.name}
                 onChangeText={handleNameChange}
-                onSubmitEditing={handleSearch}
+                onSubmitEditing={() => handleSearch()}
                 autoFocus={autoFocusName}
               />
             </View>
             <TouchableOpacity
               style={styles.searchButton}
-              onPress={handleSearch}
+              onPress={() => handleSearch()}
               disabled={searching || form.name.trim().length < 2}
               accessibilityLabel="Rechercher en ligne">
               {searching ? (
@@ -207,9 +209,12 @@ export function PlantForm({
           </View>
           {searchError ? <Text style={styles.fieldError}>{searchError}</Text> : null}
 
-          {showSuggestions && suggestions.length > 0 && (
+          {showSuggestions && !searching && !searchError && (
             <View style={styles.suggestionsCard}>
               <Text style={styles.suggestionsEyebrow}>Résultats en ligne</Text>
+              {suggestions.length === 0 && (
+                <Text style={styles.suggestionLatin}>Aucun résultat</Text>
+              )}
               {suggestions.map((item) => (
                 <TouchableOpacity
                   key={item.id}
@@ -219,6 +224,17 @@ export function PlantForm({
                   <Text style={styles.suggestionLatin}>{item.scientific_name}</Text>
                 </TouchableOpacity>
               ))}
+              {!lastSearchPrecise && (
+                <TouchableOpacity
+                  style={styles.deepSearchLink}
+                  onPress={() => handleSearch({ precise: true })}
+                  accessibilityRole="button"
+                  accessibilityLabel="Recherche approfondie">
+                  <Text style={styles.deepSearchText}>
+                    Pas la bonne plante ? Recherche approfondie
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -599,6 +615,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.textSecondary,
     marginTop: 2,
+  },
+  deepSearchLink: { paddingVertical: 8, marginTop: 4 },
+  deepSearchText: {
+    ...typography.caption,
+    fontFamily: 'InstrumentSans_600SemiBold',
+    color: colors.accent,
   },
   colorDot: { width: 22, height: 22, borderRadius: 11 },
   moreToggle: {
