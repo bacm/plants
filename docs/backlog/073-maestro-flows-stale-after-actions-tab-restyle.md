@@ -1,7 +1,7 @@
 ---
 id: 073
 title: Maestro flows 02 and 03 target Actions-tab text removed in 067
-status: open
+status: done
 priority: P2
 type: bug
 ---
@@ -24,11 +24,11 @@ next one — or be ignored.
 
 ## Acceptance criteria
 
-- [ ] 02 checks that tapping "Fait" changes the reminder's due line and logs
+- [x] 02 checks that tapping "Fait" changes the reminder's due line and logs
       "Arrosé", using text the Actions tab actually renders
-- [ ] 03 opens the care log from "Enregistrer un soin" and still checks the
+- [x] 03 opens the care log from "Enregistrer un soin" and still checks the
       back button after saving
-- [ ] Both flows pass on the simulator (run just these two, not the suite)
+- [x] Both flows pass on the simulator (run just these two, not the suite)
 
 ## Notes
 

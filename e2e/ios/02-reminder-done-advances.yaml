@@ -9,17 +9,21 @@ appId: host.exp.Exponent
 - runFlow: _seed-minimal.yaml
 
 # _seed-minimal.yaml ends on Rosier rouge's own detail screen. Since 045 a new
-# plant has no reminder: accept the watering suggestion (listed first) on the
-# reminders screen, then come back to the Actions tab.
+# plant has no reminder: accept the watering suggestion (listed first, due
+# today) on the reminders screen, then come back to the Actions tab.
 - tapOn: "Actions"
 - runFlow: _dismiss-dev-menu.yaml
 - tapOn: "Gérer"
 - tapOn: "Ajouter"
 - tapOn: "Retour"
 - runFlow: _dismiss-dev-menu.yaml
-- assertVisible: ".*Prochaine :.*"
-- copyTextFrom:
-    text: "Prochaine :.*"
+
+# Since 067 the Actions tab shows the due line from lib/reminderDue.js:
+# "Aujourd’hui" for a reminder due today, "Dans N jours · <date>" after.
+# Tapping "Fait" must move it a full watering interval (7 days) ahead --
+# a no-op markReminderDone (ticket 002) would leave "Aujourd’hui".
+- assertVisible: "Aujourd’hui"
 - tapOn: "Fait"
-- assertNotVisible: "${maestro.copiedText}"
+- assertVisible: "Dans 7 jours.*"
+- assertNotVisible: "Aujourd’hui"
 - assertVisible: "Arrosé"

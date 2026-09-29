@@ -30,25 +30,16 @@ appId: host.exp.Exponent
 - tapOn: "Enregistrer"
 - runFlow: _dismiss-dev-menu.yaml
 
-- tapOn: "Actions"
-- runFlow: _dismiss-dev-menu.yaml
-# "+ Log" is under Historique, below Rappels — scroll to it; the iOS
-# accessibility tree only exposes elements actually on screen.
-- scrollUntilVisible:
-    element:
-      text: '+ Log'
-    direction: DOWN
-- tapOn: '+ Log'
+# Since 067 the care log opens from the sticky "Enregistrer un soin" button,
+# shown on every tab of the detail screen (the old "+ Log" link is gone).
+- tapOn: "Enregistrer un soin"
 - tapOn: "Taillé"
+# The log screen's own title is also "Enregistrer un soin"; the exact
+# "Enregistrer" only matches its sticky save button.
 - tapOn: "Enregistrer"
 - runFlow: _dismiss-dev-menu.yaml
 
-# We're still scrolled down to "Enregistrer" from the log — "Retour" is up
-# in the hero, off screen (the iOS accessibility tree only exposes elements
-# actually on screen).
-- scrollUntilVisible:
-    element:
-      text: "Retour"
-    direction: UP
+# Back on the detail screen, unscrolled: the hero's round "Retour" button is
+# on screen.
 - tapOn: "Retour"
 - assertVisible: ".*Rechercher.*"

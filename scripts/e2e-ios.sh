@@ -180,8 +180,24 @@ MONTH_NAME="${MONTH_NAMES[$MONTH_INDEX]}"
 
 echo "Running Maestro flows against $APP_URL on device $SIM_UDID..."
 
+# Optional arguments pick flows by number prefix instead of running the whole
+# suite, e.g. `npm run e2e:ios -- 02 03` runs 02-*.yaml and 03-*.yaml. With
+# no argument, the whole directory runs (config.yaml's `flows:` list).
+TARGETS=(e2e/ios/)
+if [ "$#" -gt 0 ]; then
+  TARGETS=()
+  for prefix in "$@"; do
+    match=(e2e/ios/"$prefix"-*.yaml)
+    if [ ! -f "${match[0]}" ]; then
+      echo "error: no flow matches e2e/ios/$prefix-*.yaml" >&2
+      exit 1
+    fi
+    TARGETS+=("${match[@]}")
+  done
+fi
+
 set +e
-maestro test e2e/ios/ \
+maestro test "${TARGETS[@]}" \
   --udid "$SIM_UDID" \
   --env "APP_URL=$APP_URL" \
   --env "MONTH_NAME=$MONTH_NAME" \

@@ -14,10 +14,13 @@ appId: host.exp.Exponent
 - launchApp:
     clearState: false
 - openLink: "${APP_URL}"
+# Whichever comes first: the dashboard, or Expo Go's first-launch "Tools"
+# tutorial sheet ("Continue"), which can pop up over the dashboard well after
+# the bundle loads and hides it from the accessibility tree. Maestro's text
+# matcher is a regex, so one wait covers both.
 - extendedWaitUntil:
-    visible: "Continue"
-    timeout: 8000
-    optional: true
+    visible: "Votre jardin|Continue"
+    timeout: 30000
 - tapOn:
     text: "Continue"
     optional: true
@@ -27,10 +30,14 @@ appId: host.exp.Exponent
 # existence). Close it if it showed up before waiting for the dashboard.
 - extendedWaitUntil:
     visible: "Close"
-    timeout: 8000
+    timeout: 3000
     optional: true
 - tapOn:
     text: "Close"
+    optional: true
+# The tutorial can also arrive after the dev menu was closed.
+- tapOn:
+    text: "Continue"
     optional: true
 - extendedWaitUntil:
     visible: "Votre jardin"

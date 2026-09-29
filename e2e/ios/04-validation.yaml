@@ -27,7 +27,14 @@ appId: host.exp.Exponent
 # TextInput itself carries, to land on the actual field.
 - tapOn: "ex. Rosier grimpant"
 - inputText: "Test Validation"
-- hideKeyboard
+- tapOn: "Nouvelle plante"
+# Since 069 the sticky save button shortens the scroll view, so the
+# "Plus de détails" toggle starts below it: scroll it into view first.
+- scrollUntilVisible:
+    element:
+      text: "Plus de détails"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:

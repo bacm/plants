@@ -30,21 +30,21 @@ appId: host.exp.Exponent
     id: "zone-list-new-button"
 - tapOn: "Nom de la zone"
 - inputText: "Massif sud"
-- hideKeyboard
+- tapOn: "Nouvelle zone"
 - tapOn: "Créer la zone"
 
 - tapOn:
     id: "zone-list-new-button"
 - tapOn: "Nom de la zone"
 - inputText: "Potager"
-- hideKeyboard
+- tapOn: "Nouvelle zone"
 - tapOn: "Créer la zone"
 
 - tapOn:
     id: "zone-list-new-button"
 - tapOn: "Nom de la zone"
 - inputText: "Ombre nord"
-- hideKeyboard
+- tapOn: "Nouvelle zone"
 - tapOn: "Créer la zone"
 
 # --- Rosier rouge: Massif sud, bloom 5-7, rouge ---
@@ -59,8 +59,15 @@ appId: host.exp.Exponent
 # TextInput itself carries, to land on the actual field.
 - tapOn: "ex. Rosier grimpant"
 - inputText: "Rosier rouge"
-- hideKeyboard
+- tapOn: "Nouvelle plante"
 - tapOn: "Massif sud"
+# Since 069 the sticky save button shortens the scroll view, so the
+# "Plus de détails" toggle starts below it: scroll it into view first.
+- scrollUntilVisible:
+    element:
+      text: "Plus de détails"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:
@@ -68,7 +75,7 @@ appId: host.exp.Exponent
     direction: DOWN
 - tapOn: "ex. rose, blanc"
 - inputText: "rouge"
-- hideKeyboard
+- tapOn: "Période"
 # Ticket 069: bloom months are now MonthRangePicker taps (no text entry) —
 # tap the start month's cell, then the end month's, both by their
 # accessibilityLabel (the full French month name). "Période" is the bloom
@@ -95,8 +102,15 @@ appId: host.exp.Exponent
     timeout: 15000
 - tapOn: "ex. Rosier grimpant"
 - inputText: "Hellébore"
-- hideKeyboard
+- tapOn: "Nouvelle plante"
 - tapOn: "Ombre nord"
+# Since 069 the sticky save button shortens the scroll view, so the
+# "Plus de détails" toggle starts below it: scroll it into view first.
+- scrollUntilVisible:
+    element:
+      text: "Plus de détails"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:
@@ -119,8 +133,15 @@ appId: host.exp.Exponent
     timeout: 15000
 - tapOn: "ex. Rosier grimpant"
 - inputText: "Lavande"
-- hideKeyboard
+- tapOn: "Nouvelle plante"
 - tapOn: "Potager"
+# Since 069 the sticky save button shortens the scroll view, so the
+# "Plus de détails" toggle starts below it: scroll it into view first.
+- scrollUntilVisible:
+    element:
+      text: "Plus de détails"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:
@@ -128,7 +149,7 @@ appId: host.exp.Exponent
     direction: DOWN
 - tapOn: "ex. rose, blanc"
 - inputText: "violette"
-- hideKeyboard
+- tapOn: "Période"
 - scrollUntilVisible:
     element:
       text: "Période"
@@ -158,8 +179,15 @@ appId: host.exp.Exponent
     timeout: 15000
 - tapOn: "ex. Rosier grimpant"
 - inputText: "Framboisier"
-- hideKeyboard
+- tapOn: "Nouvelle plante"
 - tapOn: "Potager"
+# Since 069 the sticky save button shortens the scroll view, so the
+# "Plus de détails" toggle starts below it: scroll it into view first.
+- scrollUntilVisible:
+    element:
+      text: "Plus de détails"
+    direction: DOWN
+    centerElement: true
 - tapOn: "Plus de détails"
 - scrollUntilVisible:
     element:
@@ -182,6 +210,6 @@ appId: host.exp.Exponent
     timeout: 15000
 - tapOn: "ex. Rosier grimpant"
 - inputText: "Mystère"
-- hideKeyboard
+- tapOn: "Nouvelle plante"
 - tapOn: "Enregistrer"
 - runFlow: _dismiss-dev-menu.yaml
