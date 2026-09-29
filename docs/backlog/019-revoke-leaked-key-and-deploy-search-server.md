@@ -1,7 +1,7 @@
 ---
 id: 019
 title: Revoke the leaked OpenAI key and deploy the search server
-status: blocked
+status: done
 priority: P0
 type: security
 ---
@@ -24,7 +24,7 @@ build.
 - [x] The new key exists only in the server's environment
 - [x] A hard monthly spend limit is set in the OpenAI dashboard (from 037)
 - [x] The server is deployed with `--proxy-headers` if behind a reverse proxy
-- [ ] Release builds set `EXPO_PUBLIC_PLANT_API_URL` to the deployed URL
+- [x] Release builds set `EXPO_PUBLIC_PLANT_API_URL` to the deployed URL
 - [x] Every build published before 001 is treated as compromised
 
 ## Notes
@@ -43,3 +43,7 @@ points `EXPO_PUBLIC_PLANT_API_URL` at that URL; a release build still has to
 be installed to confirm it.
 Spend is capped by a prepaid balance of 10 EUR on the OpenAI account, which
 holds only while auto-recharge stays off.
+`API_TOKENS` was regenerated the same day (the old value was unreadable) and
+the server redeployed; the release build on the owner's iPhone then searched
+`https://plants.bacm.me` with that token and got an answer from the model.
+Search quality for rare cultivars is 080.
