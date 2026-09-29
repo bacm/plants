@@ -1,7 +1,7 @@
 ---
 id: 070
 title: Restyle the care log and reminder screens
-status: open
+status: done
 priority: P3
 type: feature
 ---
@@ -16,15 +16,15 @@ Logging a care is a frequent, quick action; it should take one glance.
 
 ## Acceptance criteria
 
-- [ ] Care log: the plant name as subtitle, care types as a grid of icon
+- [x] Care log: the plant name as subtitle, care types as a grid of icon
       tiles, the date with "Aujourd'hui" / "Hier" chips, notes, a dashed
       "Ajouter une photo" tile, a sticky "Enregistrer" button
-- [ ] Reminders: suggestions on soft-green cards with "Ajouter", a "Nouveau
+- [x] Reminders: suggestions on soft-green cards with "Ajouter", a "Nouveau
       rappel" card (kind chips, every N days, next due date), then the saved
       reminders with "Fait" and a labelled delete button
-- [ ] Both use the 065 components
-- [ ] Existing behaviour is unchanged
-- [ ] `npm run verify` and `npm run e2e:web` pass
+- [x] Both use the 065 components
+- [x] Existing behaviour is unchanged
+- [x] `npm run verify` and `npm run e2e:web` pass
 
 ## Notes
 

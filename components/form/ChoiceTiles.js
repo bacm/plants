@@ -1,14 +1,26 @@
 // Icon tiles over an enum list (lib/enums.js shape), for choices with an
 // icon per value: Exposition, Arrosage, care types. Same choices()/
-// toggleChip() logic as ChipGroup. `columns=1` stacks icon+label rows (as
-// in the mock-up's Exposition/Arrosage); `columns>1` lays out a grid with
-// the icon above the label, sized by percentage width per tile.
+// toggleChip() logic as ChipGroup. `columns` lays out a grid of tiles sized
+// by percentage width; `columns=1` is a single full-width column. `stacked`
+// (default `columns > 1`, so Exposition/Arrosage stay unchanged) picks each
+// tile's own layout: `true` stacks the icon above the label, centred (the
+// mock-up's Exposition/Arrosage); `false` puts the icon left of a label that
+// may wrap to two lines, left-aligned (the mock-up's care-type grid,
+// `columns={2} stacked={false}`).
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { choices, toggleChip } from '../../lib/enums';
 import Icon from '../Icon';
 
-export function ChoiceTiles({ label, options, value, onChange, allowClear = true, columns = 1 }) {
+export function ChoiceTiles({
+  label,
+  options,
+  value,
+  onChange,
+  allowClear = true,
+  columns = 1,
+  stacked = columns > 1,
+}) {
   const items = choices(options);
   const isGrid = columns > 1;
   const tileWidth = isGrid ? `${100 / columns}%` : '100%';
@@ -24,7 +36,7 @@ export function ChoiceTiles({ label, options, value, onChange, allowClear = true
               <TouchableOpacity
                 style={[
                   styles.tile,
-                  isGrid ? styles.tileGrid : styles.tileRow,
+                  stacked ? styles.tileGrid : styles.tileRow,
                   selected && styles.tileSelected,
                 ]}
                 onPress={() =>
@@ -34,7 +46,9 @@ export function ChoiceTiles({ label, options, value, onChange, allowClear = true
                 accessibilityLabel={option.label}
                 accessibilityState={{ selected }}>
                 {option.icon ? <Icon name={option.icon} size={20} color={colors.text} /> : null}
-                <Text style={styles.tileLabel}>{option.label}</Text>
+                <Text style={[styles.tileLabel, !stacked && styles.tileLabelRow]}>
+                  {option.label}
+                </Text>
               </TouchableOpacity>
             </View>
           );
@@ -57,10 +71,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   tileRow: {
-    minHeight: 52,
+    minHeight: 48,
     flexDirection: 'row',
+    justifyContent: 'flex-start',
     gap: spacing.sm,
     paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   tileGrid: {
     minHeight: 84,
@@ -75,4 +91,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.softGreen,
   },
   tileLabel: { ...typography.label, color: colors.text },
+  // `stacked=false` rows: let the label take the remaining row width so it
+  // wraps instead of overflowing past the icon. `flexBasis: 'auto'` is
+  // required alongside `flex: 1` on react-native-web, or the label collapses
+  // to zero width.
+  tileLabelRow: { flex: 1, flexBasis: 'auto' },
 });

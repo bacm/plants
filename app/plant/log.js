@@ -1,22 +1,36 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
-import { GradientHero } from '../../components/GradientHero';
-import { GlassCard } from '../../components/GlassCard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenHeader } from '../../components/ScreenHeader';
 import Icon from '../../components/Icon';
+import { Field, ChipGroup, ChoiceTiles, PrimaryButton, StickyFooter } from '../../components/form';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { showMessage } from '../../lib/dialogs';
 import { getPlantById, createCareLog, addPhoto } from '../../lib/db';
 import { CARE_TYPES } from '../../lib/enums';
 import { parseISODate } from '../../lib/validation';
+import { addDaysISO } from '../../lib/dates';
 
 export default function LogCareScreen() {
+  const insets = useSafeAreaInsets();
   const { plantId } = useLocalSearchParams();
   const router = useRouter();
   const [plant, setPlant] = useState(null);
   const [type, setType] = useState('watered');
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = addDaysISO(today, -1);
+  const [date, setDate] = useState(today);
   const [dateError, setDateError] = useState('');
   const [notes, setNotes] = useState('');
   const [photoUri, setPhotoUri] = useState(null);
@@ -40,6 +54,11 @@ export default function LogCareScreen() {
       quality: 0.8,
     });
     if (!result.canceled) setPhotoUri(result.assets[0].uri);
+  };
+
+  const setDateValue = (v) => {
+    setDate(v);
+    setDateError('');
   };
 
   const save = async () => {
@@ -73,129 +92,145 @@ export default function LogCareScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <GradientHero>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Icon name="chevron-left" size={16} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Annuler</Text>
-          </TouchableOpacity>
-          <Text style={styles.heroTitle}>Enregistrer un soin</Text>
-          <Text style={styles.heroSubtitle}>{plant.name}</Text>
-        </GradientHero>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12 }]}
+        keyboardShouldPersistTaps="handled">
+        <ScreenHeader title="Enregistrer un soin" subtitle={plant.name} />
 
-        <View style={styles.section}>
-          <GlassCard>
-            <Text style={styles.label}>Type de soin</Text>
-            <View style={styles.pills}>
-              {CARE_TYPES.map(({ value: t, label }) => (
-                <TouchableOpacity
-                  key={t}
-                  onPress={() => setType(t)}
-                  style={[styles.pill, type === t && styles.pillActive]}>
-                  <Text style={[styles.pillText, type === t && styles.pillTextActive]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+        <ChoiceTiles
+          label="Type de soin"
+          columns={2}
+          stacked={false}
+          options={CARE_TYPES}
+          value={type}
+          onChange={setType}
+          allowClear={false}
+        />
+
+        <View style={styles.dateBlock}>
+          <Text style={styles.label}>Date</Text>
+          <View style={styles.dateRow}>
+            <View style={styles.dateField}>
+              <Field
+                accessibilityLabel="Date"
+                placeholder="AAAA-MM-JJ"
+                value={date}
+                onChangeText={setDateValue}
+                error={dateError}
+                leading={
+                  <Icon name="calendar-blank-outline" size={18} color={colors.textSecondary} />
+                }
+              />
             </View>
-            <Text style={styles.label}>Date</Text>
-            <TextInput
-              style={styles.input}
+            <ChipGroup
+              allowClear={false}
+              options={[
+                { value: today, label: 'Aujourd’hui' },
+                { value: yesterday, label: 'Hier' },
+              ]}
               value={date}
-              onChangeText={(v) => {
-                setDate(v);
-                setDateError('');
-              }}
-              placeholder="AAAA-MM-JJ"
-              placeholderTextColor={colors.textSecondary}
+              onChange={setDateValue}
             />
-            {dateError ? <Text style={styles.fieldError}>{dateError}</Text> : null}
-            <Text style={styles.label}>Notes (optionnel)</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <View style={styles.notesCol}>
+            <Field
+              label="Notes"
+              multiline
+              placeholder="Facultatif"
+              style={styles.notesInput}
               value={notes}
               onChangeText={setNotes}
-              placeholder="Notes..."
-              placeholderTextColor={colors.textSecondary}
-              multiline
             />
-            <Text style={styles.label}>Photo (optionnel)</Text>
+          </View>
+          <View style={styles.photoCol}>
+            <Text style={styles.label}>Photo</Text>
             {photoUri ? (
-              <View style={styles.photoRow}>
-                <Text style={styles.photoLabel}>Photo ajoutée</Text>
-                <TouchableOpacity onPress={() => setPhotoUri(null)}>
-                  <Text style={styles.removePhoto}>Retirer</Text>
+              <View style={styles.photoTile}>
+                <Image source={{ uri: photoUri }} style={styles.photoImage} />
+                <TouchableOpacity
+                  style={styles.removePhotoBtn}
+                  onPress={() => setPhotoUri(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Retirer la photo">
+                  <Icon name="close" size={14} color={colors.text} />
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity style={styles.photoBtn} onPress={pickImage}>
-                <Text style={styles.photoBtnText}>+ Ajouter une photo</Text>
+              <TouchableOpacity
+                style={styles.photoPlaceholder}
+                onPress={pickImage}
+                accessibilityRole="button">
+                <Icon name="camera-outline" size={22} color={colors.textSecondary} />
+                <Text style={styles.photoPlaceholderText}>Ajouter une photo</Text>
               </TouchableOpacity>
             )}
-          </GlassCard>
+          </View>
         </View>
-
-        <TouchableOpacity style={styles.saveBtn} onPress={save} disabled={saving}>
-          <Text style={styles.saveBtnText}>{saving ? 'Enregistrement…' : 'Enregistrer'}</Text>
-        </TouchableOpacity>
-        <View style={{ height: 80 }} />
       </ScrollView>
-    </View>
+
+      <StickyFooter>
+        <PrimaryButton
+          label="Enregistrer"
+          loadingLabel="Enregistrement…"
+          loading={saving}
+          onPress={save}
+        />
+      </StickyFooter>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
-  scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 24 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
-  heroTitle: { ...typography.display, color: colors.text },
-  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },
-  section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  label: { ...typography.label, color: colors.textSecondary, marginBottom: 6, marginTop: 12 },
-  input: {
-    ...typography.body,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    borderRadius: radius.sm,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+    gap: spacing.md,
   },
-  fieldError: { ...typography.caption, color: colors.danger, marginTop: 6 },
-  textArea: { minHeight: 80 },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  pill: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+  label: { ...typography.label, color: colors.text },
+  dateBlock: { gap: spacing.sm },
+  dateRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  dateField: { flex: 1, flexBasis: 'auto', minWidth: 0 },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
+  notesCol: { flex: 1, flexBasis: 'auto', gap: spacing.xs },
+  notesInput: { minHeight: 104 },
+  photoCol: { width: 104, gap: spacing.xs },
+  photoTile: { width: 104, height: 104, borderRadius: radius.lg },
+  photoImage: { width: 104, height: 104, borderRadius: radius.lg },
+  removePhotoBtn: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
     borderRadius: radius.full,
     backgroundColor: colors.surface,
-  },
-  pillActive: { backgroundColor: colors.accent },
-  pillText: { ...typography.caption, color: colors.textSecondary },
-  pillTextActive: { color: '#fff' },
-  photoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  photoLabel: { ...typography.bodySmall, color: colors.text },
-  removePhoto: { ...typography.caption, color: colors.accent },
-  photoBtn: {
-    paddingVertical: 14,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  photoBtnText: { ...typography.caption, color: colors.textSecondary },
-  saveBtn: {
-    marginHorizontal: spacing.lg,
-    marginTop: spacing.xxl,
-    backgroundColor: colors.accent,
-    paddingVertical: 16,
+  photoPlaceholder: {
+    width: 104,
+    height: 104,
     borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: colors.border,
+    backgroundColor: 'transparent',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
   },
-  saveBtnText: { ...typography.label, color: '#fff' },
+  photoPlaceholderText: {
+    ...typography.caption,
+    color: colors.accent,
+    textAlign: 'center',
+  },
 });

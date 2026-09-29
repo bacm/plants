@@ -1,14 +1,15 @@
 // A labelled text input: label above a rounded surface input, an optional
 // hint below, or an error message (and a red border) in its place. Every
-// prop besides label/required/error/hint/leading passes straight through to
-// TextInput, so screens use it exactly like a TextInput with a label.
-// `leading` renders a node (e.g. an icon or a colour dot) inside the input
-// box, left of the text, by wrapping the box in a row and dropping the
-// TextInput's own border.
+// prop besides label/required/error/hint/leading/trailing passes straight
+// through to TextInput, so screens use it exactly like a TextInput with a
+// label. `leading`/`trailing` render a node (e.g. an icon, a colour dot or a
+// unit label) inside the input box, left/right of the text, by wrapping the
+// box in a row and dropping the TextInput's own border. Either one alone
+// takes the row path; both can be set together (e.g. "Tous les [7] jours").
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 
-export function Field({ label, required, error, hint, leading, style, ...inputProps }) {
+export function Field({ label, required, error, hint, leading, trailing, style, ...inputProps }) {
   return (
     <View style={styles.container}>
       {label ? (
@@ -17,7 +18,7 @@ export function Field({ label, required, error, hint, leading, style, ...inputPr
           {required ? ' *' : ''}
         </Text>
       ) : null}
-      {leading ? (
+      {leading || trailing ? (
         <View style={[styles.inputRow, error && styles.inputError]}>
           {leading}
           <TextInput
@@ -26,6 +27,7 @@ export function Field({ label, required, error, hint, leading, style, ...inputPr
             accessibilityLabel={label}
             {...inputProps}
           />
+          {trailing}
         </View>
       ) : (
         <TextInput
@@ -79,8 +81,12 @@ const styles = StyleSheet.create({
     minHeight: 52,
     paddingHorizontal: 16,
   },
+  // minWidth 0: on web a TextInput keeps its intrinsic width (~20 chars) and
+  // would push past the row, over whatever sits beside the Field.
   inputBorderless: {
     flex: 1,
+    flexBasis: 'auto',
+    minWidth: 0,
     borderWidth: 0,
     minHeight: undefined,
     paddingHorizontal: 0,
