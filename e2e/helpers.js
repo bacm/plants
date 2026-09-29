@@ -18,6 +18,14 @@ function tabButton(page, title) {
   return page.locator(`[aria-label^=${JSON.stringify(title + ',')}]:visible`);
 }
 
+// The plant detail hero's back button (ticket 067) is icon-only, with an
+// accessibilityLabel of "Retour" instead of a visible text label -- unlike
+// every other screen's back button, which is still a Text node visibleText
+// can find.
+function backButton(page) {
+  return page.locator('[aria-label="Retour"]:visible');
+}
+
 // A photo row can survive a reload while its image does not (ticket 044: web
 // stored a blob: URL that died with the page). Assert real, decodable bytes.
 async function expectStoredPhotoLoads(page) {
@@ -31,4 +39,4 @@ async function expectStoredPhotoLoads(page) {
   );
 }
 
-module.exports = { visibleText, tabButton, expectStoredPhotoLoads };
+module.exports = { visibleText, tabButton, backButton, expectStoredPhotoLoads };

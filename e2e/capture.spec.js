@@ -6,7 +6,7 @@
 // bar's central button -> select the plant in the strip -> shoot -> close ->
 // the shot shows up on the plant's Photos tab as a real, decodable image.
 const { test, expect } = require('@playwright/test');
-const { visibleText, tabButton, expectStoredPhotoLoads } = require('./helpers');
+const { visibleText, tabButton, backButton, expectStoredPhotoLoads } = require('./helpers');
 
 test.describe('in-app camera (garden walk)', () => {
   test('shoot a photo for a chosen plant -> it lands in the plant Photos tab', async ({ page }) => {
@@ -42,7 +42,7 @@ test.describe('in-app camera (garden walk)', () => {
     // plant/[id] is a full-screen route outside the (tabs) group, so the
     // bottom tab bar (and its central camera button) isn't rendered there;
     // go back to the zone detail screen, which is inside (tabs), first.
-    await visibleText(page, 'Retour').click();
+    await backButton(page).click();
     await expect(visibleText(page, '1 plante')).toBeVisible();
 
     // --- Open the camera from the tab bar's central button ---

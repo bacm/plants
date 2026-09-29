@@ -10,7 +10,7 @@
 // capture.spec.js.
 const path = require('node:path');
 const { test, expect } = require('@playwright/test');
-const { visibleText, tabButton, expectStoredPhotoLoads } = require('./helpers');
+const { visibleText, tabButton, backButton, expectStoredPhotoLoads } = require('./helpers');
 
 test.describe('À trier (sort + import)', () => {
   test('import two photos -> assign one, delete the other -> photo shows on the plant', async ({
@@ -52,7 +52,7 @@ test.describe('À trier (sort + import)', () => {
     // plant/[id] is a full-screen route outside the (tabs) group, so the
     // bottom tab bar isn't rendered there; go back to the zone detail
     // screen first, same as capture.spec.js.
-    await visibleText(page, 'Retour').click();
+    await backButton(page).click();
     await expect(visibleText(page, '1 plante')).toBeVisible();
     await page.locator('[aria-label="Prendre une photo"]:visible').click();
     await visibleText(page, 'Autoriser').click();

@@ -14,7 +14,7 @@ const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
 const { test, expect } = require('@playwright/test');
-const { visibleText, tabButton, expectStoredPhotoLoads } = require('./helpers');
+const { visibleText, tabButton, backButton, expectStoredPhotoLoads } = require('./helpers');
 
 test.describe('web smoke', () => {
   test('zone -> plant -> edit -> care log -> reload survives', async ({ page }) => {
@@ -74,8 +74,9 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, editedLatinName)).toBeVisible();
 
     // --- Add a care log ---
-    await visibleText(page, 'Actions').click();
-    await visibleText(page, '+ Log').click();
+    // "Enregistrer un soin" is the sticky bottom button (ticket 067),
+    // visible on every tab -- no need to switch to Actions first.
+    await visibleText(page, 'Enregistrer un soin').click();
     await expect(visibleText(page, 'Enregistrer un soin')).toBeVisible();
     // Default care type ('Arrosé') and today's date are prefilled; just save.
     await visibleText(page, 'Enregistrer').click();
@@ -100,7 +101,7 @@ test.describe('web smoke', () => {
     // the replace() calls. Since the tab bar isn't rendered on this route
     // either, a user who edits or logs care has no way back to the zones
     // list. Asserting the intended behaviour so this fails loudly.
-    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
+    await backButton(page).click(); // plant detail -> zone detail
     // "N plante(s)" only renders on the zone detail screen, so unlike the
     // plant/zone names (shown on the still-unmoved plant detail too) it
     // actually proves the navigation happened.
@@ -129,7 +130,7 @@ test.describe('web smoke', () => {
     // the zone pill, then check the plant lands in this zone anyway.
     await visibleText(page, 'Enregistrer').click();
     await expect(visibleText(page, secondPlantName)).toBeVisible();
-    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
+    await backButton(page).click(); // plant detail -> zone detail
     await expect(visibleText(page, '2 plantes')).toBeVisible();
     await expect(visibleText(page, plantName)).toBeVisible();
     await expect(visibleText(page, secondPlantName)).toBeVisible();
@@ -183,8 +184,14 @@ test.describe('web smoke', () => {
     // dialog (ticket 042) and goes straight into
     // ImagePicker.launchImageLibraryAsync(), which opens a hidden
     // `<input type="file">` -- Playwright sees this as a `filechooser` event.
+    //
+    // The Photos tab's header button and the photo-date modal's confirm
+    // button both read "Ajouter" (ticket 067), so a text locator matches
+    // both while the modal is open; target each by its accessible name
+    // instead (PhotosTab.js gives the header button a distinct
+    // accessibilityLabel).
     const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
-    await visibleText(page, '+ Ajouter').click();
+    await page.getByRole('button', { name: 'Ajouter une photo', exact: true }).click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(path.join(__dirname, 'fixtures', 'test-photo.png'));
 
@@ -192,10 +199,12 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Date de la photo')).toBeVisible();
     const dateInput = page.getByPlaceholder('AAAA-MM-JJ');
     await dateInput.fill(photoDate);
-    await visibleText(page, 'Ajouter').click();
+    await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
 
-    // The photo now shows in the timeline with the chosen date.
-    await expect(visibleText(page, photoDate)).toBeVisible();
+    // The photo now shows in the grid, grouped by month (ticket 067's
+    // PhotosTab has no plain-text date any more, just the accessibilityLabel
+    // kept for Maestro -- see the comment on that label in PhotosTab.js).
+    await expect(page.getByLabel(`Photo du ${photoDate}`)).toBeVisible();
 
     // --- Reload: the photo (and its date) survived ---
     // plant/[id] is a full-screen route outside the (tabs) group (see the
@@ -205,7 +214,7 @@ test.describe('web smoke', () => {
     await page.reload();
     await expect(visibleText(page, plantName)).toBeVisible();
     await visibleText(page, 'Photos').click();
-    await expect(visibleText(page, photoDate)).toBeVisible();
+    await expect(page.getByLabel(`Photo du ${photoDate}`)).toBeVisible();
     await expectStoredPhotoLoads(page);
   });
 
@@ -251,16 +260,17 @@ test.describe('web smoke', () => {
     await visibleText(page, 'Photos').click();
     await expect(visibleText(page, 'Mes photos')).toBeVisible();
     const fileChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
-    await visibleText(page, '+ Ajouter').click();
+    await page.getByRole('button', { name: 'Ajouter une photo', exact: true }).click();
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(path.join(__dirname, 'fixtures', 'test-photo.png'));
     await expect(visibleText(page, 'Date de la photo')).toBeVisible();
     const photoDate = new Date().toISOString().slice(0, 10);
-    await visibleText(page, 'Ajouter').click();
+    await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
     // Wait for the photo to actually be persisted before exporting -- addPhoto
     // is async, and navigating away too soon would export a garden that
-    // still has zero photos in it.
-    await expect(visibleText(page, photoDate)).toBeVisible();
+    // still has zero photos in it. No plain-text date renders any more
+    // (ticket 067's PhotosTab); assert on the accessibilityLabel instead.
+    await expect(page.getByLabel(`Photo du ${photoDate}`)).toBeVisible();
 
     // --- Réglages: export the whole garden ---
     //
@@ -271,7 +281,7 @@ test.describe('web smoke', () => {
     // it's still live, so getting there has to stay client-side routing
     // (clicks / router pushes), same as a real user would, rather than
     // page.goto() straight to '/'.
-    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
+    await backButton(page).click(); // plant detail -> zone detail
     await expect(visibleText(page, '1 plante')).toBeVisible();
     await tabButton(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
@@ -385,7 +395,7 @@ test.describe('web smoke', () => {
     // plant/[id] is a full-screen route outside the (tabs) group, so the tab
     // bar isn't rendered there (see the comment on the first test above); go
     // back to the zone detail screen first, which is inside the tabs group.
-    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
+    await backButton(page).click(); // plant detail -> zone detail
     await expect(visibleText(page, '1 plante')).toBeVisible();
     await tabButton(page, 'Accueil').click(); // zone detail (tabs) -> dashboard
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
@@ -437,7 +447,7 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, plantName)).toBeVisible();
 
     // --- Bloom tab: "Sur l'année" shows this plant's row ---
-    await visibleText(page, 'Retour').click(); // plant detail -> zone detail
+    await backButton(page).click(); // plant detail -> zone detail
     await expect(visibleText(page, '1 plante')).toBeVisible();
     await tabButton(page, 'Floraison').click(); // zone detail (tabs) -> bloom tab
     await expect(visibleText(page, 'Ce qui fleurit par mois')).toBeVisible();
