@@ -6,7 +6,13 @@
 // bar's central button -> select the plant in the strip -> shoot -> close ->
 // the shot shows up on the plant's Photos tab as a real, decodable image.
 const { test, expect } = require('@playwright/test');
-const { visibleText, tabButton, backButton, expectStoredPhotoLoads } = require('./helpers');
+const {
+  visibleText,
+  screenTitle,
+  tabButton,
+  backButton,
+  expectStoredPhotoLoads,
+} = require('./helpers');
 
 test.describe('in-app camera (garden walk)', () => {
   test('shoot a photo for a chosen plant -> it lands in the plant Photos tab', async ({ page }) => {
@@ -23,16 +29,16 @@ test.describe('in-app camera (garden walk)', () => {
 
     // --- Zone + plant to shoot into ---
     await tabButton(page, 'Zones').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
-    await visibleText(page, '+ Créer une zone').click();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
+    await visibleText(page, 'Nouvelle zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
     await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
     await visibleText(page, 'Créer la zone').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
 
     await visibleText(page, zoneName).click();
-    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
-    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
+    await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
     await page.getByPlaceholder('Nom de la plante *').fill(plantName);
     await visibleText(page, zoneName).click();

@@ -6,7 +6,7 @@
 # Plants: Rosier rouge (Massif sud, bloom 5-7, rouge), Hellébore (Ombre nord,
 # bloom 12-2, wraps the year), Lavande (Potager, bloom 6-8, violette, pruning
 # month = Sep), Framboisier (Potager, harvest 7-9), Mystère (name only, no
-# zone). Plants are always added from the Bibliothèque list's "+ Ajouter une
+# zone). Plants are always added from the Bibliothèque list's "Ajouter une
 # plante" button (reached via the tab once, then via "Retour" — saving a
 # plant replaces the stack entry with its detail screen, which has no tab
 # bar) — a zone's own detail screen only offers that button while the zone
@@ -18,20 +18,30 @@ appId: host.exp.Exponent
 ---
 
 # --- Zones ---
+# Ticket 068: the zones list's dashed "add zone" button now reads "Nouvelle
+# zone" — the same text as the zone form it opens (components/ZoneForm.js's
+# heroTitle). Since this flow creates three zones in a row, tapping on that
+# text could match either the button or a not-yet-unmounted previous form
+# screen; tap by testID (app/(tabs)/zones/index.js's
+# "zone-list-new-button") instead, which is unambiguous regardless of stack
+# state.
 - tapOn: "Zones, tab.*"
-- tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
+- tapOn:
+    id: "zone-list-new-button"
 - tapOn: "Nom de la zone"
 - inputText: "Massif sud"
 - hideKeyboard
 - tapOn: "Créer la zone"
 
-- tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
+- tapOn:
+    id: "zone-list-new-button"
 - tapOn: "Nom de la zone"
 - inputText: "Potager"
 - hideKeyboard
 - tapOn: "Créer la zone"
 
-- tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
+- tapOn:
+    id: "zone-list-new-button"
 - tapOn: "Nom de la zone"
 - inputText: "Ombre nord"
 - hideKeyboard

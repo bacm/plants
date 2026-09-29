@@ -18,6 +18,15 @@ function visibleText(page, text) {
   return page.getByText(text, { exact: true }).and(page.locator(':visible'));
 }
 
+// A screen's own <Text accessibilityRole="header"> title (ticket 068:
+// Bibliothèque/Zones/zone detail) -- react-native-web exposes that role as
+// an ARIA heading, so this can tell a screen's title apart from the same
+// word shown elsewhere, e.g. the floating tab bar's "Zones" pill (which
+// isn't a heading).
+function screenTitle(page, text) {
+  return page.getByRole('heading', { name: text, exact: true }).and(page.locator(':visible'));
+}
+
 // The floating tab bar (ticket 064) only renders a visible text label on the
 // active tab -- the others are icon-only, so `visibleText` can't find them.
 // Every tab (active or not) still carries an accessibilityLabel of
@@ -26,10 +35,10 @@ function tabButton(page, title) {
   return page.locator(`[aria-label^=${JSON.stringify(title + ',')}]:visible`);
 }
 
-// The plant detail hero's back button (ticket 067) is icon-only, with an
-// accessibilityLabel of "Retour" instead of a visible text label -- unlike
-// every other screen's back button, which is still a Text node visibleText
-// can find.
+// The plant detail hero's and zone detail's back buttons (tickets 067, 068)
+// are icon-only, with an accessibilityLabel of "Retour" instead of a visible
+// text label -- unlike some other screens' back buttons, which are still a
+// Text node visibleText can find.
 function backButton(page) {
   return page.locator('[aria-label="Retour"]:visible');
 }
@@ -47,4 +56,4 @@ async function expectStoredPhotoLoads(page) {
   );
 }
 
-module.exports = { visibleText, tabButton, backButton, expectStoredPhotoLoads };
+module.exports = { visibleText, screenTitle, tabButton, backButton, expectStoredPhotoLoads };

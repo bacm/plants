@@ -9,12 +9,21 @@ import {
   Image,
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { GlassCard } from '../../../components/GlassCard';
 import Icon from '../../../components/Icon';
 import { colors, spacing, typography, radius } from '../../../lib/theme';
 import { getZones, getPlantsByZoneWithImages, getZoneContextInfo } from '../../../lib/db';
-import { SUN, REMINDER_KINDS, isUnknown, labelFor, DEFAULT_ZONE_ICON } from '../../../lib/enums';
+import {
+  SUN,
+  REMINDER_KINDS,
+  isUnknown,
+  labelFor,
+  DEFAULT_ZONE_ICON,
+  zoneIconFor,
+} from '../../../lib/enums';
 import { parseImageUrls } from '../../../lib/plantFields';
+import { plural } from '../../../lib/text';
+
+const THUMB_COLUMNS = 4;
 
 function getContextLine(info) {
   if (!info) return null;
@@ -99,104 +108,112 @@ export default function ZonesScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.heroTitle}>Mes Zones de Jardin</Text>
-            <Text style={styles.heroSubtitle}>Organisez les zones de votre jardin</Text>
-          </View>
+        <View style={styles.headerTextWrap}>
+          <Text style={styles.eyebrow}>
+            Votre jardin · {zones.length} {plural(zones.length, 'zone', 'zones')}
+          </Text>
+          <Text style={styles.title} accessibilityRole="header">
+            Zones
+          </Text>
         </View>
 
-        <View style={styles.section}>
-          {zones.length === 0 ? (
-            <GlassCard>
-              <Text style={styles.emptyText}>
-                Aucune zone. Créez une zone (ex. « Balcon », « Potager ») puis assignez-y des
-                plantes.
-              </Text>
-              <TouchableOpacity style={styles.primaryBtn} onPress={() => router.push('/zone/new')}>
-                <Text style={styles.primaryBtnText}>+ Créer une zone</Text>
-              </TouchableOpacity>
-            </GlassCard>
-          ) : (
-            zones.map((zone) => {
+        {zones.length === 0 ? (
+          <Text style={styles.emptyText}>
+            Aucune zone. Créez une zone (ex. « Balcon », « Potager ») puis assignez-y des plantes.
+          </Text>
+        ) : (
+          <View style={styles.list}>
+            {zones.map((zone) => {
               const plants = zonePlants[zone.id] || [];
               const context = getContextLine(zoneContexts[zone.id]);
+              const { icon, tint } = zoneIconFor(zone.icon || DEFAULT_ZONE_ICON);
+              const count = plants.length;
               return (
                 <TouchableOpacity
                   key={zone.id}
                   activeOpacity={0.85}
                   onPress={() => router.push(`/zones/${zone.id}`)}
-                  style={styles.cardWrap}>
-                  <GlassCard>
-                    {/* Zone header: icon + name + count */}
-                    <View style={styles.cardHeader}>
-                      <View style={styles.zoneInfo}>
-                        <View style={styles.zoneNameRow}>
-                          <Text style={styles.zoneIcon}>{zone.icon || DEFAULT_ZONE_ICON}</Text>
-                          <Text style={styles.zoneName}>{zone.name}</Text>
-                        </View>
-                        {zone.description ? (
-                          <Text style={styles.zoneDesc}>({zone.description})</Text>
-                        ) : null}
-                      </View>
-                      <View style={styles.countBadge}>
-                        <Text style={styles.countText}>{plants.length}</Text>
-                        <Text style={styles.countLabel}>plantes</Text>
-                      </View>
+                  style={styles.card}>
+                  <View style={styles.cardTopRow}>
+                    <View style={[styles.iconSquare, { backgroundColor: colors[tint] }]}>
+                      <Icon name={icon} size={22} color={colors.text} />
                     </View>
+                    <View style={styles.zoneTextCol}>
+                      <Text style={styles.zoneName} numberOfLines={1}>
+                        {zone.name}
+                      </Text>
+                      {zone.description ? (
+                        <Text style={styles.zoneDesc} numberOfLines={1}>
+                          {zone.description}
+                        </Text>
+                      ) : null}
+                    </View>
+                    <View style={styles.countPill}>
+                      <Text style={styles.countPillText}>
+                        {count} {plural(count, 'plante', 'plantes')}
+                      </Text>
+                    </View>
+                  </View>
 
-                    {/* Plant thumbnails */}
-                    {plants.length > 0 && (
-                      <ScrollView
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
-                        style={styles.plantsScroll}
-                        contentContainerStyle={styles.plantsRow}>
-                        {plants.map((plant, idx) => {
-                          const img = imageLoadErrors[plant.id] ? null : getPlantImage(plant);
-                          return (
-                            <View key={plant.id || idx} style={styles.plantItem}>
-                              {img ? (
-                                <Image
-                                  source={{ uri: img }}
-                                  style={styles.plantThumb}
-                                  onError={() => markImageLoadError(plant.id)}
+                  {plants.length > 0 && (
+                    <View style={styles.thumbRow}>
+                      {plants.slice(0, THUMB_COLUMNS).map((plant, idx) => {
+                        const img = imageLoadErrors[plant.id] ? null : getPlantImage(plant);
+                        return (
+                          <View key={plant.id || idx} style={styles.thumbCol}>
+                            {img ? (
+                              <Image
+                                source={{ uri: img }}
+                                style={styles.thumb}
+                                onError={() => markImageLoadError(plant.id)}
+                              />
+                            ) : (
+                              <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                                <Icon
+                                  name="leaf"
+                                  size={18}
+                                  color={colors.sage}
+                                  style={styles.thumbPlaceholderIcon}
                                 />
-                              ) : (
-                                <View style={[styles.plantThumb, styles.plantPlaceholder]}>
-                                  <Icon name="leaf" size={24} color={colors.textSecondary} />
-                                </View>
-                              )}
-                              <Text style={styles.plantName} numberOfLines={1}>
-                                {plant.name}
-                              </Text>
-                            </View>
-                          );
-                        })}
-                      </ScrollView>
-                    )}
+                              </View>
+                            )}
+                            <Text style={styles.thumbName} numberOfLines={1}>
+                              {plant.name}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                      {/* Empty columns keep a fixed 4-column grid when a zone has
+                          fewer plants, as in the mock-up. */}
+                      {Array.from(
+                        { length: Math.max(0, THUMB_COLUMNS - plants.length) },
+                        (_, i) => (
+                          <View key={`empty-${i}`} style={styles.thumbCol} />
+                        )
+                      )}
+                    </View>
+                  )}
 
-                    {/* Context info line */}
-                    {context && <Text style={styles.contextLine}>{context}</Text>}
-                  </GlassCard>
+                  {context && (
+                    <View style={styles.contextRow}>
+                      <Icon name="water-outline" size={14} color={colors.textSecondary} />
+                      <Text style={styles.contextText}>{context}</Text>
+                    </View>
+                  )}
                 </TouchableOpacity>
               );
-            })
-          )}
-        </View>
+            })}
+          </View>
+        )}
 
-        {/* Add zone button */}
-        <View style={styles.footer}>
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => router.push('/zone/new')}
-            activeOpacity={0.7}>
-            <Text style={styles.addButtonText}>+ AJOUTER UNE NOUVELLE ZONE</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={{ height: 100 }} />
+        <TouchableOpacity
+          testID="zone-list-new-button"
+          style={styles.dashedButton}
+          onPress={() => router.push('/zone/new')}
+          activeOpacity={0.7}>
+          <Icon name="plus" size={20} color={colors.accent} />
+          <Text style={styles.dashedButtonText}>Nouvelle zone</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -205,129 +222,88 @@ export default function ZonesScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 24 },
-
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+  scrollContent: {
+    paddingTop: 64,
     paddingHorizontal: spacing.lg,
-    paddingTop: 60,
-    paddingBottom: spacing.lg,
+    paddingBottom: 140,
+    gap: 20,
   },
-  headerLeft: { flex: 1 },
-  heroTitle: {
-    ...typography.display,
-    color: colors.text,
-    marginBottom: 4,
-  },
-  heroSubtitle: {
-    ...typography.bodySmall,
+  headerTextWrap: { gap: 6 },
+  eyebrow: {
+    fontFamily: 'InstrumentSans_500Medium',
+    fontSize: 13,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: colors.textSecondary,
   },
-
-  // Section
-  section: { paddingHorizontal: spacing.lg },
-
-  // Empty state
-  emptyText: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginBottom: spacing.md,
-  },
-  primaryBtn: {
-    alignSelf: 'flex-start',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    backgroundColor: colors.accent,
-    borderRadius: radius.md,
-  },
-  primaryBtnText: { ...typography.label, color: '#fff' },
-
-  // Card
-  cardWrap: { marginBottom: spacing.md },
-
-  // Card header
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-  },
-  zoneInfo: { flex: 1, marginRight: spacing.sm },
-  zoneNameRow: { flexDirection: 'row', alignItems: 'center' },
-  zoneIcon: { fontSize: 22, marginRight: 8 },
-  zoneName: {
-    ...typography.title,
-    fontSize: 20,
-    fontWeight: '700',
+  title: {
+    fontFamily: 'Fraunces_400Regular',
+    fontSize: 40,
+    lineHeight: 42,
+    letterSpacing: -0.8,
     color: colors.text,
   },
-  zoneDesc: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: 2,
-    marginLeft: 30,
-  },
-  countBadge: { alignItems: 'center', marginLeft: spacing.sm },
-  countText: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.accent,
-  },
-  countLabel: { ...typography.caption, color: colors.textSecondary },
-
-  // Plant thumbnails
-  plantsScroll: { marginTop: spacing.md },
-  plantsRow: { paddingRight: spacing.sm },
-  plantItem: {
-    alignItems: 'center',
-    marginRight: spacing.md,
-    width: 68,
-  },
-  plantThumb: {
-    width: 60,
-    height: 60,
-    borderRadius: radius.sm,
-  },
-  plantPlaceholder: {
+  emptyText: { ...typography.bodySmall, color: colors.textSecondary },
+  list: { gap: 12 },
+  card: {
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.track,
+    borderRadius: radius.xl,
+    padding: 16,
+    gap: 12,
+  },
+  cardTopRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  iconSquare: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  plantName: {
-    ...typography.caption,
-    color: colors.textSecondary,
-    marginTop: 6,
-    textAlign: 'center',
-    maxWidth: 68,
-  },
-
-  // Context line
-  contextLine: {
-    ...typography.bodySmall,
-    color: colors.textSecondary,
-    marginTop: spacing.md,
-  },
-
-  // Footer
-  footer: {
-    paddingHorizontal: spacing.lg,
-    marginTop: spacing.xl,
-  },
-  addButton: {
-    paddingVertical: 16,
-    borderRadius: radius.lg,
+  zoneTextCol: { flex: 1, minWidth: 0, gap: 2 },
+  zoneName: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 17, color: colors.text },
+  zoneDesc: { ...typography.bodySmall, fontSize: 13, color: colors.textSecondary },
+  countPill: {
+    height: 26,
+    paddingHorizontal: 10,
+    borderRadius: 13,
+    backgroundColor: colors.highlight,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderStyle: 'dashed',
+    justifyContent: 'center',
   },
-  addButtonText: {
-    ...typography.label,
+  countPillText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 12, color: colors.accent },
+  thumbRow: { flexDirection: 'row', gap: 8 },
+  thumbCol: { flex: 1, gap: 4, minWidth: 0 },
+  thumb: { height: 52, borderRadius: 14 },
+  thumbPlaceholder: {
+    backgroundColor: colors.softGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbPlaceholderIcon: { opacity: 0.35 },
+  thumbName: {
+    fontFamily: 'InstrumentSans_500Medium',
+    fontSize: 11,
     color: colors.textSecondary,
-    letterSpacing: 0.5,
+    textAlign: 'center',
+  },
+  contextRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  contextText: { ...typography.bodySmall, fontSize: 13, color: colors.textSecondary },
+  dashedButton: {
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  dashedButtonText: {
+    fontFamily: 'InstrumentSans_600SemiBold',
+    fontSize: 15,
+    color: colors.accent,
   },
 });

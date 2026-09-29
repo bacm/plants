@@ -10,7 +10,13 @@
 // capture.spec.js.
 const path = require('node:path');
 const { test, expect } = require('@playwright/test');
-const { visibleText, tabButton, backButton, expectStoredPhotoLoads } = require('./helpers');
+const {
+  visibleText,
+  screenTitle,
+  tabButton,
+  backButton,
+  expectStoredPhotoLoads,
+} = require('./helpers');
 
 test.describe('À trier (sort + import)', () => {
   test('import two photos -> assign one, delete the other -> photo shows on the plant', async ({
@@ -32,16 +38,16 @@ test.describe('À trier (sort + import)', () => {
 
     // --- Zone + plant to assign a photo to ---
     await tabButton(page, 'Zones').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
-    await visibleText(page, '+ Créer une zone').click();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
+    await visibleText(page, 'Nouvelle zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
     await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
     await visibleText(page, 'Créer la zone').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
 
     await visibleText(page, zoneName).click();
-    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
-    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
+    await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
     await page.getByPlaceholder('Nom de la plante *').fill(plantName);
     await visibleText(page, zoneName).click();

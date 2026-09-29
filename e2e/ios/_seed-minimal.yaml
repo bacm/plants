@@ -13,8 +13,11 @@
 # `runFlow` from a numbered check.
 appId: host.exp.Exponent
 ---
+# Ticket 068: tap by testID, not the button's "Nouvelle zone" text -- see
+# _seed-garden.yaml's comment on the same button.
 - tapOn: "Zones, tab.*"
-- tapOn: '+ AJOUTER UNE NOUVELLE ZONE'
+- tapOn:
+    id: "zone-list-new-button"
 - tapOn: "Nom de la zone"
 - inputText: "Massif sud"
 - hideKeyboard

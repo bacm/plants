@@ -14,7 +14,13 @@ const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
 const { test, expect } = require('@playwright/test');
-const { visibleText, tabButton, backButton, expectStoredPhotoLoads } = require('./helpers');
+const {
+  visibleText,
+  screenTitle,
+  tabButton,
+  backButton,
+  expectStoredPhotoLoads,
+} = require('./helpers');
 
 test.describe('web smoke', () => {
   test('zone -> plant -> edit -> care log -> reload survives', async ({ page }) => {
@@ -37,21 +43,21 @@ test.describe('web smoke', () => {
 
     // --- Create a zone ---
     await tabButton(page, 'Zones').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
-    await visibleText(page, '+ Créer une zone').click();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
+    await visibleText(page, 'Nouvelle zone').click();
 
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
     await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
     await visibleText(page, 'Créer la zone').click();
 
     // Back on the zones list, the new zone is there.
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
     await expect(visibleText(page, zoneName)).toBeVisible();
 
     // --- Create a plant in that zone ---
     await visibleText(page, zoneName).click();
-    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
-    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
+    await visibleText(page, 'Ajouter une plante').click();
 
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
     await page.getByPlaceholder('Nom de la plante *').fill(plantName);
@@ -106,14 +112,14 @@ test.describe('web smoke', () => {
     // plant/zone names (shown on the still-unmoved plant detail too) it
     // actually proves the navigation happened.
     await expect(visibleText(page, '1 plante')).toBeVisible();
-    await visibleText(page, 'Retour').click(); // zone detail -> zones list (tab)
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await backButton(page).click(); // zone detail -> zones list (tab)
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
     await expect(visibleText(page, zoneName)).toBeVisible();
     await expect(visibleText(page, plantName)).toBeVisible();
 
     // --- Reload: everything persisted (lib/db.web.js -> localStorage) ---
     await page.reload();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
     await expect(visibleText(page, zoneName)).toBeVisible();
     await expect(visibleText(page, plantName)).toBeVisible();
 
@@ -123,7 +129,7 @@ test.describe('web smoke', () => {
     // --- Ticket 048: a zone that already has a plant still offers
     // "Ajouter une plante", and the form preselects that zone ---
     const secondPlantName = `E2E Plant 2 ${Date.now()}`;
-    await visibleText(page, '+ Ajouter une plante').click();
+    await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
     await page.getByPlaceholder('Nom de la plante *').fill(secondPlantName);
     // Zone preselected via the zoneId route param -- save without touching
@@ -139,7 +145,7 @@ test.describe('web smoke', () => {
     // window.confirm() on web; accept the browser-native dialog.
     page.once('dialog', (d) => d.accept());
     await visibleText(page, 'Supprimer la zone').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
     await expect(visibleText(page, zoneName)).toHaveCount(0);
 
     // No console errors or uncaught exceptions anywhere in the flow.
@@ -159,16 +165,16 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
     await tabButton(page, 'Zones').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
-    await visibleText(page, '+ Créer une zone').click();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
+    await visibleText(page, 'Nouvelle zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
     await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
     await visibleText(page, 'Créer la zone').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
 
     await visibleText(page, zoneName).click();
-    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
-    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
+    await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
     await page.getByPlaceholder('Nom de la plante *').fill(plantName);
     await visibleText(page, zoneName).click();
@@ -241,16 +247,16 @@ test.describe('web smoke', () => {
 
     // --- Zone + plant + photo, same as the earlier tests ---
     await tabButton(page, 'Zones').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
-    await visibleText(page, '+ Créer une zone').click();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
+    await visibleText(page, 'Nouvelle zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
     await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
     await visibleText(page, 'Créer la zone').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
 
     await visibleText(page, zoneName).click();
-    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
-    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
+    await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
     await page.getByPlaceholder('Nom de la plante *').fill(plantName);
     await visibleText(page, zoneName).click();
@@ -371,16 +377,16 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
     await tabButton(page, 'Zones').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
-    await visibleText(page, '+ Créer une zone').click();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
+    await visibleText(page, 'Nouvelle zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
     await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
     await visibleText(page, 'Créer la zone').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
 
     await visibleText(page, zoneName).click();
-    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
-    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
+    await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
     await page.getByPlaceholder('Nom de la plante *').fill(plantName);
     await visibleText(page, zoneName).click();
@@ -423,16 +429,16 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
     await tabButton(page, 'Zones').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
-    await visibleText(page, '+ Créer une zone').click();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
+    await visibleText(page, 'Nouvelle zone').click();
     await expect(visibleText(page, 'Nouvelle zone')).toBeVisible();
     await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zoneName);
     await visibleText(page, 'Créer la zone').click();
-    await expect(visibleText(page, 'Mes Zones de Jardin')).toBeVisible();
+    await expect(screenTitle(page, 'Zones')).toBeVisible();
 
     await visibleText(page, zoneName).click();
-    await expect(visibleText(page, '+ Ajouter une plante')).toBeVisible();
-    await visibleText(page, '+ Ajouter une plante').click();
+    await expect(visibleText(page, 'Ajouter une plante')).toBeVisible();
+    await visibleText(page, 'Ajouter une plante').click();
     await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
     await page.getByPlaceholder('Nom de la plante *').fill(plantName);
     await visibleText(page, zoneName).click();

@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
-import { GradientHero } from '../../../components/GradientHero';
-import { GlassCard } from '../../../components/GlassCard';
 import Icon from '../../../components/Icon';
 import { colors, spacing, typography, radius, colorHex } from '../../../lib/theme';
 import { showMessage, confirm } from '../../../lib/dialogs';
 import { getZones, getPlants, deleteZone, countPlantsInZone } from '../../../lib/db';
+import { DEFAULT_ZONE_ICON, zoneIconFor } from '../../../lib/enums';
+import { plural } from '../../../lib/text';
 
 export default function ZoneDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -39,10 +39,10 @@ export default function ZoneDetailScreen() {
 
   const confirmDelete = useCallback(async () => {
     const count = await countPlantsInZone(id);
-    const plural = count !== 1 ? 's' : '';
+    const suffix = count !== 1 ? 's' : '';
     const ok = await confirm({
       title: 'Supprimer la zone',
-      message: `Les ${count} plante${plural} de cette zone resteront dans votre jardin, sans zone.`,
+      message: `Les ${count} plante${suffix} de cette zone resteront dans votre jardin, sans zone.`,
       confirmLabel: 'Supprimer',
       destructive: true,
     });
@@ -66,6 +66,8 @@ export default function ZoneDetailScreen() {
     );
   }
 
+  const { icon, tint } = zoneIconFor(zone.icon || DEFAULT_ZONE_ICON);
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -74,68 +76,73 @@ export default function ZoneDetailScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
-        <GradientHero>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Icon name="chevron-left" size={16} color={colors.textSecondary} />
-            <Text style={styles.backBtnText}>Retour</Text>
-          </TouchableOpacity>
-          <Text style={styles.heroTitle}>{zone.name}</Text>
-          {zone.description ? <Text style={styles.heroSubtitle}>{zone.description}</Text> : null}
-          <Text style={styles.plantCount}>
-            {plants.length} plante{plants.length !== 1 ? 's' : ''}
-          </Text>
-          <View style={styles.actionRow}>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => router.push(`/plant/new?zoneId=${zone.id}`)}
-              accessibilityLabel="Ajouter une plante">
-              <Text style={styles.actionBtnText}>+ Ajouter une plante</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionBtn}
-              onPress={() => router.push(`/zone/edit?id=${zone.id}`)}
-              accessibilityLabel="Modifier la zone">
-              <Text style={styles.actionBtnText}>Modifier</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionBtn, styles.deleteBtn]}
-              onPress={confirmDelete}
-              accessibilityLabel="Supprimer la zone">
-              <Text style={[styles.actionBtnText, styles.deleteBtnText]}>Supprimer la zone</Text>
-            </TouchableOpacity>
-          </View>
-        </GradientHero>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          accessibilityLabel="Retour"
+          style={styles.backButton}>
+          <Icon name="chevron-left" size={20} color={colors.text} />
+        </TouchableOpacity>
 
-        <View style={styles.section}>
-          {plants.length === 0 ? (
-            <GlassCard>
-              <Text style={styles.emptyText}>
-                Aucune plante dans cette zone. Ajoutez des plantes et assignez-les à « {zone.name}{' '}
-                ».
-              </Text>
-            </GlassCard>
-          ) : (
-            plants.map((p) => (
+        <View style={styles.headerRow}>
+          <View style={[styles.iconSquare, { backgroundColor: colors[tint] }]}>
+            <Icon name={icon} size={26} color={colors.text} />
+          </View>
+          <View style={styles.headerTextCol}>
+            <Text style={styles.eyebrow}>
+              {plants.length} {plural(plants.length, 'plante', 'plantes')}
+            </Text>
+            <Text style={styles.title}>{zone.name}</Text>
+            {zone.description ? <Text style={styles.description}>{zone.description}</Text> : null}
+          </View>
+        </View>
+
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={styles.primaryBtn}
+            onPress={() => router.push(`/plant/new?zoneId=${zone.id}`)}
+            accessibilityLabel="Ajouter une plante">
+            <Icon name="plus" size={18} color="#fff" />
+            <Text style={styles.primaryBtnText}>Ajouter une plante</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.outlinedBtn}
+            onPress={() => router.push(`/zone/edit?id=${zone.id}`)}
+            accessibilityLabel="Modifier la zone">
+            <Text style={styles.outlinedBtnText}>Modifier</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={confirmDelete} style={styles.deleteBtn}>
+            <Text style={styles.deleteBtnText}>Supprimer la zone</Text>
+          </TouchableOpacity>
+        </View>
+
+        {plants.length === 0 ? (
+          <Text style={styles.emptyText}>
+            Aucune plante dans cette zone. Ajoutez des plantes et assignez-les à « {zone.name} ».
+          </Text>
+        ) : (
+          <View style={styles.plantsCard}>
+            {plants.map((p, idx) => (
               <TouchableOpacity
                 key={p.id}
                 activeOpacity={0.9}
                 onPress={() => router.push(`/plant/${p.id}`)}
-                style={styles.cardWrap}>
-                <GlassCard>
-                  <View style={styles.row}>
-                    <View style={[styles.colorDot, { backgroundColor: colorHex(p.flowerColor) }]} />
-                    <View style={styles.plantInfo}>
-                      <Text style={styles.plantName}>{p.name}</Text>
-                      {p.latinName ? <Text style={styles.latin}>{p.latinName}</Text> : null}
-                    </View>
-                    <Icon name="chevron-right" size={18} color={colors.textSecondary} />
-                  </View>
-                </GlassCard>
+                style={[styles.row, idx < plants.length - 1 && styles.rowDivider]}>
+                <View style={[styles.colorDot, { backgroundColor: colorHex(p.flowerColor) }]} />
+                <View style={styles.plantInfo}>
+                  <Text style={styles.plantName} numberOfLines={1}>
+                    {p.name}
+                  </Text>
+                  {p.latinName ? (
+                    <Text style={styles.latin} numberOfLines={1}>
+                      {p.latinName}
+                    </Text>
+                  ) : null}
+                </View>
+                <Icon name="chevron-right" size={18} color={colors.textSecondary} />
               </TouchableOpacity>
-            ))
-          )}
-        </View>
-        <View style={{ height: 100 }} />
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -145,33 +152,88 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   placeholder: { ...typography.body, color: colors.textSecondary, padding: spacing.lg },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 24 },
-  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
-  heroTitle: { ...typography.display, color: colors.text, marginBottom: 4 },
-  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary },
-  plantCount: { ...typography.caption, color: colors.accent, marginTop: 8 },
-  actionRow: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.md },
-  actionBtn: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: radius.md,
+  scrollContent: {
+    paddingTop: 56,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 140,
+    gap: 20,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  actionBtnText: { ...typography.bodySmall, color: colors.text },
-  deleteBtn: { borderColor: colors.danger },
-  deleteBtnText: { color: colors.danger },
-  section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
-  emptyText: {
-    ...typography.bodySmall,
+  headerRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 14 },
+  iconSquare: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTextCol: { flex: 1, gap: 4 },
+  eyebrow: {
+    fontFamily: 'InstrumentSans_500Medium',
+    fontSize: 13,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
     color: colors.textSecondary,
-    marginBottom: spacing.md,
   },
-  cardWrap: { marginBottom: spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  colorDot: { width: 12, height: 12, borderRadius: 6, marginRight: spacing.md },
-  plantInfo: { flex: 1 },
-  plantName: { ...typography.title, color: colors.text },
-  latin: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 2 },
+  title: {
+    fontFamily: 'Fraunces_400Regular',
+    fontSize: 36,
+    lineHeight: 38,
+    letterSpacing: -0.5,
+    color: colors.text,
+  },
+  description: { ...typography.body, fontSize: 15, color: colors.textSecondary },
+  actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  primaryBtn: {
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    backgroundColor: colors.accent,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  primaryBtnText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14, color: '#fff' },
+  outlinedBtn: {
+    height: 44,
+    paddingHorizontal: 16,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outlinedBtnText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14, color: colors.text },
+  deleteBtn: {
+    height: 44,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteBtnText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14, color: colors.danger },
+  emptyText: { ...typography.bodySmall, color: colors.textSecondary },
+  plantsCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.track,
+    borderRadius: radius.xl,
+    paddingVertical: 4,
+    paddingHorizontal: 16,
+  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 60 },
+  rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
+  colorDot: { width: 14, height: 14, borderRadius: 7 },
+  plantInfo: { flex: 1, minWidth: 0, gap: 1 },
+  plantName: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 15, color: colors.text },
+  latin: { fontFamily: 'Fraunces_400Regular_Italic', fontSize: 14, color: colors.textSecondary },
 });
