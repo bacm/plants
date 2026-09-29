@@ -168,6 +168,35 @@ Optional manual approval of every deploy: GitHub → Settings → Environments �
 Delete the private key from your Mac once it is in GitHub, if you like
 (`rm ~/.ssh/plants_gha_deploy`): a new one can always be made with step 7.
 
+## 8b. A VPS that already runs a Caddy
+
+If ports 80/443 are already served by a Caddy of your own (for other sites),
+don't start a second one. Tell the deploy which Docker network that Caddy is
+on:
+
+```bash
+gh variable set SHARED_CADDY_NETWORK --env production --body "proxy"
+```
+
+The deploy then leaves this stack's Caddy off and attaches the API to that
+network as `plants-api` (`deploy/docker-compose.shared-caddy.yml`). Add the
+site to that Caddy's `Caddyfile`, then validate and reload it — a reload
+doesn't interrupt the other sites:
+
+```
+plants-api.example.com {
+    request_body {
+        max_size 8KB
+    }
+    reverse_proxy plants-api:8000
+}
+```
+
+```bash
+docker exec <caddy container> caddy validate --config /etc/caddy/Caddyfile
+docker exec <caddy container> caddy reload --config /etc/caddy/Caddyfile
+```
+
 ## 9. First deploy
 
 ```bash

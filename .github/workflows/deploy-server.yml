@@ -97,6 +97,7 @@ jobs:
           API_DOMAIN: ${{ vars.API_DOMAIN }}
           SEARCH_DAILY_BUDGET: ${{ vars.SEARCH_DAILY_BUDGET }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
+          SHARED_CADDY_NETWORK: ${{ vars.SHARED_CADDY_NETWORK }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           API_TOKENS: ${{ secrets.API_TOKENS }}
         run: |
@@ -106,6 +107,7 @@ jobs:
             printf 'API_TOKENS=%s\n' "$API_TOKENS"
             [ -n "$SEARCH_DAILY_BUDGET" ] && printf 'SEARCH_DAILY_BUDGET=%s\n' "$SEARCH_DAILY_BUDGET"
             printf 'ALLOWED_ORIGINS=%s\n' "$ALLOWED_ORIGINS"
+            printf 'SHARED_CADDY_NETWORK=%s\n' "$SHARED_CADDY_NETWORK"
           } | ssh -i ~/.ssh/deploy_key \
                 -o IdentitiesOnly=yes \
                 -o StrictHostKeyChecking=yes \

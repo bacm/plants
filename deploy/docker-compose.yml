@@ -1,3 +1,8 @@
+# A fixed project name, so this stack's containers and volumes never mix with
+# another project's on a shared VPS (the default would be the folder name,
+# "deploy").
+name: plants
+
 services:
   api:
     build: ../server

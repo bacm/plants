@@ -19,7 +19,7 @@ main() {
   REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
   ENV_FILE="$REPO_DIR/deploy/.env"
   COMPOSE=(docker compose -f "$REPO_DIR/deploy/docker-compose.yml")
-  ALLOWED_KEYS='API_DOMAIN|OPENAI_API_KEY|API_TOKENS|SEARCH_DAILY_BUDGET|ALLOWED_ORIGINS'
+  ALLOWED_KEYS='API_DOMAIN|OPENAI_API_KEY|API_TOKENS|SEARCH_DAILY_BUDGET|ALLOWED_ORIGINS|SHARED_CADDY_NETWORK'
   REQUIRED_KEYS=(API_DOMAIN OPENAI_API_KEY API_TOKENS)
 
   fail() {
@@ -62,6 +62,19 @@ main() {
   mv "$TMP_ENV" "$ENV_FILE"
   chmod 600 "$ENV_FILE"
   trap - EXIT
+
+  # --- Standalone Caddy, or the VPS's own one -----------------------------------
+
+  # SHARED_CADDY_NETWORK set: the VPS already runs a Caddy on 80/443, so this
+  # stack's Caddy stays off and the API joins that Caddy's network instead
+  # (deploy/docker-compose.shared-caddy.yml).
+  SHARED_NETWORK="$(sed -n 's/^SHARED_CADDY_NETWORK=//p' "$ENV_FILE")"
+  if [ -n "$SHARED_NETWORK" ]; then
+    [[ "$SHARED_NETWORK" =~ ^[A-Za-z0-9_.-]+$ ]] || fail "SHARED_CADDY_NETWORK is not a network name"
+    docker network inspect "$SHARED_NETWORK" >/dev/null 2>&1 || fail "Docker network '$SHARED_NETWORK' does not exist"
+    COMPOSE+=(-f "$REPO_DIR/deploy/docker-compose.shared-caddy.yml")
+    echo "deploy: using the VPS's Caddy, network $SHARED_NETWORK"
+  fi
 
   # --- Start and wait for the API to be healthy -------------------------------
 
