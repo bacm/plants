@@ -88,8 +88,9 @@ jobs:
 
       # The commit SHA is the SSH "command" (deploy.sh reads it from
       # SSH_ORIGINAL_COMMAND); the environment file goes over stdin, so no
-      # secret is ever a command-line argument. deploy.sh is the key's forced
-      # command on the VPS, so nothing else can run with it.
+      # secret is ever a command-line argument. On the VPS the key's forced
+      # command (deploy/authorized-key-line.sh) checks that commit out and
+      # runs its deploy.sh; nothing else can run with the key.
       - name: Deploy
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}

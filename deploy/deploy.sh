@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Deploys one commit of the search server on the VPS (ticket 079).
 #
-# Run by GitHub Actions over SSH as the forced command of its deploy key
-# (see docs/DEPLOY-SERVER.md), so it is the only thing that key can do:
+# Run by GitHub Actions over SSH, via the forced command of its deploy key
+# (deploy/authorized-key-line.sh), which has already checked out the commit
+# being deployed:
 #   - the commit to deploy arrives as the SSH "command", in
 #     $SSH_ORIGINAL_COMMAND, and must be a full 40-character SHA;
 #   - the environment file arrives on stdin, one KEY=value per line, and only

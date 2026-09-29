@@ -91,59 +91,41 @@ registrar (nothing to do with sslip.io). Check from your Mac:
 dig +short plants-api.example.com     # must print the VPS IP
 ```
 
-## 6. Clone the repository on the VPS
+## 6. Nothing to clone
 
-```bash
-sudo -iu deploy
-```
-
-If the GitHub repository is **private**, give the VPS a read-only key:
-
-```bash
-ssh-keygen -t ed25519 -N "" -f ~/.ssh/github_read -C "vps-read-only"
-cat ~/.ssh/github_read.pub
-```
-
-GitHub → repository → Settings → Deploy keys → Add deploy key: paste it,
-leave **Allow write access unticked**. Then:
-
-```bash
-printf 'Host github.com\n  IdentityFile ~/.ssh/github_read\n' >> ~/.ssh/config
-ssh -o StrictHostKeyChecking=accept-new -T git@github.com   # "successfully authenticated"
-git clone git@github.com:bacm/plants.git ~/plants
-```
-
-(Public repository: `git clone https://github.com/bacm/plants.git ~/plants`.)
-
-Do **not** create `deploy/.env`: the first deploy writes it from the GitHub
-secrets.
-
-If the VPS clone predates `deploy/deploy.sh` (pushed with ticket 079), update
-it once by hand — the forced command of step 7 needs the script to exist; every
-later deploy updates the checkout itself:
-
-```bash
-cd ~/plants && git pull
-```
+The first deploy clones the repository into `/home/deploy/plants` itself, and
+every deploy checks out the commit it deploys: no `git clone` or `git pull` on
+the VPS, ever. Do not create `deploy/.env` either: each deploy writes it from
+the GitHub secrets.
 
 ## 7. The key GitHub Actions deploys with
 
-On your Mac:
+On your Mac, create the key and print the exact `authorized_keys` line for it:
 
 ```bash
 ssh-keygen -t ed25519 -N "" -f ~/.ssh/plants_gha_deploy -C "github-actions-deploy"
-cat ~/.ssh/plants_gha_deploy.pub
+deploy/authorized-key-line.sh ~/.ssh/plants_gha_deploy.pub
 ```
 
-On the VPS, as `deploy`, authorise it **only** for the deploy script — replace
-`AAAA...` with the content of `plants_gha_deploy.pub`:
+The line restricts the key to one forced command, a bootstrap that never
+changes: it accepts only a full commit SHA, clones the repository if needed,
+checks that commit out and runs its `deploy/deploy.sh` (see the comment in
+`deploy/authorized-key-line.sh`).
+
+On the VPS, as `deploy` (`sudo -iu deploy`), open the file and paste the
+printed line as its **only** line for this key — replace any earlier
+`github-actions-deploy` line, since SSH uses the first match:
 
 ```bash
-echo 'command="/home/deploy/plants/deploy/deploy.sh",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty ssh-ed25519 AAAA... github-actions-deploy' >> ~/.ssh/authorized_keys
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+nano ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
 ```
 
-Check from your Mac that it gives no shell — it must answer
+`deploy`'s login shell must be bash (Ubuntu's default for `adduser`; check
+with `getent passwd deploy`).
+
+Check from your Mac that the key gives no shell — it must answer
 `deploy: expected a full commit SHA` and close:
 
 ```bash
@@ -244,8 +226,10 @@ logs -f api`.
 - The commit SHA is sent as the SSH "command"; the environment file goes over
   SSH stdin. No secret is ever a command-line argument, so none appears in
   `ps` or in a log (GitHub also masks secret values in its logs).
-- `deploy/deploy.sh` is the key's forced command: the key can do nothing else.
-  It accepts only a full 40-character SHA and only the known `KEY=value`
+- The key's forced command (`deploy/authorized-key-line.sh`) is the only
+  thing it can run: it accepts only a full 40-character SHA, fetches and
+  checks out that commit, then runs its `deploy/deploy.sh`, which accepts only
+  the known `KEY=value`
   lines, checks the required ones are present, checks out that commit, then
   atomically writes `deploy/.env` with mode 600 and restarts the stack. It
   fails, and the workflow with it, if the API is not healthy within 90 s.
