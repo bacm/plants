@@ -38,4 +38,5 @@ Mock-up: https://claude.ai/artifact/1gkwXJGkWRBB2VFmiYx6Ks, artboards
 "Bibliothèque", "Zones", "Détail d'une zone". Depends on 063, 064, 052.
 
 053 asks for at least 6 plants per Bibliothèque screen; the mock-up's grid
-shows about 4. The owner must choose between the two before this starts.
+shows about 4. Owner decision (2026-09-29): follow the mock-up for now and
+revisit density afterwards.

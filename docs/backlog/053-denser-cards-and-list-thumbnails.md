@@ -31,3 +31,5 @@ The dashboard part is superseded by 058; this ticket keeps lists and detail.
 
 Approved mock-up (2026-09-28): https://claude.ai/artifact/1gkwXJGkWRBB2VFmiYx6Ks. Its Bibliothèque grid shows about 4
 plants, not 6: settle that before 068.
+Owner decision (2026-09-29): the redesign follows the mock-up first; the
+6-plant criterion is revisited after 068.
