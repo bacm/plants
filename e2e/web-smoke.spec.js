@@ -212,6 +212,30 @@ test.describe('web smoke', () => {
     // kept for Maestro -- see the comment on that label in PhotosTab.js).
     await expect(page.getByLabel(`Photo du ${photoDate}`)).toBeVisible();
 
+    // --- Lightbox: change the photo's date (ticket 078) ---
+    // The lightbox is a react-native-web Modal, which only gets role="dialog"
+    // while open (ModalContent.js) -- scope to it so its "Retour"/"Enregistrer"
+    // buttons aren't ambiguous with the screen's own back button underneath,
+    // which stays present (if visually covered) while the modal is open.
+    await page.getByLabel(`Photo du ${photoDate}`).click();
+    const lightbox = page.getByRole('dialog');
+    await lightbox.getByRole('button', { name: 'Modifier la date', exact: true }).click();
+
+    // Invalid date: shows an error, keeps the old date.
+    const editDateInput = lightbox.getByLabel('Date de la photo', { exact: true });
+    await editDateInput.fill('2025-13-01');
+    await lightbox.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await expect(visibleText(page, 'Date au format AAAA-MM-JJ')).toBeVisible();
+
+    // Valid date: the lightbox reflects it, and closing it shows the photo
+    // re-grouped under its new date.
+    const newPhotoDate = '2025-04-12';
+    await editDateInput.fill(newPhotoDate);
+    await lightbox.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await lightbox.getByRole('button', { name: 'Retour', exact: true }).click();
+    await expect(page.getByLabel(`Photo du ${newPhotoDate}`)).toBeVisible();
+    await expect(page.getByLabel(`Photo du ${photoDate}`)).toHaveCount(0);
+
     // --- Reload: the photo (and its date) survived ---
     // plant/[id] is a full-screen route outside the (tabs) group (see the
     // comment on the first test above), so reloading lands back on this
@@ -220,7 +244,7 @@ test.describe('web smoke', () => {
     await page.reload();
     await expect(visibleText(page, plantName)).toBeVisible();
     await visibleText(page, 'Photos').click();
-    await expect(page.getByLabel(`Photo du ${photoDate}`)).toBeVisible();
+    await expect(page.getByLabel(`Photo du ${newPhotoDate}`)).toBeVisible();
     await expectStoredPhotoLoads(page);
   });
 

@@ -11,12 +11,14 @@ import {
   TextInput,
   Dimensions,
   Animated,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '../../components/Icon';
-import { PrimaryButton } from '../../components/form';
+import { PrimaryButton, Field } from '../../components/form';
 import { InfoTab } from '../../components/plant/InfoTab';
 import { PhotosTab } from '../../components/plant/PhotosTab';
 import { ActionsTab } from '../../components/plant/ActionsTab';
@@ -32,6 +34,7 @@ import {
   getBloomObservations,
   addPhoto,
   deletePhoto,
+  updatePhotoDate,
   markReminderDone,
   createCareLog,
   deleteCareLog,
@@ -106,6 +109,9 @@ export default function PlantDetailScreen() {
   const [selectedPhoto, setSelectedPhoto] = useState(null);
   const [zoomScale, setZoomScale] = useState(1);
   const [remoteImageError, setRemoteImageError] = useState(false);
+  const [editingPhotoDate, setEditingPhotoDate] = useState(false);
+  const [photoDateEdit, setPhotoDateEdit] = useState('');
+  const [photoDateEditError, setPhotoDateEditError] = useState('');
 
   const load = useCallback(async () => {
     if (id === 'new') return;
@@ -227,6 +233,44 @@ export default function PlantDetailScreen() {
       webKey: 'gallery',
     });
     if (key) await handleAddPhoto(key);
+  };
+
+  const closeLightbox = () => {
+    setSelectedPhoto(null);
+    setEditingPhotoDate(false);
+    setPhotoDateEdit('');
+    setPhotoDateEditError('');
+  };
+
+  const startEditPhotoDate = () => {
+    setPhotoDateEdit(selectedPhoto.date);
+    setPhotoDateEditError('');
+    setEditingPhotoDate(true);
+  };
+
+  const cancelEditPhotoDate = () => {
+    setEditingPhotoDate(false);
+    setPhotoDateEdit('');
+    setPhotoDateEditError('');
+  };
+
+  const confirmEditPhotoDate = async () => {
+    const { value, error } = parseISODate(photoDateEdit);
+    if (error || value == null) {
+      setPhotoDateEditError(error || 'Date requise');
+      return;
+    }
+    try {
+      updatePhotoDate(selectedPhoto.id, value);
+    } catch (e) {
+      showMessage('Erreur', `Impossible de modifier la date : ${e.message}`);
+      return;
+    }
+    setSelectedPhoto({ ...selectedPhoto, date: value });
+    setEditingPhotoDate(false);
+    setPhotoDateEdit('');
+    setPhotoDateEditError('');
+    await load();
   };
 
   const handleDeletePhoto = async (photo) => {
@@ -470,10 +514,16 @@ export default function PlantDetailScreen() {
         visible={!!selectedPhoto}
         transparent
         animationType="fade"
-        onRequestClose={() => setSelectedPhoto(null)}>
-        <View style={styles.lightboxOverlay}>
+        onRequestClose={closeLightbox}>
+        <KeyboardAvoidingView
+          style={styles.lightboxOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <View style={styles.lightboxHeader}>
-            <TouchableOpacity style={styles.lightboxBackBtn} onPress={() => setSelectedPhoto(null)}>
+            <TouchableOpacity
+              style={styles.lightboxBackBtn}
+              onPress={closeLightbox}
+              accessibilityRole="button"
+              accessibilityLabel="Retour">
               <Icon name="chevron-left" size={18} color="#fff" />
               <Text style={styles.lightboxBackText}>Retour</Text>
             </TouchableOpacity>
@@ -500,8 +550,49 @@ export default function PlantDetailScreen() {
               </Animated.View>
             </PinchGestureHandler>
           )}
-          {selectedPhoto && <Text style={styles.lightboxDate}>{selectedPhoto.date}</Text>}
-        </View>
+          {selectedPhoto && !editingPhotoDate && (
+            <View style={styles.lightboxDateRow}>
+              <Text style={styles.lightboxDate}>{selectedPhoto.date}</Text>
+              <TouchableOpacity
+                style={styles.lightboxEditDateBtn}
+                onPress={startEditPhotoDate}
+                accessibilityRole="button"
+                accessibilityLabel="Modifier la date">
+                <Icon name="pencil-outline" size={16} color="#fff" />
+                <Text style={styles.lightboxEditDateText}>Modifier la date</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {selectedPhoto && editingPhotoDate && (
+            <View style={styles.lightboxDateEditRow}>
+              <Field
+                value={photoDateEdit}
+                onChangeText={(v) => {
+                  setPhotoDateEdit(v);
+                  setPhotoDateEditError('');
+                }}
+                placeholder="AAAA-MM-JJ"
+                keyboardType="numbers-and-punctuation"
+                accessibilityLabel="Date de la photo"
+                error={photoDateEditError}
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={cancelEditPhotoDate}
+                  accessibilityRole="button">
+                  <Text style={[styles.modalCancelText, styles.lightboxCancelText]}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalConfirmBtn}
+                  onPress={confirmEditPhotoDate}
+                  accessibilityRole="button">
+                  <Text style={styles.modalConfirmText}>Enregistrer</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </KeyboardAvoidingView>
       </Modal>
     </GestureHandlerRootView>
   );
@@ -675,7 +766,7 @@ const styles = StyleSheet.create({
   modalConfirmText: { ...typography.label, color: '#fff' },
   lightboxOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.95)',
+    backgroundColor: colors.lightbox,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -701,11 +792,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   lightboxImage: { width: '100%', height: '100%' },
-  lightboxDate: {
+  // The shared modal's cancel label is dark (it sits on a light card); on the
+  // lightbox's black it needs the light text colour.
+  lightboxCancelText: { color: colors.background },
+  lightboxDateRow: {
     position: 'absolute',
     bottom: 50,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  lightboxDate: {
     ...typography.body,
     color: '#fff',
     textAlign: 'center',
+  },
+  lightboxEditDateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: spacing.sm,
+  },
+  lightboxEditDateText: { ...typography.body, color: '#fff' },
+  lightboxDateEditRow: {
+    position: 'absolute',
+    bottom: 50,
+    left: 0,
+    right: 0,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.sm,
   },
 });

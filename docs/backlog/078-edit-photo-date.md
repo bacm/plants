@@ -1,7 +1,7 @@
 ---
 id: 078
 title: Change the date of a photo after adding it
-status: open
+status: done
 priority: P1
 type: feature
 ---
@@ -19,12 +19,12 @@ comparison (029); a wrong date misplaces the photo everywhere.
 
 ## Acceptance criteria
 
-- [ ] From the lightbox, the date can be edited ("Modifier la date"), with the
+- [x] From the lightbox, the date can be edited ("Modifier la date"), with the
       same AAAA-MM-JJ validation as when adding
-- [ ] `updatePhotoDate(id, date)` exists in `lib/db.js` and `lib/db.web.js`
-- [ ] The photo moves to its new place in the Photos tab right away
-- [ ] A failed update shows an error and keeps the lightbox open
-- [ ] `npm run verify` and `npm run e2e:web` pass, with an e2e check changing a
+- [x] `updatePhotoDate(id, date)` exists in `lib/db.js` and `lib/db.web.js`
+- [x] The photo moves to its new place in the Photos tab right away
+- [x] A failed update shows an error and keeps the lightbox open
+- [x] `npm run verify` and `npm run e2e:web` pass, with an e2e check changing a
       photo's date
 
 ## Notes
