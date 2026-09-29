@@ -302,7 +302,7 @@ test.describe('web smoke', () => {
     expect(fs.existsSync(backupPath)).toBe(true);
 
     // --- Delete the plant through its confirmation (ticket 042) ---
-    await visibleText(page, 'Retour').click(); // settings -> dashboard
+    await backButton(page).click(); // settings -> dashboard
     await tabButton(page, 'Zones').click();
     await visibleText(page, zoneName).click();
     await visibleText(page, plantName).click();

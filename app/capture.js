@@ -333,6 +333,7 @@ export default function CaptureScreen() {
           onSelect={setSelectedId}
           showUnsorted
           onAddPlant={addPlant}
+          variant="dark"
         />
 
         <View style={styles.actionsRow}>

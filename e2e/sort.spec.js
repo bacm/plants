@@ -76,12 +76,12 @@ test.describe('À trier (sort + import)', () => {
     // openGallery (app/capture.js) navigates to /sort once the import
     // finishes.
     await expect(visibleText(page, 'À trier')).toBeVisible({ timeout: 10000 });
-    await expect(visibleText(page, '2 photos à trier')).toBeVisible({ timeout: 10000 });
+    await expect(visibleText(page, '2 photos')).toBeVisible({ timeout: 10000 });
 
     // --- Assign the photo shown to the plant just created ---
     await visibleText(page, zoneName).click();
     await visibleText(page, plantName).click();
-    await expect(visibleText(page, '1 photo à trier')).toBeVisible();
+    await expect(visibleText(page, '1 photo')).toBeVisible();
 
     // --- Delete the one still left ---
     await visibleText(page, 'Supprimer').click();

@@ -1,7 +1,7 @@
 ---
 id: 071
 title: Restyle the photo sorting and settings screens
-status: in-progress
+status: done
 priority: P3
 type: feature
 ---
@@ -18,15 +18,15 @@ same app.
 
 ## Acceptance criteria
 
-- [ ] PlantStrip has a dark variant (camera) and a light one (sorting): zone
+- [x] PlantStrip has a dark variant (camera) and a light one (sorting): zone
       chips, round plant avatars, the selected one ringed in sprout green
-- [ ] Sorting: count, "Importer", a large photo with "i / N", the date row
+- [x] Sorting: count, "Importer", a large photo with "i / N", the date row
       ("Date inconnue" tag plus an editable date), the green "Classée dans …"
       banner, "Passer" and "Supprimer"
-- [ ] Settings: "Sauvegarde de votre jardin" with the Exporter and Importer
+- [x] Settings: "Sauvegarde de votre jardin" with the Exporter and Importer
       cards
-- [ ] Existing behaviour is unchanged
-- [ ] `npm run verify` and `npm run e2e:web` pass
+- [x] Existing behaviour is unchanged
+- [x] `npm run verify` and `npm run e2e:web` pass
 
 ## Notes
 

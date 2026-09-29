@@ -2,19 +2,12 @@
 // (056) and photos imported from the device's photo library, one at a
 // time, into the garden's plants using the same strip as the camera.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { GradientHero } from '../components/GradientHero';
-import { GlassCard } from '../components/GlassCard';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { PlantStrip } from '../components/PlantStrip';
+import { Field, PrimaryButton } from '../components/form';
 import Icon from '../components/Icon';
 import { colors, spacing, typography, radius } from '../lib/theme';
 import { importPhotosFromLibrary } from '../lib/libraryImport';
@@ -34,6 +27,7 @@ function todayISO() {
 
 export default function SortScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { selectPlantId, autoImport } = useLocalSearchParams();
 
   const [zones, setZones] = useState([]);
@@ -134,7 +128,7 @@ export default function SortScreen() {
         // addPhoto already succeeded; the row left behind is a harmless
         // duplicate the user can clear from "À trier" manually.
       }
-      showConfirmation(`Ajoutée à ${plant?.name ?? 'la plante'}`);
+      showConfirmation(`Classée dans ${plant?.name ?? 'la plante'}`);
       removeFromQueue(current.id);
     },
     [current, plants, editedDate]
@@ -219,35 +213,37 @@ export default function SortScreen() {
 
   const loading = photos === null;
   const empty = !loading && photos.length === 0;
+  const countLabel =
+    !loading && !empty ? `${photos.length} photo${photos.length > 1 ? 's' : ''}` : undefined;
 
   return (
-    <View style={styles.container}>
-      <GradientHero>
-        <TouchableOpacity onPress={close} style={styles.backBtn}>
-          <Icon name="chevron-left" size={16} color={colors.textSecondary} />
-          <Text style={styles.backBtnText}>Retour</Text>
-        </TouchableOpacity>
-        <View style={styles.heroRow}>
-          <View>
-            <Text style={styles.heroTitle}>À trier</Text>
-            {!loading && !empty && (
-              <Text style={styles.heroSubtitle}>
-                {photos.length} photo{photos.length > 1 ? 's' : ''} à trier
-              </Text>
-            )}
-          </View>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 16 },
+      ]}>
+      <ScreenHeader
+        title="À trier"
+        subtitle={countLabel}
+        right={
           <TouchableOpacity
             onPress={importFromLibrary}
             disabled={importing}
-            style={styles.importBtn}>
+            accessibilityRole="button"
+            accessibilityLabel="Importer"
+            accessibilityState={{ disabled: importing, busy: importing }}
+            style={[styles.importPill, importing && styles.importPillDisabled]}>
             {importing ? (
               <ActivityIndicator color={colors.text} />
             ) : (
-              <Text style={styles.importBtnText}>Importer de la galerie</Text>
+              <>
+                <Icon name="image-outline" size={18} color={colors.text} />
+                <Text style={styles.importPillText}>Importer</Text>
+              </>
             )}
           </TouchableOpacity>
-        </View>
-      </GradientHero>
+        }
+      />
 
       {loading && (
         <View style={styles.centered}>
@@ -257,50 +253,64 @@ export default function SortScreen() {
 
       {empty && (
         <View style={styles.centered}>
-          <GlassCard style={styles.emptyCard}>
+          <View style={styles.emptyCard}>
             <Text style={styles.emptyTitle}>Tout est trié</Text>
             <Text style={styles.emptyBody}>Aucune photo en attente de classement.</Text>
-            <TouchableOpacity onPress={close} style={styles.emptyBtn}>
-              <Text style={styles.emptyBtnText}>Retour</Text>
-            </TouchableOpacity>
-          </GlassCard>
+            <PrimaryButton label="Retour" onPress={close} />
+          </View>
         </View>
       )}
 
       {current && (
-        <View style={styles.body}>
+        <>
           <View style={styles.photoWrap}>
-            <Image source={{ uri: current.uri }} style={styles.photo} />
+            <Image
+              source={{ uri: current.uri }}
+              style={styles.photo}
+              accessibilityLabel={`Photo ${pos + 1} sur ${photos.length}`}
+            />
+            <View style={styles.photoBadge}>
+              <Text style={styles.photoBadgeText}>
+                {pos + 1} / {photos.length}
+              </Text>
+            </View>
           </View>
+
           {current.dateUnknown ? (
             <View style={styles.dateRow}>
-              <Text style={styles.unknownDateTag}>Date inconnue</Text>
-              <TextInput
-                style={styles.dateInput}
-                value={editedDate}
-                onChangeText={(text) => {
-                  setEditedDate(text);
-                  setEditedDateError('');
-                }}
-                placeholder="AAAA-MM-JJ"
-                placeholderTextColor={colors.textSecondary}
-              />
-              {editedDateError ? <Text style={styles.dateError}>{editedDateError}</Text> : null}
+              <View style={styles.unknownTag}>
+                <Icon name="alert-circle-outline" size={14} color={colors.terracotta} />
+                <Text style={styles.unknownTagText}>Date inconnue</Text>
+              </View>
+              <View style={styles.dateFieldWrap}>
+                <Field
+                  value={editedDate}
+                  onChangeText={(text) => {
+                    setEditedDate(text);
+                    setEditedDateError('');
+                  }}
+                  placeholder="AAAA-MM-JJ"
+                  accessibilityLabel="Date de la photo"
+                  error={editedDateError}
+                />
+              </View>
             </View>
           ) : (
             <View style={styles.dateRow}>
+              <Icon name="calendar-blank-outline" size={16} color={colors.textSecondary} />
               <Text style={styles.dateText}>{current.takenAt.slice(0, 10)}</Text>
             </View>
           )}
 
           {confirmation && (
-            <View style={styles.confirmationBanner}>
-              <Icon name="check" size={16} color="#fff" />
+            <View style={styles.confirmationBanner} accessibilityRole="alert">
+              <Icon name="check" size={16} color={colors.accent} />
               <Text style={styles.confirmationText}>{confirmation}</Text>
             </View>
           )}
 
           <PlantStrip
+            variant="light"
             zones={zones}
             zoneId={zoneId}
             onSelectZone={setZoneId}
@@ -310,112 +320,153 @@ export default function SortScreen() {
             onAddPlant={addPlant}
           />
 
+          <View style={styles.spacer} />
+
           <View style={styles.actionsRow}>
-            <TouchableOpacity onPress={skip} style={styles.actionBtn}>
-              <Text style={styles.actionBtnText}>Passer</Text>
+            <TouchableOpacity
+              style={styles.skipBtn}
+              onPress={skip}
+              accessibilityRole="button"
+              accessibilityLabel="Passer">
+              <Text style={styles.skipBtnText}>Passer</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={removeCurrent} style={styles.actionBtn}>
+            <TouchableOpacity
+              style={styles.deleteBtn}
+              onPress={removeCurrent}
+              accessibilityRole="button"
+              accessibilityLabel="Supprimer">
+              <Icon name="trash-can-outline" size={18} color={colors.danger} />
               <Text style={styles.deleteBtnText}>Supprimer</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </>
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
-  backBtn: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  backBtnText: { ...typography.bodySmall, color: colors.textSecondary },
-  heroRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  heroTitle: { ...typography.display, color: colors.text },
-  heroSubtitle: { ...typography.bodySmall, color: colors.textSecondary, marginTop: 4 },
-  importBtn: {
-    backgroundColor: colors.surfaceGlass,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
-  },
-  importBtnText: { ...typography.label, color: colors.text },
-
-  emptyCard: { alignItems: 'center', width: '100%' },
-  emptyTitle: { ...typography.title, color: colors.text, marginBottom: spacing.xs },
-  emptyBody: {
-    ...typography.body,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.md,
-  },
-  emptyBtn: {
-    backgroundColor: colors.accent,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-  },
-  emptyBtnText: { ...typography.label, color: '#fff' },
-
-  body: { flex: 1, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-  photoWrap: {
+  container: {
     flex: 1,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    backgroundColor: colors.surface,
-    marginBottom: spacing.sm,
+    backgroundColor: colors.background,
+    paddingHorizontal: 20,
+    gap: 14,
   },
-  photo: { width: '100%', height: '100%', resizeMode: 'cover' },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  dateText: { ...typography.bodySmall, color: colors.textSecondary },
-  unknownDateTag: {
-    ...typography.caption,
-    color: '#fff',
-    backgroundColor: colors.danger,
-    paddingVertical: 2,
-    paddingHorizontal: spacing.xs,
-    borderRadius: radius.sm,
-  },
-  dateInput: {
-    ...typography.bodySmall,
-    color: colors.text,
-    backgroundColor: colors.surface,
-    borderRadius: radius.sm,
-    paddingVertical: 6,
-    paddingHorizontal: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  dateError: { ...typography.caption, color: colors.danger },
-  confirmationBanner: {
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  spacer: { flex: 1 },
+
+  importPill: {
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.accentSoft,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  confirmationText: { ...typography.bodySmall, color: '#fff' },
-
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: spacing.lg,
-    marginTop: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  actionBtn: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 14,
     borderRadius: radius.full,
     backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  actionBtnText: { ...typography.label, color: colors.text },
-  deleteBtnText: { ...typography.label, color: colors.danger },
+  importPillDisabled: { opacity: 0.6 },
+  importPillText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14, color: colors.text },
+
+  emptyCard: {
+    width: '100%',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    padding: 20,
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  emptyTitle: { ...typography.displaySmall, color: colors.text },
+  emptyBody: { ...typography.body, color: colors.textSecondary, textAlign: 'center' },
+
+  photoWrap: {
+    height: 318,
+    flexShrink: 1,
+    minHeight: 200,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    backgroundColor: colors.surface,
+  },
+  photo: { width: '100%', height: '100%', resizeMode: 'cover' },
+  photoBadge: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    height: 28,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    backgroundColor: colors.overlayDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoBadgeText: {
+    fontFamily: 'InstrumentSans_600SemiBold',
+    fontSize: 12,
+    color: colors.background,
+  },
+
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  dateText: { ...typography.bodySmall, color: colors.textSecondary },
+  unknownTag: {
+    height: 32,
+    flexShrink: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    backgroundColor: colors.blush,
+  },
+  unknownTagText: {
+    fontFamily: 'InstrumentSans_600SemiBold',
+    fontSize: 13,
+    color: colors.terracotta,
+  },
+  dateFieldWrap: { flex: 1, flexBasis: 'auto', minWidth: 0 },
+
+  confirmationBanner: {
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.softGreen,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+  },
+  confirmationText: {
+    fontFamily: 'InstrumentSans_600SemiBold',
+    fontSize: 14,
+    color: colors.accent,
+  },
+
+  actionsRow: { flexDirection: 'row', gap: 12 },
+  skipBtn: {
+    flex: 1,
+    flexBasis: 'auto',
+    minWidth: 0,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skipBtnText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 15, color: colors.text },
+  deleteBtn: {
+    flex: 1,
+    flexBasis: 'auto',
+    minWidth: 0,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: colors.blush,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  deleteBtnText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 15, color: colors.danger },
 });

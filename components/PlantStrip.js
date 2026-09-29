@@ -2,9 +2,40 @@
 // (app/capture.js, ticket 056) and the "À trier" sorting screen
 // (app/sort.js, ticket 061), so the one strip only exists in one place.
 import { View, Text, Image, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import Icon from './Icon';
 import { colors, spacing, typography, radius } from '../lib/theme';
 
 export const UNSORTED_ID = '__unsorted__';
+
+// `variant` picks the strip's palette (ticket 071): 'light' sits on the
+// app's paper background (app/sort.js), 'dark' sits on the camera screen's
+// dark bottom bar (app/capture.js).
+const PALETTE = {
+  light: {
+    chipBg: colors.surface,
+    chipBorder: colors.border,
+    chipBgActive: colors.text,
+    chipBorderActive: colors.text,
+    chipLabel: colors.text,
+    chipLabelActive: colors.background,
+    thumbBg: colors.softGreen,
+    thumbGlyph: colors.text,
+    name: colors.textSecondary,
+    nameSelected: colors.text,
+  },
+  dark: {
+    chipBg: colors.onDarkChipBg,
+    chipBorder: colors.onDarkBorder,
+    chipBgActive: colors.background,
+    chipBorderActive: colors.background,
+    chipLabel: colors.background,
+    chipLabelActive: colors.text,
+    thumbBg: colors.onDarkChipBg,
+    thumbGlyph: colors.background,
+    name: colors.onDarkMuted,
+    nameSelected: colors.background,
+  },
+};
 
 /**
  * `zones`/`zoneId`/`onSelectZone` drive the zone chip row; `null` selects
@@ -12,6 +43,8 @@ export const UNSORTED_ID = '__unsorted__';
  * below it (each plant's latest photo, or an initial when it has none).
  * `showUnsorted` prepends a "?" / "À trier" item selectable with
  * `UNSORTED_ID`. `onAddPlant`, when given, appends a trailing "+" item.
+ * `variant` ('light' | 'dark', default 'light') picks the palette for the
+ * panel the strip sits on.
  */
 export function PlantStrip({
   zones,
@@ -22,65 +55,127 @@ export function PlantStrip({
   onSelect,
   showUnsorted = false,
   onAddPlant,
+  variant = 'light',
 }) {
+  const p = PALETTE[variant];
+
+  const renderThumb = (selected, content) => (
+    <View style={[styles.thumbRing, { borderColor: selected ? colors.highlight : 'transparent' }]}>
+      <View style={[styles.plantThumb, { backgroundColor: p.thumbBg }]}>{content}</View>
+    </View>
+  );
+
   return (
     <View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.zoneScroll}>
         <TouchableOpacity
-          style={[styles.zoneChip, zoneId === null && styles.zoneChipActive]}
-          onPress={() => onSelectZone(null)}>
-          <Text style={[styles.zoneChipText, zoneId === null && styles.zoneChipTextActive]}>
+          style={[
+            styles.zoneChip,
+            { backgroundColor: p.chipBg, borderColor: p.chipBorder },
+            zoneId === null && { backgroundColor: p.chipBgActive, borderColor: p.chipBorderActive },
+          ]}
+          onPress={() => onSelectZone(null)}
+          accessibilityRole="button"
+          accessibilityLabel="Sans zone"
+          accessibilityState={{ selected: zoneId === null }}>
+          <Text
+            style={[
+              styles.zoneChipText,
+              { color: zoneId === null ? p.chipLabelActive : p.chipLabel },
+            ]}>
             Sans zone
           </Text>
         </TouchableOpacity>
-        {zones.map((z) => (
-          <TouchableOpacity
-            key={z.id}
-            style={[styles.zoneChip, zoneId === z.id && styles.zoneChipActive]}
-            onPress={() => onSelectZone(z.id)}>
-            <Text style={[styles.zoneChipText, zoneId === z.id && styles.zoneChipTextActive]}>
-              {z.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {zones.map((z) => {
+          const selected = zoneId === z.id;
+          return (
+            <TouchableOpacity
+              key={z.id}
+              style={[
+                styles.zoneChip,
+                { backgroundColor: p.chipBg, borderColor: p.chipBorder },
+                selected && { backgroundColor: p.chipBgActive, borderColor: p.chipBorderActive },
+              ]}
+              onPress={() => onSelectZone(z.id)}
+              accessibilityRole="button"
+              accessibilityLabel={z.name}
+              accessibilityState={{ selected }}>
+              <Text
+                style={[
+                  styles.zoneChipText,
+                  { color: selected ? p.chipLabelActive : p.chipLabel },
+                ]}>
+                {z.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.plantStrip}>
         {showUnsorted && (
           <TouchableOpacity
-            style={[styles.plantItem, selectedId === UNSORTED_ID && styles.plantItemSelected]}
-            onPress={() => onSelect(UNSORTED_ID)}>
-            <View style={styles.plantThumb}>
-              <Text style={styles.plantThumbInitial}>?</Text>
-            </View>
-            <Text style={styles.plantName}>À trier</Text>
+            style={styles.plantItem}
+            onPress={() => onSelect(UNSORTED_ID)}
+            accessibilityRole="button"
+            accessibilityLabel="À trier"
+            accessibilityState={{ selected: selectedId === UNSORTED_ID }}>
+            {renderThumb(
+              selectedId === UNSORTED_ID,
+              <Icon name="help" size={20} color={p.thumbGlyph} />
+            )}
+            <Text
+              style={[
+                styles.plantName,
+                { color: selectedId === UNSORTED_ID ? p.nameSelected : p.name },
+                selectedId === UNSORTED_ID && styles.plantNameSelected,
+              ]}>
+              À trier
+            </Text>
           </TouchableOpacity>
         )}
 
-        {plants.map((p) => (
-          <TouchableOpacity
-            key={p.id}
-            style={[styles.plantItem, selectedId === p.id && styles.plantItemSelected]}
-            onPress={() => onSelect(p.id)}>
-            <View style={styles.plantThumb}>
-              {p.photoUri ? (
-                <Image source={{ uri: p.photoUri }} style={styles.plantThumbImage} />
-              ) : (
-                <Text style={styles.plantThumbInitial}>{p.name?.[0]?.toUpperCase() ?? '?'}</Text>
+        {plants.map((plant) => {
+          const selected = selectedId === plant.id;
+          return (
+            <TouchableOpacity
+              key={plant.id}
+              style={styles.plantItem}
+              onPress={() => onSelect(plant.id)}
+              accessibilityRole="button"
+              accessibilityLabel={plant.name}
+              accessibilityState={{ selected }}>
+              {renderThumb(
+                selected,
+                plant.photoUri ? (
+                  <Image source={{ uri: plant.photoUri }} style={styles.plantThumbImage} />
+                ) : (
+                  <Text style={[styles.plantThumbInitial, { color: p.thumbGlyph }]}>
+                    {plant.name?.[0]?.toUpperCase() ?? '?'}
+                  </Text>
+                )
               )}
-            </View>
-            <Text style={styles.plantName} numberOfLines={1}>
-              {p.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  styles.plantName,
+                  { color: selected ? p.nameSelected : p.name },
+                  selected && styles.plantNameSelected,
+                ]}
+                numberOfLines={1}>
+                {plant.name}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
 
         {onAddPlant && (
-          <TouchableOpacity style={styles.plantItem} onPress={onAddPlant}>
-            <View style={styles.plantThumb}>
-              <Text style={styles.plantThumbInitial}>+</Text>
-            </View>
-            <Text style={styles.plantName}>Nouvelle</Text>
+          <TouchableOpacity
+            style={styles.plantItem}
+            onPress={onAddPlant}
+            accessibilityRole="button"
+            accessibilityLabel="Nouvelle plante">
+            {renderThumb(false, <Icon name="plus" size={20} color={p.thumbGlyph} />)}
+            <Text style={[styles.plantName, { color: p.name }]}>Nouvelle</Text>
           </TouchableOpacity>
         )}
       </ScrollView>
@@ -91,31 +186,36 @@ export function PlantStrip({
 const styles = StyleSheet.create({
   zoneScroll: { marginBottom: spacing.sm },
   zoneChip: {
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
+    height: 40,
+    paddingHorizontal: 16,
     borderRadius: radius.full,
-    backgroundColor: colors.surfaceGlass,
+    borderWidth: 1,
     marginRight: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  zoneChipActive: { backgroundColor: colors.accent },
-  zoneChipText: { ...typography.caption, color: colors.text },
-  zoneChipTextActive: { color: '#fff' },
+  zoneChipText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14 },
 
   plantStrip: { marginBottom: spacing.sm },
-  plantItem: { alignItems: 'center', marginRight: spacing.md, width: 64 },
-  plantItemSelected: { opacity: 1 },
-  plantThumb: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
+  plantItem: { alignItems: 'center', marginRight: spacing.md, width: 62 },
+  // The selected ring (2px `colors.highlight`, 3px gap from the avatar) is
+  // built as a wrapping border + padding rather than a box-shadow, which
+  // doesn't exist on native.
+  thumbRing: {
     borderWidth: 2,
-    borderColor: 'transparent',
+    padding: 3,
+    borderRadius: radius.full,
+  },
+  plantThumb: {
+    width: 50,
+    height: 50,
+    borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
   },
   plantThumbImage: { width: '100%', height: '100%' },
-  plantThumbInitial: { ...typography.title, color: colors.text },
-  plantName: { ...typography.caption, color: colors.text, marginTop: 4 },
+  plantThumbInitial: { ...typography.title },
+  plantName: { ...typography.caption, marginTop: 6 },
+  plantNameSelected: { fontFamily: 'InstrumentSans_600SemiBold' },
 });

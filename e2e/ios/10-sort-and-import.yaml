@@ -58,7 +58,7 @@ appId: host.exp.Exponent
 - extendedWaitUntil:
     visible: "À trier"
     timeout: 15000
-- assertVisible: "1 photo à trier"
+- assertVisible: "1 photo"
 
 # --- Assign it to the seeded plant (in "Massif sud") ---
 - tapOn: "Massif sud"
