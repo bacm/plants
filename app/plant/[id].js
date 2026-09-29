@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,8 @@ import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '../../components/Icon';
 import { PrimaryButton, Field } from '../../components/form';
+import { ZoneChips } from '../../components/PlantStrip';
+import { PlantPickList } from '../../components/PlantPickList';
 import { InfoTab } from '../../components/plant/InfoTab';
 import { PhotosTab } from '../../components/plant/PhotosTab';
 import { ActionsTab } from '../../components/plant/ActionsTab';
@@ -35,6 +37,9 @@ import {
   addPhoto,
   deletePhoto,
   updatePhotoDate,
+  movePhoto,
+  getZones,
+  getPlantsByZoneWithImages,
   markReminderDone,
   createCareLog,
   deleteCareLog,
@@ -112,6 +117,11 @@ export default function PlantDetailScreen() {
   const [editingPhotoDate, setEditingPhotoDate] = useState(false);
   const [photoDateEdit, setPhotoDateEdit] = useState('');
   const [photoDateEditError, setPhotoDateEditError] = useState('');
+  // Ticket 082: the "Déplacer" sheet inside the lightbox.
+  const [movingPhoto, setMovingPhoto] = useState(false);
+  const [moveZoneId, setMoveZoneId] = useState(null);
+  const [moveZones, setMoveZones] = useState([]);
+  const [movePlants, setMovePlants] = useState([]);
 
   const load = useCallback(async () => {
     if (id === 'new') return;
@@ -233,8 +243,43 @@ export default function PlantDetailScreen() {
     if (key) await handleAddPhoto(key);
   };
 
+  useEffect(() => {
+    if (!movingPhoto) return undefined;
+    let cancelled = false;
+    (async () => {
+      const [zs, ps] = await Promise.all([getZones(), getPlantsByZoneWithImages(moveZoneId)]);
+      if (cancelled) return;
+      setMoveZones(zs);
+      setMovePlants(ps);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [movingPhoto, moveZoneId]);
+
+  const startMovePhoto = () => {
+    setMoveZoneId(plant?.zoneId ?? null);
+    setMovePlants([]);
+    setMovingPhoto(true);
+  };
+
+  const confirmMove = async (targetId) => {
+    if (targetId === plant.id) return;
+    const target = movePlants.find((p) => p.id === targetId);
+    try {
+      movePhoto(selectedPhoto.id, targetId);
+    } catch (e) {
+      showMessage('Erreur', `Impossible de déplacer la photo : ${e.message}`);
+      return;
+    }
+    closeLightbox();
+    await load();
+    showMessage('Photo déplacée', `Déplacée vers ${target?.name ?? 'la plante'}`);
+  };
+
   const closeLightbox = () => {
     setSelectedPhoto(null);
+    setMovingPhoto(false);
     setEditingPhotoDate(false);
     setPhotoDateEdit('');
     setPhotoDateEditError('');
@@ -549,16 +594,29 @@ export default function PlantDetailScreen() {
             </PinchGestureHandler>
           )}
           {selectedPhoto && !editingPhotoDate && (
-            <View style={styles.lightboxDateRow}>
-              <Text style={styles.lightboxDate}>{selectedPhoto.date}</Text>
-              <TouchableOpacity
-                style={styles.lightboxEditDateBtn}
-                onPress={startEditPhotoDate}
-                accessibilityRole="button"
-                accessibilityLabel="Modifier la date">
-                <Icon name="pencil-outline" size={16} color="#fff" />
-                <Text style={styles.lightboxEditDateText}>Modifier la date</Text>
-              </TouchableOpacity>
+            <View style={[styles.lightboxInfo, { paddingBottom: insets.bottom + 36 }]}>
+              <View>
+                <Text style={styles.lightboxPlantName}>{plant?.name}</Text>
+                <Text style={styles.lightboxDate}>{selectedPhoto.date}</Text>
+              </View>
+              <View style={styles.lightboxActions}>
+                <TouchableOpacity
+                  style={[styles.lightboxPill, styles.lightboxPillOutline]}
+                  onPress={startEditPhotoDate}
+                  accessibilityRole="button"
+                  accessibilityLabel="Modifier la date">
+                  <Icon name="calendar-blank-outline" size={18} color="#fff" />
+                  <Text style={styles.lightboxPillOutlineText}>Modifier la date</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.lightboxPill, styles.lightboxPillFilled]}
+                  onPress={startMovePhoto}
+                  accessibilityRole="button"
+                  accessibilityLabel="Déplacer">
+                  <Icon name="arrow-right" size={18} color={colors.text} />
+                  <Text style={styles.lightboxPillFilledText}>Déplacer</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
           {selectedPhoto && editingPhotoDate && (
@@ -586,6 +644,35 @@ export default function PlantDetailScreen() {
                   onPress={confirmEditPhotoDate}
                   accessibilityRole="button">
                   <Text style={styles.modalConfirmText}>Enregistrer</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          {selectedPhoto && movingPhoto && (
+            <View style={styles.moveOverlay}>
+              <View style={styles.moveSheet}>
+                <View style={styles.moveGrabber} />
+                <View style={styles.moveHeader}>
+                  <Image source={{ uri: selectedPhoto.uri }} style={styles.moveThumb} />
+                  <View style={styles.moveHeaderText}>
+                    <Text style={styles.moveTitle}>Déplacer la photo</Text>
+                    <Text style={styles.moveSubtitle}>Actuellement dans {plant?.name}</Text>
+                  </View>
+                </View>
+                <ZoneChips
+                  variant="light"
+                  zones={moveZones}
+                  zoneId={moveZoneId}
+                  onSelectZone={setMoveZoneId}
+                  style={styles.moveZoneChips}
+                />
+                <PlantPickList plants={movePlants} currentId={plant?.id} onSelect={confirmMove} />
+                <TouchableOpacity
+                  style={styles.moveCancelBtn}
+                  onPress={() => setMovingPhoto(false)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Annuler le déplacement">
+                  <Text style={styles.moveCancelText}>Annuler</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -793,30 +880,87 @@ const styles = StyleSheet.create({
   // The shared modal's cancel label is dark (it sits on a light card); on the
   // lightbox's black it needs the light text colour.
   lightboxCancelText: { color: colors.background },
-  lightboxDateRow: {
+  lightboxInfo: {
     position: 'absolute',
-    bottom: 50,
+    bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: 20,
+    gap: 14,
   },
+  lightboxPlantName: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 17, color: '#fff' },
   lightboxDate: {
-    ...typography.body,
-    color: '#fff',
-    textAlign: 'center',
+    fontFamily: 'InstrumentSans_400Regular',
+    fontSize: 14,
+    color: colors.onDarkMuted,
   },
-  lightboxEditDateBtn: {
+  lightboxActions: { flexDirection: 'row', gap: 12 },
+  lightboxPill: {
+    flex: 1,
+    height: 52,
+    borderRadius: 26,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    minHeight: 44,
-    paddingHorizontal: spacing.sm,
+    justifyContent: 'center',
+    gap: 8,
   },
-  lightboxEditDateText: { ...typography.body, color: '#fff' },
+  lightboxPillOutline: { borderWidth: 1.5, borderColor: colors.onDarkBorder },
+  lightboxPillFilled: { backgroundColor: colors.highlight },
+  lightboxPillOutlineText: {
+    fontFamily: 'InstrumentSans_600SemiBold',
+    fontSize: 15,
+    color: '#fff',
+  },
+  lightboxPillFilledText: {
+    fontFamily: 'InstrumentSans_600SemiBold',
+    fontSize: 15,
+    color: colors.text,
+  },
+  moveOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: colors.overlayDark,
+    zIndex: 20,
+  },
+  moveSheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '76%',
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    gap: 14,
+  },
+  moveGrabber: {
+    alignSelf: 'center',
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.borderStrong,
+  },
+  moveHeader: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  moveThumb: { width: 52, height: 52, borderRadius: 14 },
+  moveHeaderText: { flex: 1 },
+  moveTitle: { ...typography.displaySmall, color: colors.text },
+  moveSubtitle: {
+    fontFamily: 'InstrumentSans_400Regular',
+    fontSize: 13,
+    color: colors.textSecondary,
+  },
+  moveZoneChips: { flexGrow: 0, flexShrink: 0, marginBottom: 0, marginRight: -20 },
+  moveCancelBtn: {
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moveCancelText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 15, color: colors.text },
   lightboxDateEditRow: {
     position: 'absolute',
     bottom: 50,

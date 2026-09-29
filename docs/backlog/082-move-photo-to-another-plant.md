@@ -1,7 +1,7 @@
 ---
 id: 082
 title: Move a photo to another plant from the photo viewer
-status: open
+status: done
 priority: P1
 type: feature
 ---
@@ -23,23 +23,23 @@ or forces a re-import from the photo library.
 
 ## Acceptance criteria
 
-- [ ] The photo viewer shows two actions under the photo: "Modifier la date"
+- [x] The photo viewer shows two actions under the photo: "Modifier la date"
       and "Déplacer" (mock-up artboard "Photo · visionneuse")
-- [ ] "Déplacer" opens a bottom sheet "Déplacer la photo" with the zone chips
+- [x] "Déplacer" opens a bottom sheet "Déplacer la photo" with the zone chips
       and the full-width plant list from 081 (`ZoneChips`, `PlantPickList`);
       it opens on the photo's current zone, and the current plant is shown
       dimmed with an "Actuelle" tag and cannot be picked (artboard "Photo ·
       déplacer vers une autre plante")
-- [ ] Picking a plant moves the photo: it leaves this plant's gallery, shows
+- [x] Picking a plant moves the photo: it leaves this plant's gallery, shows
       in the target's, keeps its file and date; the viewer closes and a
       confirmation names the target plant
-- [ ] A new `movePhoto(id, plantId)` in `lib/db.js` and `lib/db.web.js`
+- [x] A new `movePhoto(id, plantId)` in `lib/db.js` and `lib/db.web.js`
       (parity test) updates `plantId` and clears `careLogId` (the care entry
       belongs to the old plant); it throws when the photo is missing, and the
       screen shows the error with `Alert.alert('Erreur', …)` (CLAUDE.md rule 6)
-- [ ] An e2e step (web) files a photo into plant A, moves it to plant B and
+- [x] An e2e step (web) files a photo into plant A, moves it to plant B and
       checks it is on B and no longer on A
-- [ ] `npm run verify` passes
+- [x] `npm run verify` passes
 
 ## Notes
 
