@@ -6,6 +6,7 @@ OpenAI (this is not a generic relay).
 """
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -27,6 +28,8 @@ RATE_LIMIT_MAX_REQUESTS = 20
 RATE_LIMIT_WINDOW_SECONDS = 60
 
 SEARCH_DAILY_BUDGET_DEFAULT = 500
+
+MIN_API_TOKEN_LENGTH = 32
 
 WIKIPEDIA_SUMMARY_URL = "https://en.wikipedia.org/api/rest_v1/page/summary/{title}"
 WIKIPEDIA_USER_AGENT = "PlantsApp/1.0 (https://github.com/bacm/plants)"
@@ -297,10 +300,43 @@ def parse_plants(text):
     return plants[:5]
 
 
+def _is_authorized(header, tokens):
+    """Check an `Authorization` header against the configured tokens.
+
+    Requires the `Bearer` scheme (case-insensitive) and compares the
+    presented token against every configured token with a constant-time
+    comparison, looping over all of them rather than stopping at the first
+    match, so the response time never leaks which token (if any) was close.
+    """
+    if not header:
+        return False
+    scheme, _, presented = header.partition(" ")
+    if scheme.lower() != "bearer" or not presented:
+        return False
+    presented_bytes = presented.encode("utf-8")
+    authorized = False
+    for token in tokens:
+        if hmac.compare_digest(presented_bytes, token.encode("utf-8")):
+            authorized = True
+    return authorized
+
+
 def create_app():
     if "OPENAI_API_KEY" not in os.environ or not os.environ["OPENAI_API_KEY"].strip():
         raise RuntimeError(
             "OPENAI_API_KEY environment variable is required to start the plant search server."
+        )
+
+    raw_tokens = os.environ.get("API_TOKENS", "")
+    api_tokens = tuple(token.strip() for token in raw_tokens.split(",") if token.strip())
+    if not api_tokens:
+        raise RuntimeError(
+            "API_TOKENS environment variable is required to start the plant search server "
+            "(comma-separated, each at least 32 characters)."
+        )
+    if any(len(token) < MIN_API_TOKEN_LENGTH for token in api_tokens):
+        raise RuntimeError(
+            f"API_TOKENS entries must each be at least {MIN_API_TOKEN_LENGTH} characters."
         )
 
     raw_budget = os.environ.get("SEARCH_DAILY_BUDGET")
@@ -317,6 +353,7 @@ def create_app():
             )
 
     app = FastAPI()
+    app.state.api_tokens = api_tokens
 
     allowed_origins = [
         origin.strip()
@@ -328,7 +365,7 @@ def create_app():
             CORSMiddleware,
             allow_origins=allowed_origins,
             allow_methods=["GET", "POST"],
-            allow_headers=["Content-Type"],
+            allow_headers=["Content-Type", "Authorization"],
         )
 
     limiter = RateLimiter()
@@ -346,6 +383,12 @@ def create_app():
         client_host = request.client.host if request.client else "unknown"
         if not app.state.limiter.allow(client_host):
             raise HTTPException(status_code=429, detail="Too many requests")
+
+        if not _is_authorized(request.headers.get("Authorization"), app.state.api_tokens):
+            logger.warning("Rejected unauthorized /search request from %s", client_host)
+            raise HTTPException(
+                status_code=401, detail="Unauthorized", headers={"WWW-Authenticate": "Bearer"}
+            )
 
         if not app.state.budget.try_spend():
             if app.state.budget.should_warn():

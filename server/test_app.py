@@ -4,11 +4,17 @@ from datetime import datetime, timezone
 
 os.environ.setdefault("OPENAI_API_KEY", "test-key-not-real")
 
+TOKEN = "a" * 64
+SECOND_TOKEN = "b" * 64
+os.environ.setdefault("API_TOKENS", TOKEN)
+
 import httpx
 import pytest
 from fastapi.testclient import TestClient
 
 import app as app_module
+
+AUTH = {"Authorization": f"Bearer {TOKEN}"}
 
 
 @pytest.fixture
@@ -54,7 +60,7 @@ def test_valid_query_returns_parsed_plants(client, monkeypatch):
     text = '[{"id": "rose-1", "common_name": "Rose", "scientific_name": "Rosa"}]'
     _set_call_openai(monkeypatch, result=text)
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
 
     assert res.status_code == 200
     body = res.json()
@@ -67,7 +73,7 @@ def test_prose_around_array_still_parses(monkeypatch, client):
     text = 'Voici le resultat:\n[{"id": "a"}, {"id": "b"}]\nMerci.'
     _set_call_openai(monkeypatch, result=text)
 
-    res = client.post("/search", json={"query": "tulipe"})
+    res = client.post("/search", json={"query": "tulipe"}, headers=AUTH)
 
     assert res.status_code == 200
     assert res.json()["plants"] == [
@@ -79,7 +85,7 @@ def test_prose_around_array_still_parses(monkeypatch, client):
 def test_garbage_response_returns_empty_list(monkeypatch, client):
     _set_call_openai(monkeypatch, result="not json at all")
 
-    res = client.post("/search", json={"query": "cactus"})
+    res = client.post("/search", json={"query": "cactus"}, headers=AUTH)
 
     assert res.status_code == 200
     assert res.json() == {"plants": []}
@@ -88,7 +94,7 @@ def test_garbage_response_returns_empty_list(monkeypatch, client):
 def test_non_list_json_returns_empty_list(monkeypatch, client):
     _set_call_openai(monkeypatch, result='{"foo": "bar"}')
 
-    res = client.post("/search", json={"query": "cactus"})
+    res = client.post("/search", json={"query": "cactus"}, headers=AUTH)
 
     assert res.status_code == 200
     assert res.json() == {"plants": []}
@@ -100,24 +106,24 @@ def test_more_than_five_items_capped(monkeypatch, client):
 
     _set_call_openai(monkeypatch, result=jsonlib.dumps(items))
 
-    res = client.post("/search", json={"query": "fleur"})
+    res = client.post("/search", json={"query": "fleur"}, headers=AUTH)
 
     assert res.status_code == 200
     assert len(res.json()["plants"]) == 5
 
 
 def test_query_too_short_rejected(client):
-    res = client.post("/search", json={"query": "a"})
+    res = client.post("/search", json={"query": "a"}, headers=AUTH)
     assert res.status_code == 422
 
 
 def test_query_too_long_rejected(client):
-    res = client.post("/search", json={"query": "a" * 101})
+    res = client.post("/search", json={"query": "a" * 101}, headers=AUTH)
     assert res.status_code == 422
 
 
 def test_query_missing_rejected(client):
-    res = client.post("/search", json={})
+    res = client.post("/search", json={}, headers=AUTH)
     assert res.status_code == 422
 
 
@@ -129,15 +135,15 @@ def test_rate_limit_then_recovers_after_window(monkeypatch, client):
     client.app.state.limiter._hits = {}
 
     for _ in range(20):
-        res = client.post("/search", json={"query": "rose"})
+        res = client.post("/search", json={"query": "rose"}, headers=AUTH)
         assert res.status_code == 200
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 429
 
     now[0] += 60.1
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 200
 
 
@@ -156,7 +162,7 @@ def test_image_found_is_attached(monkeypatch, client):
 
     monkeypatch.setattr(app_module, "fetch_wikipedia_image", fake_fetch)
 
-    res = client.post("/search", json={"query": "rosa canina"})
+    res = client.post("/search", json={"query": "rosa canina"}, headers=AUTH)
 
     assert res.status_code == 200
     assert res.json()["plants"][0]["image_urls"] == [
@@ -169,7 +175,7 @@ def test_image_not_found_yields_empty_list(monkeypatch, client):
     _set_call_openai(monkeypatch, result=text)
     # The autouse fixture already stubs fetch_wikipedia_image to return None.
 
-    res = client.post("/search", json={"query": "rosa canina"})
+    res = client.post("/search", json={"query": "rosa canina"}, headers=AUTH)
 
     assert res.status_code == 200
     assert res.json()["plants"][0]["image_urls"] == []
@@ -184,7 +190,7 @@ def test_model_supplied_image_urls_are_discarded(monkeypatch, client):
 
     monkeypatch.setattr(app_module, "fetch_wikipedia_image", fake_fetch)
 
-    res = client.post("/search", json={"query": "rosa canina"})
+    res = client.post("/search", json={"query": "rosa canina"}, headers=AUTH)
 
     assert res.status_code == 200
     assert res.json()["plants"][0]["image_urls"] == [
@@ -201,7 +207,7 @@ def test_image_lookup_exception_does_not_fail_request(monkeypatch, client):
 
     monkeypatch.setattr(app_module, "fetch_wikipedia_image", fake_fetch)
 
-    res = client.post("/search", json={"query": "rosa canina"})
+    res = client.post("/search", json={"query": "rosa canina"}, headers=AUTH)
 
     assert res.status_code == 200
     assert res.json()["plants"][0]["image_urls"] == []
@@ -268,7 +274,7 @@ def test_upstream_error_returns_502_without_leaking_details(monkeypatch, client)
     exc = httpx.HTTPStatusError("upstream failed", request=request, response=response)
     _set_call_openai(monkeypatch, exc=exc)
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
 
     assert res.status_code == 502
     body_text = res.text
@@ -305,7 +311,7 @@ def test_daily_budget_under_limit_passes(monkeypatch, client):
     client.app.state.budget = app_module.DailyBudget(2, clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc))
 
     for _ in range(2):
-        res = client.post("/search", json={"query": "rose"})
+        res = client.post("/search", json={"query": "rose"}, headers=AUTH)
         assert res.status_code == 200
 
 
@@ -319,11 +325,11 @@ def test_daily_budget_exceeded_returns_503_without_calling_openai(monkeypatch, c
     monkeypatch.setattr(app_module, "call_openai", fake_call_openai)
     client.app.state.budget = app_module.DailyBudget(1, clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc))
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 200
     assert len(calls) == 1
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 503
     assert res.json() == {"detail": "Plant search daily limit reached"}
     assert len(calls) == 1
@@ -335,7 +341,7 @@ def test_daily_budget_warns_once_per_day(monkeypatch, client, caplog):
 
     with caplog.at_level("WARNING"):
         for _ in range(3):
-            res = client.post("/search", json={"query": "rose"})
+            res = client.post("/search", json={"query": "rose"}, headers=AUTH)
             assert res.status_code == 503
 
     warnings = [r for r in caplog.records if r.levelname == "WARNING"]
@@ -347,15 +353,15 @@ def test_daily_budget_resets_on_next_utc_day(monkeypatch, client):
     current = [datetime(2026, 1, 1, 23, 59, tzinfo=timezone.utc)]
     client.app.state.budget = app_module.DailyBudget(1, clock=lambda: current[0])
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 200
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 503
 
     current[0] = datetime(2026, 1, 2, 0, 1, tzinfo=timezone.utc)
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 200
 
 
@@ -364,10 +370,10 @@ def test_validation_error_does_not_consume_budget(monkeypatch, client):
     budget = app_module.DailyBudget(1, clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc))
     client.app.state.budget = budget
 
-    res = client.post("/search", json={"query": "a"})
+    res = client.post("/search", json={"query": "a"}, headers=AUTH)
     assert res.status_code == 422
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 200
 
 
@@ -377,11 +383,11 @@ def test_rate_limited_request_does_not_consume_budget(monkeypatch, client):
     client.app.state.budget = budget
     client.app.state.limiter.allow = lambda key: False
 
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 429
 
     client.app.state.limiter.allow = lambda key: True
-    res = client.post("/search", json={"query": "rose"})
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
     assert res.status_code == 200
 
 
@@ -397,3 +403,89 @@ def test_invalid_search_daily_budget_fails_fast(monkeypatch):
     monkeypatch.setenv("SEARCH_DAILY_BUDGET", "-5")
     with pytest.raises(RuntimeError):
         app_module.create_app()
+
+
+def test_missing_auth_header_rejected_without_calling_openai(client, monkeypatch):
+    calls = []
+
+    async def fake_call_openai(prompt):
+        calls.append(prompt)
+        return "[]"
+
+    monkeypatch.setattr(app_module, "call_openai", fake_call_openai)
+
+    res = client.post("/search", json={"query": "rose"})
+
+    assert res.status_code == 401
+    assert res.headers["WWW-Authenticate"] == "Bearer"
+    assert calls == []
+
+
+def test_wrong_token_rejected(client):
+    res = client.post("/search", json={"query": "rose"}, headers={"Authorization": "Bearer wrong-token-wrong-token-wrong-token"})
+    assert res.status_code == 401
+
+
+def test_wrong_auth_scheme_rejected(client):
+    res = client.post("/search", json={"query": "rose"}, headers={"Authorization": f"Basic {TOKEN}"})
+    assert res.status_code == 401
+
+
+def test_lowercase_bearer_scheme_accepted(monkeypatch, client):
+    _set_call_openai(monkeypatch, result="[]")
+
+    res = client.post("/search", json={"query": "rose"}, headers={"Authorization": f"bearer {TOKEN}"})
+
+    assert res.status_code == 200
+
+
+def test_second_of_two_configured_tokens_accepted(monkeypatch):
+    monkeypatch.setenv("API_TOKENS", f"{TOKEN},{SECOND_TOKEN}")
+    test_app = app_module.create_app()
+    local_client = TestClient(test_app)
+    _set_call_openai(monkeypatch, result="[]")
+
+    res = local_client.post(
+        "/search", json={"query": "rose"}, headers={"Authorization": f"Bearer {SECOND_TOKEN}"}
+    )
+
+    assert res.status_code == 200
+
+
+def test_unauthorized_request_does_not_consume_budget(monkeypatch, client):
+    _set_call_openai(monkeypatch, result="[]")
+    budget = app_module.DailyBudget(1, clock=lambda: datetime(2026, 1, 1, tzinfo=timezone.utc))
+    client.app.state.budget = budget
+
+    res = client.post("/search", json={"query": "rose"})
+    assert res.status_code == 401
+
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
+    assert res.status_code == 200
+
+
+def test_startup_fails_without_api_tokens(monkeypatch):
+    monkeypatch.delenv("API_TOKENS", raising=False)
+    with pytest.raises(RuntimeError):
+        app_module.create_app()
+
+
+def test_startup_fails_with_empty_api_tokens(monkeypatch):
+    monkeypatch.setenv("API_TOKENS", "")
+    with pytest.raises(RuntimeError):
+        app_module.create_app()
+
+    monkeypatch.setenv("API_TOKENS", " , ")
+    with pytest.raises(RuntimeError):
+        app_module.create_app()
+
+
+def test_startup_fails_with_short_token(monkeypatch):
+    monkeypatch.setenv("API_TOKENS", "a" * 31)
+    with pytest.raises(RuntimeError):
+        app_module.create_app()
+
+
+def test_health_works_without_auth_header(client):
+    res = client.get("/health")
+    assert res.status_code == 200

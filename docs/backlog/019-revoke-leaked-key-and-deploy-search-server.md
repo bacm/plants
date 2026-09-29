@@ -30,5 +30,7 @@ build.
 ## Notes
 
 Blocked on the owner: revocation needs the OpenAI account, and the hosting choice
-is theirs. The rate limit is in memory and per process — fine for one instance;
+is theirs. Since 076 the server ships as a Docker Compose stack behind Caddy
+with an access token on `/search`; `docs/DEPLOY-SERVER.md` covers the VPS side
+(Caddy already forwards the client IP, uvicorn runs with `--proxy-headers`). The rate limit is in memory and per process — fine for one instance;
 revisit if the server scales out.

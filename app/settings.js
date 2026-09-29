@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { File, Paths } from 'expo-file-system';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { PrimaryButton } from '../components/form';
+import { Field, PrimaryButton } from '../components/form';
 import Icon from '../components/Icon';
 import { colors, typography, radius } from '../lib/theme';
 import { showMessage, confirm } from '../lib/dialogs';
-import { exportGarden, isGardenEmpty, importGarden } from '../lib/db';
+import { exportGarden, isGardenEmpty, importGarden, getApiToken, setApiToken } from '../lib/db';
 import { buildBackup, parseBackup } from '../lib/backupFormat';
 
 function todayFileName() {
@@ -56,6 +57,47 @@ export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [hasToken, setHasToken] = useState(false);
+  const [tokenInput, setTokenInput] = useState('');
+  const [savingToken, setSavingToken] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      getApiToken().then((token) => setHasToken(!!token));
+    }, [])
+  );
+
+  const handleSaveToken = async () => {
+    setSavingToken(true);
+    try {
+      await setApiToken(tokenInput);
+      setTokenInput('');
+      const token = await getApiToken();
+      setHasToken(!!token);
+      showMessage('Jeton enregistré', 'La recherche de plantes est activée.');
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'enregistrer le jeton : ${e.message}`);
+    } finally {
+      setSavingToken(false);
+    }
+  };
+
+  const handleDeleteToken = async () => {
+    const proceed = await confirm({
+      title: 'Supprimer le jeton ?',
+      message:
+        'La recherche de plantes ne fonctionnera plus tant qu’un nouveau jeton n’est pas ajouté.',
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    });
+    if (!proceed) return;
+    try {
+      await setApiToken('');
+      setHasToken(false);
+    } catch (e) {
+      showMessage('Erreur', `Impossible de supprimer le jeton : ${e.message}`);
+    }
+  };
 
   const handleExport = async () => {
     setExporting(true);
@@ -137,6 +179,51 @@ export default function SettingsScreen() {
       style={styles.scroll}
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]}>
       <ScreenHeader title="Réglages" large />
+
+      <View style={styles.section}>
+        <Text style={styles.eyebrow}>Recherche de plantes</Text>
+
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.iconSquare, { backgroundColor: colors.sun }]}>
+              <Icon name="key-outline" size={20} color={colors.text} />
+            </View>
+            <View style={styles.cardHeaderText}>
+              <Text style={styles.cardTitle}>Jeton d’accès</Text>
+              <Text style={styles.cardHint}>
+                Fourni par votre serveur de recherche. Il reste sur cet appareil.
+              </Text>
+              <Text style={styles.tokenStatus}>
+                {hasToken ? 'Jeton enregistré' : 'Aucun jeton'}
+              </Text>
+            </View>
+          </View>
+          <Field
+            value={tokenInput}
+            onChangeText={setTokenInput}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            placeholder="Collez le jeton ici"
+            accessibilityLabel="Jeton d’accès"
+          />
+          <PrimaryButton
+            label="Enregistrer le jeton"
+            loadingLabel="Enregistrement…"
+            loading={savingToken}
+            disabled={!tokenInput.trim()}
+            onPress={handleSaveToken}
+          />
+          {hasToken ? (
+            <TouchableOpacity
+              style={styles.deleteTokenBtn}
+              onPress={handleDeleteToken}
+              accessibilityRole="button">
+              <Text style={styles.deleteTokenBtnText}>Supprimer le jeton</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.eyebrow}>Sauvegarde de votre jardin</Text>
@@ -255,6 +342,14 @@ const styles = StyleSheet.create({
   },
   outlineBtnDisabled: { opacity: 0.5 },
   outlineBtnText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 15, color: colors.text },
+
+  tokenStatus: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: colors.accent },
+  deleteTokenBtn: { alignItems: 'center', paddingVertical: 8 },
+  deleteTokenBtnText: {
+    fontFamily: 'InstrumentSans_600SemiBold',
+    fontSize: 15,
+    color: colors.danger,
+  },
 
   spacer: { flex: 1 },
   footer: { alignItems: 'center', gap: 2 },

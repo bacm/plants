@@ -24,6 +24,7 @@ npx expo start
 
 - **iOS / Android**: Scan the QR code with Expo Go (recommended, native mobile experience).
 - **Install on your iPhone** (Release build, keeps your data): see [`docs/DEPLOY-IPHONE.md`](docs/DEPLOY-IPHONE.md).
+- **Deploy the search server** on a VPS: see [`docs/DEPLOY-SERVER.md`](docs/DEPLOY-SERVER.md).
 - **Web**: `npx expo start --web` (SQLite storage not available on web as is).
 
 ## MVP Features

@@ -1,0 +1,31 @@
+{$API_DOMAIN} {
+	# Automatic HTTPS via Let's Encrypt (or ZeroSSL) for {$API_DOMAIN}.
+
+	# The only payload /search accepts is a short JSON query string; nothing
+	# legitimate needs more than a few hundred bytes.
+	request_body {
+		max_size 8KB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		-Server
+	}
+
+	# JSON access logs to stdout (captured by `docker compose logs`). The
+	# `filter` encoder strips the Authorization header explicitly rather than
+	# relying on Caddy's default field set, since that default is not
+	# guaranteed never to include it.
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>headers>Authorization delete
+			}
+		}
+	}
+
+	reverse_proxy api:8000
+}

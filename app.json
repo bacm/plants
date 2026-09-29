@@ -29,7 +29,8 @@
           "cameraPermission": "Pour photographier vos plantes pendant une balade au jardin."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-secure-store"
     ],
     "ios": {
       "supportsTablet": true,

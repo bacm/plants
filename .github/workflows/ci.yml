@@ -72,3 +72,6 @@ jobs:
       - name: Tests
         working-directory: server
         run: python -m pytest -q
+
+      - name: Docker image builds
+        run: docker build server
