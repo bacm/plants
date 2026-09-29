@@ -6,7 +6,8 @@ import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } fr
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { PlantStrip } from '../components/PlantStrip';
+import { ZoneChips } from '../components/PlantStrip';
+import { PlantPickList } from '../components/PlantPickList';
 import { Field, PrimaryButton } from '../components/form';
 import Icon from '../components/Icon';
 import { colors, spacing, typography, radius } from '../lib/theme';
@@ -274,6 +275,14 @@ export default function SortScreen() {
                 {pos + 1} / {photos.length}
               </Text>
             </View>
+            {confirmation && (
+              <View style={styles.confirmationBanner} accessibilityRole="alert">
+                <Icon name="check" size={16} color={colors.accent} />
+                <Text style={styles.confirmationText} numberOfLines={1}>
+                  {confirmation}
+                </Text>
+              </View>
+            )}
           </View>
 
           {current.dateUnknown ? (
@@ -302,25 +311,15 @@ export default function SortScreen() {
             </View>
           )}
 
-          {confirmation && (
-            <View style={styles.confirmationBanner} accessibilityRole="alert">
-              <Icon name="check" size={16} color={colors.accent} />
-              <Text style={styles.confirmationText}>{confirmation}</Text>
-            </View>
-          )}
-
-          <PlantStrip
+          <ZoneChips
             variant="light"
             zones={zones}
             zoneId={zoneId}
             onSelectZone={setZoneId}
-            plants={plants}
-            selectedId={null}
-            onSelect={assignTo}
-            onAddPlant={addPlant}
+            style={styles.zoneChips}
           />
 
-          <View style={styles.spacer} />
+          <PlantPickList plants={plants} onSelect={assignTo} onAddPlant={addPlant} />
 
           <View style={styles.actionsRow}>
             <TouchableOpacity
@@ -353,7 +352,9 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  spacer: { flex: 1 },
+  // A horizontal ScrollView grows along the column by default, which would
+  // take the height the plant list below needs.
+  zoneChips: { flexGrow: 0, flexShrink: 0, marginBottom: 0, marginRight: -20 },
 
   importPill: {
     height: 44,
@@ -383,9 +384,8 @@ const styles = StyleSheet.create({
   emptyBody: { ...typography.body, color: colors.textSecondary, textAlign: 'center' },
 
   photoWrap: {
-    height: 318,
-    flexShrink: 1,
-    minHeight: 200,
+    height: 220,
+    flexShrink: 0,
     borderRadius: radius.xl,
     overflow: 'hidden',
     backgroundColor: colors.surface,
@@ -428,8 +428,12 @@ const styles = StyleSheet.create({
   dateFieldWrap: { flex: 1, flexBasis: 'auto', minWidth: 0 },
 
   confirmationBanner: {
-    height: 44,
-    borderRadius: 22,
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 12,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: colors.softGreen,
     flexDirection: 'row',
     alignItems: 'center',

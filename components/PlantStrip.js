@@ -38,6 +38,61 @@ const PALETTE = {
 };
 
 /**
+ * The zone chip row: a "Sans zone" chip (`zoneId === null`) plus one chip per
+ * zone. Shared by PlantStrip and the sort screen's plant list (ticket 081).
+ * `style` lets the caller override the row's margins.
+ */
+export function ZoneChips({ zones, zoneId, onSelectZone, variant = 'light', style }) {
+  const p = PALETTE[variant];
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={[styles.zoneScroll, style]}>
+      <TouchableOpacity
+        style={[
+          styles.zoneChip,
+          { backgroundColor: p.chipBg, borderColor: p.chipBorder },
+          zoneId === null && { backgroundColor: p.chipBgActive, borderColor: p.chipBorderActive },
+        ]}
+        onPress={() => onSelectZone(null)}
+        accessibilityRole="button"
+        accessibilityLabel="Sans zone"
+        accessibilityState={{ selected: zoneId === null }}>
+        <Text
+          style={[
+            styles.zoneChipText,
+            { color: zoneId === null ? p.chipLabelActive : p.chipLabel },
+          ]}>
+          Sans zone
+        </Text>
+      </TouchableOpacity>
+      {zones.map((z) => {
+        const selected = zoneId === z.id;
+        return (
+          <TouchableOpacity
+            key={z.id}
+            style={[
+              styles.zoneChip,
+              { backgroundColor: p.chipBg, borderColor: p.chipBorder },
+              selected && { backgroundColor: p.chipBgActive, borderColor: p.chipBorderActive },
+            ]}
+            onPress={() => onSelectZone(z.id)}
+            accessibilityRole="button"
+            accessibilityLabel={z.name}
+            accessibilityState={{ selected }}>
+            <Text
+              style={[styles.zoneChipText, { color: selected ? p.chipLabelActive : p.chipLabel }]}>
+              {z.name}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </ScrollView>
+  );
+}
+
+/**
  * `zones`/`zoneId`/`onSelectZone` drive the zone chip row; `null` selects
  * "Sans zone". `plants`/`selectedId`/`onSelect` drive the plant thumbnails
  * below it (each plant's latest photo, or an initial when it has none).
@@ -67,50 +122,7 @@ export function PlantStrip({
 
   return (
     <View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.zoneScroll}>
-        <TouchableOpacity
-          style={[
-            styles.zoneChip,
-            { backgroundColor: p.chipBg, borderColor: p.chipBorder },
-            zoneId === null && { backgroundColor: p.chipBgActive, borderColor: p.chipBorderActive },
-          ]}
-          onPress={() => onSelectZone(null)}
-          accessibilityRole="button"
-          accessibilityLabel="Sans zone"
-          accessibilityState={{ selected: zoneId === null }}>
-          <Text
-            style={[
-              styles.zoneChipText,
-              { color: zoneId === null ? p.chipLabelActive : p.chipLabel },
-            ]}>
-            Sans zone
-          </Text>
-        </TouchableOpacity>
-        {zones.map((z) => {
-          const selected = zoneId === z.id;
-          return (
-            <TouchableOpacity
-              key={z.id}
-              style={[
-                styles.zoneChip,
-                { backgroundColor: p.chipBg, borderColor: p.chipBorder },
-                selected && { backgroundColor: p.chipBgActive, borderColor: p.chipBorderActive },
-              ]}
-              onPress={() => onSelectZone(z.id)}
-              accessibilityRole="button"
-              accessibilityLabel={z.name}
-              accessibilityState={{ selected }}>
-              <Text
-                style={[
-                  styles.zoneChipText,
-                  { color: selected ? p.chipLabelActive : p.chipLabel },
-                ]}>
-                {z.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+      <ZoneChips zones={zones} zoneId={zoneId} onSelectZone={onSelectZone} variant={variant} />
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.plantStrip}>
         {showUnsorted && (
@@ -161,7 +173,11 @@ export function PlantStrip({
                   { color: selected ? p.nameSelected : p.name },
                   selected && styles.plantNameSelected,
                 ]}
-                numberOfLines={1}>
+                // Up to 3 lines, and a middle ellipsis past that: plants of
+                // the same kind in one zone differ only by a trailing suffix
+                // ("… est 1", "… ouest 2"), so the end must stay visible.
+                numberOfLines={3}
+                ellipsizeMode="middle">
                 {plant.name}
               </Text>
             </TouchableOpacity>
@@ -197,7 +213,7 @@ const styles = StyleSheet.create({
   zoneChipText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14 },
 
   plantStrip: { marginBottom: spacing.sm },
-  plantItem: { alignItems: 'center', marginRight: spacing.md, width: 62 },
+  plantItem: { alignItems: 'center', marginRight: spacing.sm, width: 80 },
   // The selected ring (2px `colors.highlight`, 3px gap from the avatar) is
   // built as a wrapping border + padding rather than a box-shadow, which
   // doesn't exist on native.
@@ -216,6 +232,6 @@ const styles = StyleSheet.create({
   },
   plantThumbImage: { width: '100%', height: '100%' },
   plantThumbInitial: { ...typography.title },
-  plantName: { ...typography.caption, marginTop: 6 },
+  plantName: { ...typography.caption, marginTop: 6, textAlign: 'center' },
   plantNameSelected: { fontFamily: 'InstrumentSans_600SemiBold' },
 });
