@@ -1,7 +1,7 @@
 ---
 id: 065
 title: Extract shared form components for fields, chips and month ranges
-status: open
+status: done
 priority: P2
 type: refactor
 ---
@@ -20,22 +20,26 @@ everywhere.
 
 ## Acceptance criteria
 
-- [ ] `components/form/` provides: `Field` (label above a rounded input or
+- [x] `components/form/` provides: `Field` (label above a rounded input or
       textarea), `ChipGroup` (single choice, pill chips, selected = ink),
       `ChoiceTiles` (icon tiles, e.g. Exposition / Arrosage / care types),
       `MonthRangePicker` (12 cells J…D, a start–end range that may wrap the
       year), `FormSection` (card with an uppercase eyebrow) and
       `PrimaryButton` (full-width, 56 pt)
-- [ ] `MonthRangePicker` uses `isMonthInRange` from `lib/months.js`; its
+- [x] `MonthRangePicker` uses `isMonthInRange` from `lib/months.js`; its
       range logic is covered by a test
-- [ ] `ChipGroup` over an enum uses `choices()` / `toggleChip()` from
+- [x] `ChipGroup` over an enum uses `choices()` / `toggleChip()` from
       `lib/enums.js`
-- [ ] Every control is 44 pt minimum, has an accessibilityLabel and exposes
+- [x] Every control is 44 pt minimum, has an accessibilityLabel and exposes
       its selected state
-- [ ] The components use only `lib/theme.js` tokens
-- [ ] `npm run verify` passes
+- [x] The components use only `lib/theme.js` tokens
+- [x] `npm run verify` passes
 
 ## Notes
 
 Mock-up: https://claude.ai/artifact/1gkwXJGkWRBB2VFmiYx6Ks, row "Saisie".
 Depends on 063. Screens adopt these in 069 and 070; this ticket only adds them.
+
+Done. The range logic is the pure `lib/monthRange.js` (tested), which also
+adds `MONTH_LETTERS` to `lib/months.js`. Components are imported from
+`components/form`. No screen uses them yet: 069 and 070 adopt them.
