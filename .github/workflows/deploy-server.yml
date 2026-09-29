@@ -55,6 +55,26 @@ jobs:
     # manual approval.
     environment: production
     steps:
+      # Fail fast, naming what is missing, instead of reaching the VPS with an
+      # empty key or token. Checks presence only; values are never printed.
+      - name: Check configuration
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          API_TOKENS: ${{ secrets.API_TOKENS }}
+          API_DOMAIN: ${{ vars.API_DOMAIN }}
+        run: |
+          missing=()
+          for name in VPS_HOST VPS_SSH_KEY VPS_KNOWN_HOSTS OPENAI_API_KEY API_TOKENS API_DOMAIN; do
+            [ -n "${!name}" ] || missing+=("$name")
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            echo "::error::Not set in the production environment: ${missing[*]} (see docs/DEPLOY-SERVER.md, step 8)"
+            exit 1
+          fi
+
       - name: Configure SSH
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
