@@ -14,12 +14,15 @@ import { colors, spacing, typography, radius } from '../lib/theme';
 import { importPhotosFromLibrary } from '../lib/libraryImport';
 import { resolveAssignDate } from '../lib/sortAssignDate';
 import { showMessage, confirm } from '../lib/dialogs';
+import { isoDateLabel } from '../lib/months';
 import {
   getZones,
   getPlantsByZoneWithImages,
   getUnsortedPhotos,
   addPhoto,
   deleteUnsortedPhoto,
+  deletePhoto,
+  findDuplicateOfUnsorted,
 } from '../lib/db';
 
 function todayISO() {
@@ -48,6 +51,9 @@ export default function SortScreen() {
   // fallback lib/libraryImport.js filed it under.
   const [editedDate, setEditedDate] = useState(todayISO());
   const [editedDateError, setEditedDateError] = useState('');
+  // Ticket 085: `{ plantId, date, existing }` while the "Photo déjà présente"
+  // sheet is open for the photo being sorted.
+  const [duplicate, setDuplicate] = useState(null);
 
   const reload = useCallback(async () => {
     const rows = await getUnsortedPhotos();
@@ -105,7 +111,44 @@ export default function SortScreen() {
   useEffect(() => {
     setEditedDate(todayISO());
     setEditedDateError('');
+    setDuplicate(null);
   }, [current?.id]);
+
+  // Files the photo being sorted into `plantId`. With `replaceId`, the plant's
+  // older copy of the photo is deleted once the new one is safely filed.
+  const fileCurrent = useCallback(
+    async (plantId, date, replaceId = null, replacedVerb = 'Remplacée') => {
+      if (!current) return;
+      const plant = plants.find((p) => p.id === plantId);
+      try {
+        await addPhoto({ plantId, uri: current.uri, date, fingerprint: current.fingerprint });
+      } catch (e) {
+        showMessage('Erreur', `Impossible d'assigner cette photo : ${e.message}`);
+        return; // Keep the unsorted row: nothing was lost.
+      }
+      if (replaceId) {
+        try {
+          await deletePhoto(replaceId);
+        } catch (e) {
+          showMessage(
+            'Erreur',
+            `La nouvelle photo est classée, mais l'ancienne n'a pas pu être supprimée : ${e.message}`
+          );
+        }
+      }
+      try {
+        await deleteUnsortedPhoto(current.id);
+      } catch {
+        // addPhoto already succeeded; the row left behind is a harmless
+        // duplicate the user can clear from "À trier" manually.
+      }
+      showConfirmation(
+        `${replaceId ? replacedVerb : 'Classée'} dans ${plant?.name ?? 'la plante'}`
+      );
+      removeFromQueue(current.id);
+    },
+    [current, plants]
+  );
 
   const assignTo = useCallback(
     async (plantId) => {
@@ -116,24 +159,33 @@ export default function SortScreen() {
         showMessage('Date invalide', "Indiquez une date valide avant d'assigner cette photo.");
         return; // Never assign an unknown-date photo with a silent default.
       }
-      const plant = plants.find((p) => p.id === plantId);
+      let existing = null;
       try {
-        await addPhoto({ plantId, uri: current.uri, date });
-      } catch (e) {
-        showMessage('Erreur', `Impossible d'assigner cette photo : ${e.message}`);
-        return; // Keep the unsorted row: nothing was lost.
-      }
-      try {
-        await deleteUnsortedPhoto(current.id);
+        existing = await findDuplicateOfUnsorted(current.id, plantId, date);
       } catch {
-        // addPhoto already succeeded; the row left behind is a harmless
-        // duplicate the user can clear from "À trier" manually.
+        // The check is a courtesy: on error, file the photo as usual.
       }
-      showConfirmation(`Classée dans ${plant?.name ?? 'la plante'}`);
-      removeFromQueue(current.id);
+      if (existing) {
+        setDuplicate({ plantId, date, existing });
+        return;
+      }
+      await fileCurrent(plantId, date);
     },
-    [current, plants, editedDate]
+    [current, editedDate, fileCurrent]
   );
+
+  const resolveDuplicate = async (replace) => {
+    if (!duplicate) return;
+    const { plantId, date, existing } = duplicate;
+    setDuplicate(null);
+    const elsewhere = existing.plantId !== plantId;
+    await fileCurrent(
+      plantId,
+      date,
+      replace ? existing.id : null,
+      elsewhere ? 'Déplacée' : 'Remplacée'
+    );
+  };
 
   // A plant created via the strip's "+" (app/plant/new.js with
   // returnTo=sort) comes back here with the new plant's id: assign the
@@ -211,6 +263,13 @@ export default function SortScreen() {
   const close = () => {
     router.back();
   };
+
+  const elsewhere = !!duplicate && duplicate.existing.plantId !== duplicate.plantId;
+  const existingPlantName = duplicate
+    ? (duplicate.existing.plantName ??
+      plants.find((p) => p.id === duplicate.plantId)?.name ??
+      'la plante')
+    : '';
 
   const loading = photos === null;
   const empty = !loading && photos.length === 0;
@@ -340,6 +399,65 @@ export default function SortScreen() {
           </View>
         </>
       )}
+
+      {current && duplicate && (
+        <View style={styles.sheetOverlay}>
+          <View style={[styles.sheet, { paddingBottom: insets.bottom + 28 }]}>
+            <View style={styles.grabber} />
+            <View style={styles.sheetHeader}>
+              <View style={styles.sheetIcon}>
+                <Icon name="alert-outline" size={22} color={colors.terracotta} />
+              </View>
+              <Text style={styles.sheetTitle} accessibilityRole="header">
+                {elsewhere ? 'Photo déjà classée ailleurs' : 'Photo déjà présente'}
+              </Text>
+            </View>
+            <Text style={styles.sheetBody}>
+              Cette photo est déjà dans{' '}
+              <Text style={styles.sheetBodyStrong}>{existingPlantName}</Text>, datée du{' '}
+              {isoDateLabel(duplicate.existing.date)}.
+            </Text>
+            <View style={styles.compareRow}>
+              <View style={styles.compareCol}>
+                <Image
+                  source={{ uri: duplicate.existing.uri }}
+                  style={styles.compareImage}
+                  accessibilityLabel="Photo déjà classée"
+                />
+                <Text style={styles.compareLabel} numberOfLines={1}>
+                  {elsewhere ? `Dans ${existingPlantName}` : 'Déjà classée'}
+                </Text>
+              </View>
+              <View style={styles.compareCol}>
+                <Image
+                  source={{ uri: current.uri }}
+                  style={[styles.compareImage, styles.compareImageNew]}
+                  accessibilityLabel="Photo à classer"
+                />
+                <Text style={styles.compareLabel}>À classer</Text>
+              </View>
+            </View>
+            <PrimaryButton
+              label={elsewhere ? 'Garder seulement ici' : 'Remplacer l’ancienne'}
+              onPress={() => resolveDuplicate(true)}
+            />
+            <TouchableOpacity
+              style={styles.keepBothBtn}
+              onPress={() => resolveDuplicate(false)}
+              accessibilityRole="button"
+              accessibilityLabel="Garder les deux">
+              <Text style={styles.skipBtnText}>Garder les deux</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.cancelBtn}
+              onPress={() => setDuplicate(null)}
+              accessibilityRole="button"
+              accessibilityLabel="Annuler">
+              <Text style={styles.cancelBtnText}>Annuler</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -445,6 +563,64 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.accent,
   },
+
+  sheetOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: colors.overlayDark,
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: colors.background,
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    paddingTop: 10,
+    paddingHorizontal: 20,
+    gap: 16,
+  },
+  grabber: {
+    alignSelf: 'center',
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: colors.borderStrong,
+  },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  sheetIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.blush,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sheetTitle: { ...typography.displaySmall, color: colors.text, flex: 1 },
+  sheetBody: { ...typography.body, color: colors.textSecondary },
+  sheetBodyStrong: { fontFamily: 'InstrumentSans_600SemiBold', color: colors.text },
+  compareRow: { flexDirection: 'row', gap: 12 },
+  compareCol: { flex: 1, gap: 6 },
+  compareImage: {
+    width: '100%',
+    height: 130,
+    borderRadius: 18,
+    resizeMode: 'cover',
+    backgroundColor: colors.surface,
+  },
+  compareImageNew: { borderWidth: 2, borderColor: colors.accent },
+  compareLabel: { ...typography.bodySmall, color: colors.textSecondary, textAlign: 'center' },
+  keepBothBtn: {
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtn: { height: 44, alignItems: 'center', justifyContent: 'center' },
+  cancelBtnText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 15, color: colors.text },
 
   actionsRow: { flexDirection: 'row', gap: 12 },
   skipBtn: {
