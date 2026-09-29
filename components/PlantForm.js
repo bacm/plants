@@ -68,6 +68,7 @@ export function PlantForm({
   preselectZoneId,
   autoFocusName,
   onSubmit,
+  onDelete,
 }) {
   const insets = useSafeAreaInsets();
   const [form, setForm] = useState(initialForm);
@@ -518,6 +519,17 @@ export function PlantForm({
             </FormSection>
           </>
         )}
+
+        {onDelete && (
+          <TouchableOpacity
+            style={styles.deleteBtn}
+            onPress={onDelete}
+            accessibilityRole="button"
+            accessibilityLabel="Supprimer la plante">
+            <Icon name="trash-can-outline" size={20} color={colors.danger} />
+            <Text style={styles.deleteBtnText}>Supprimer la plante</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
       <StickyFooter>
@@ -611,4 +623,21 @@ const styles = StyleSheet.create({
   row2: { flexDirection: 'row', gap: 10 },
   col: { flex: 1, gap: spacing.xs },
   label: { ...typography.label, color: colors.text },
+  deleteBtn: {
+    height: 52,
+    marginTop: spacing.md,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    borderColor: colors.danger,
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  deleteBtnText: {
+    fontFamily: 'InstrumentSans_600SemiBold',
+    fontSize: 15,
+    color: colors.danger,
+  },
 });

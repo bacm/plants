@@ -1,7 +1,7 @@
 ---
 id: 072
 title: Surface errors when deleting a plant or a care log
-status: open
+status: done
 priority: P2
 type: bug
 ---
@@ -20,9 +20,9 @@ instead of a message (CLAUDE.md rule 6).
 
 ## Acceptance criteria
 
-- [ ] Both handlers wrap the write in `try`/`catch` and show
+- [x] Both handlers wrap the write in `try`/`catch` and show
       `Alert.alert('Erreur', …)`, leaving the user on the screen
-- [ ] `npm run verify` passes
+- [x] `npm run verify` passes
 
 ## Notes
 

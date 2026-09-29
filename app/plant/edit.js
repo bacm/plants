@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { PlantForm } from '../../components/PlantForm';
+import { useDeletePlant } from '../../components/plant/useDeletePlant';
 import { colors, typography, spacing } from '../../lib/theme';
 import { getPlantById, updatePlant } from '../../lib/db';
 import { plantRowToForm } from '../../lib/plantFields';
@@ -10,6 +11,7 @@ export default function EditPlantScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [plant, setPlant] = useState(null);
+  const { deletePlantWithConfirm } = useDeletePlant(id);
 
   useEffect(() => {
     if (id) getPlantById(id).then((p) => setPlant(p || null));
@@ -34,6 +36,7 @@ export default function EditPlantScreen() {
         // on focus. replace() stacked a second copy of it, which broke "Retour".
         router.back();
       }}
+      onDelete={deletePlantWithConfirm}
     />
   );
 }

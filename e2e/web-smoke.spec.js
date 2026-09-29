@@ -309,7 +309,7 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, plantName)).toBeVisible();
     await visibleText(page, 'Actions').click();
     await visibleText(page, 'Supprimer la plante').click();
-    // handleDelete navigates to router.replace('/(tabs)'), i.e. the dashboard.
+    // useDeletePlant navigates to router.dismissTo('/(tabs)'), i.e. the dashboard.
     await expect(visibleText(page, 'Votre jardin')).toBeVisible();
 
     // --- Réglages: import the file just downloaded, accepting the
@@ -470,5 +470,39 @@ test.describe('web smoke', () => {
     await expect(
       page.getByLabel(`${plantName} : fleurit de Mai à Juillet`, { exact: true })
     ).toBeVisible();
+  });
+
+  // Ticket 077: "Supprimer la plante" used to be findable only as a text
+  // link at the bottom of the detail screen's Actions tab. Check the new
+  // destructive button at the end of the edit screen deletes the plant too.
+  test('delete a plant from the edit screen', async ({ page }) => {
+    const plantName = `E2E Delete Plant ${Date.now()}`;
+
+    await page.goto('/');
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+
+    // --- Create a plant with no zone, via the library tab ---
+    await tabButton(page, 'Bibliothèque').click();
+    await expect(screenTitle(page, 'Bibliothèque')).toBeVisible();
+    await page.getByLabel('Ajouter une plante', { exact: true }).click();
+    await expect(visibleText(page, 'Nouvelle plante')).toBeVisible();
+    await page.getByLabel('Nom de la plante', { exact: true }).fill(plantName);
+    await visibleText(page, 'Enregistrer').click();
+    await expect(visibleText(page, plantName)).toBeVisible();
+
+    // --- Edit screen: the destructive button at the end of the form ---
+    await visibleText(page, 'Modifier la fiche').click();
+    await expect(visibleText(page, 'Modifier')).toBeVisible();
+    page.once('dialog', (d) => d.accept());
+    await visibleText(page, 'Supprimer la plante').click();
+
+    // useDeletePlant's dismissTo lands on the dashboard, with no screen of
+    // the deleted plant left in the back stack.
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+
+    // --- The plant is gone from the library ---
+    await tabButton(page, 'Bibliothèque').click();
+    await expect(screenTitle(page, 'Bibliothèque')).toBeVisible();
+    await expect(visibleText(page, plantName)).toHaveCount(0);
   });
 });

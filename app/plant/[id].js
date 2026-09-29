@@ -20,6 +20,7 @@ import { PrimaryButton } from '../../components/form';
 import { InfoTab } from '../../components/plant/InfoTab';
 import { PhotosTab } from '../../components/plant/PhotosTab';
 import { ActionsTab } from '../../components/plant/ActionsTab';
+import { useDeletePlant } from '../../components/plant/useDeletePlant';
 import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
 import { showMessage, confirm, choose } from '../../lib/dialogs';
 import * as ImagePicker from 'expo-image-picker';
@@ -33,7 +34,6 @@ import {
   deletePhoto,
   markReminderDone,
   createCareLog,
-  deletePlant,
   deleteCareLog,
 } from '../../lib/db';
 import { PLANT_TYPES, isUnknown, labelFor, iconFor } from '../../lib/enums';
@@ -241,17 +241,7 @@ export default function PlantDetailScreen() {
     await load();
   };
 
-  const handleDelete = async () => {
-    const ok = await confirm({
-      title: 'Supprimer la plante',
-      message: 'Cette plante et tout son historique seront supprimés.',
-      confirmLabel: 'Supprimer',
-      destructive: true,
-    });
-    if (!ok) return;
-    deletePlant(id);
-    router.replace('/(tabs)');
-  };
+  const { deletePlantWithConfirm } = useDeletePlant(id);
 
   const handleDeleteCareLog = async (log) => {
     const ok = await confirm({
@@ -261,7 +251,12 @@ export default function PlantDetailScreen() {
       destructive: true,
     });
     if (!ok) return;
-    deleteCareLog(log.id);
+    try {
+      await deleteCareLog(log.id);
+    } catch (e) {
+      showMessage('Erreur', `Impossible de supprimer le soin : ${e.message}`);
+      return;
+    }
     await load();
   };
 
@@ -317,7 +312,7 @@ export default function PlantDetailScreen() {
               router.push({ pathname: '/plant/reminders', params: { plantId: id } })
             }
             onDeleteCareLog={handleDeleteCareLog}
-            onDeletePlant={handleDelete}
+            onDeletePlant={deletePlantWithConfirm}
           />
         );
       default:
