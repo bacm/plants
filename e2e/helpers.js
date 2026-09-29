@@ -6,8 +6,16 @@
 // that also appears on an earlier screen (a zone or plant name, shown on
 // several screens) can match more than one element. Scope to the one that is
 // actually rendered on screen right now.
+//
+// Ticket 066: the dashboard title splits "jardin" into its own nested <Text>
+// for the italic accent colour, so the DOM node carrying "Votre jardin" now
+// has a child <span> for "jardin" -- the CSS `:text-is()` engine used here
+// before only matches an element whose text comes from a single run, so it
+// stopped matching. `getByText(..., { exact: true })` reads the full
+// (possibly multi-node) accessible text instead, so it keeps matching this
+// and every other exact-text case the old selector covered.
 function visibleText(page, text) {
-  return page.locator(`:text-is(${JSON.stringify(text)}):visible`);
+  return page.getByText(text, { exact: true }).and(page.locator(':visible'));
 }
 
 // The floating tab bar (ticket 064) only renders a visible text label on the

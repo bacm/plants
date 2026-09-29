@@ -1,7 +1,7 @@
 ---
 id: 066
 title: Restyle the dashboard to the Herbier mock-up
-status: open
+status: done
 priority: P3
 type: feature
 ---
@@ -17,15 +17,15 @@ It is the first screen the owner sees.
 
 ## Acceptance criteria
 
-- [ ] Header: date eyebrow and "Votre _jardin_" title in Fraunces, a Réglages
+- [x] Header: date eyebrow and "Votre _jardin_" title in Fraunces, a Réglages
       button on the right
-- [ ] "Tâches du jour" is one white card: a count badge, "Tout marquer fait",
+- [x] "Tâches du jour" is one white card: a count badge, "Tout marquer fait",
       and one row per task (tinted icon square, action, plant · zone, a round
       "Fait" button of 44 pt)
-- [ ] "En fleurs ce mois" is a horizontal row of photo cards with a colour
+- [x] "En fleurs ce mois" is a horizontal row of photo cards with a colour
       tag; "Voir tout" opens Floraison
-- [ ] Existing behaviour is unchanged (same data, same actions)
-- [ ] `npm run verify` and `npm run e2e:web` pass
+- [x] Existing behaviour is unchanged (same data, same actions)
+- [x] `npm run verify` and `npm run e2e:web` pass
 
 ## Notes
 
