@@ -1,5 +1,13 @@
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import Icon from '../../../components/Icon';
 import { colors, spacing, typography, radius, colorHex } from '../../../lib/theme';
@@ -127,7 +135,18 @@ export default function ZoneDetailScreen() {
                 activeOpacity={0.9}
                 onPress={() => router.push(`/plant/${p.id}`)}
                 style={[styles.row, idx < plants.length - 1 && styles.rowDivider]}>
-                <View style={[styles.colorDot, { backgroundColor: colorHex(p.flowerColor) }]} />
+                <View style={styles.thumbWrap}>
+                  {p.photoUri ? (
+                    <Image source={{ uri: p.photoUri }} style={styles.thumb} />
+                  ) : (
+                    <View style={[styles.thumb, styles.thumbPlaceholder]}>
+                      <Icon name="leaf" size={20} color={colors.sage} />
+                    </View>
+                  )}
+                  {p.flowerColor ? (
+                    <View style={[styles.colorDot, { backgroundColor: colorHex(p.flowerColor) }]} />
+                  ) : null}
+                </View>
                 <View style={styles.plantInfo}>
                   <Text style={styles.plantName} numberOfLines={1}>
                     {p.name}
@@ -230,9 +249,27 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 16,
   },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 60 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, minHeight: 68, paddingVertical: 8 },
   rowDivider: { borderBottomWidth: 1, borderBottomColor: colors.divider },
-  colorDot: { width: 14, height: 14, borderRadius: 7 },
+  // Ticket 084: the plant's latest photo, like every other plant list; the
+  // flower colour stays as a small badge on its corner.
+  thumbWrap: { width: 48, height: 48 },
+  thumb: { width: 48, height: 48, borderRadius: radius.full },
+  thumbPlaceholder: {
+    backgroundColor: colors.softGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  colorDot: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    borderWidth: 2,
+    borderColor: colors.surface,
+  },
   plantInfo: { flex: 1, minWidth: 0, gap: 1 },
   plantName: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 15, color: colors.text },
   latin: { fontFamily: 'Fraunces_400Regular_Italic', fontSize: 14, color: colors.textSecondary },
