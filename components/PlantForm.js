@@ -270,6 +270,10 @@ export function PlantForm({
           style={styles.moreToggle}
           onPress={toggleMore}
           accessibilityRole="button"
+          // Without an explicit label iOS reads the merged children, the
+          // chevron's icon-font glyph included.
+          accessibilityLabel="Plus de détails"
+          accessibilityHint="Floraison, sol, entretien, santé…"
           accessibilityState={{ expanded: showMore }}>
           <View>
             <Text style={styles.moreToggleTitle}>Plus de détails</Text>
