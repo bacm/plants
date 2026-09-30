@@ -19,8 +19,8 @@ main() {
   REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
   ENV_FILE="$REPO_DIR/deploy/.env"
   COMPOSE=(docker compose -f "$REPO_DIR/deploy/docker-compose.yml")
-  ALLOWED_KEYS='API_DOMAIN|OPENAI_API_KEY|API_TOKENS|SEARCH_DAILY_BUDGET|ALLOWED_ORIGINS|SHARED_CADDY_NETWORK'
-  REQUIRED_KEYS=(API_DOMAIN OPENAI_API_KEY API_TOKENS)
+  ALLOWED_KEYS='API_DOMAIN|WEB_DOMAIN|OPENAI_API_KEY|API_TOKENS|SEARCH_DAILY_BUDGET|ALLOWED_ORIGINS|SHARED_CADDY_NETWORK'
+  REQUIRED_KEYS=(API_DOMAIN WEB_DOMAIN OPENAI_API_KEY API_TOKENS)
 
   fail() {
     echo "deploy: $*" >&2
@@ -49,6 +49,20 @@ main() {
     grep -Eq "^$key=.+" "$TMP_ENV" || fail "$key is missing or empty"
   done
 
+  # WEB_DOMAIN ends up in a Caddyfile and in a CORS origin, so it must be a
+  # plain hostname (no scheme, port, path or spaces).
+  WEB_DOMAIN="$(sed -n 's/^WEB_DOMAIN=//p' "$TMP_ENV")"
+  [[ "$WEB_DOMAIN" =~ ^[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?)+$ ]] ||
+    fail "WEB_DOMAIN is not a hostname"
+
+  # The API only answers browsers from ALLOWED_ORIGINS. Unless the owner set
+  # it, the web app's own origin is the right default.
+  if ! grep -Eq '^ALLOWED_ORIGINS=.+' "$TMP_ENV"; then
+    # Drop an empty ALLOWED_ORIGINS= line first, so the file has one entry.
+    sed -i.bak '/^ALLOWED_ORIGINS=$/d' "$TMP_ENV" && rm -f "$TMP_ENV.bak"
+    printf 'ALLOWED_ORIGINS=https://%s\n' "$WEB_DOMAIN" >>"$TMP_ENV"
+  fi
+
   # --- Check out the commit ---------------------------------------------------
 
   cd "$REPO_DIR"
@@ -76,22 +90,31 @@ main() {
     echo "deploy: using the VPS's Caddy, network $SHARED_NETWORK"
   fi
 
-  # --- Start and wait for the API to be healthy -------------------------------
+  # --- Start and wait for the API and the web app to be healthy ---------------
 
   "${COMPOSE[@]}" up -d --build --remove-orphans
 
-  for _ in $(seq 1 45); do
-    status="$("${COMPOSE[@]}" ps --format '{{.Health}}' api 2>/dev/null || true)"
-    if [ "$status" = "healthy" ]; then
-      echo "deploy: api is healthy"
-      docker image prune -f >/dev/null
-      exit 0
+  # One 90 s budget shared by both services: each is polled in turn, and the
+  # one that never gets healthy is named and its logs shown.
+  for service in api web; do
+    healthy=""
+    for _ in $(seq 1 45); do
+      status="$("${COMPOSE[@]}" ps --format '{{.Health}}' "$service" 2>/dev/null || true)"
+      if [ "$status" = "healthy" ]; then
+        healthy=1
+        echo "deploy: $service is healthy"
+        break
+      fi
+      sleep 2
+    done
+    if [ -z "$healthy" ]; then
+      "${COMPOSE[@]}" logs --tail 50 "$service" >&2 || true
+      fail "$service did not become healthy"
     fi
-    sleep 2
   done
 
-  "${COMPOSE[@]}" logs --tail 50 api >&2 || true
-  fail "api did not become healthy"
+  docker image prune -f >/dev/null
+  exit 0
 }
 
 main "$@"

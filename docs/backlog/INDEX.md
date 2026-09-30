@@ -12,7 +12,6 @@
 | P1 | feature | [029 — Record when plants actually bloom and compare year over year](029-observed-bloom-history.md) |
 | P1 | chore | [040 — Walk the app on a real iOS or Android device after the refactors](040-native-smoke-test-on-device.md) |
 | P1 | bug | [062 — The camera screen cannot be closed on iOS](062-camera-screen-cannot-be-closed-on-ios.md) |
-| P1 | bug | [097 — Size Caddy limits per route and serve the web app on its own subdomain](097-caddy-routes-and-web-site.md) |
 | P1 | security | [098 — Add user accounts that the owner must approve before first login](098-accounts-with-owner-approval.md) |
 | P1 | security | [100 — Keep each account's garden and photos separate on the server](100-scope-sync-and-photos-per-account.md) |
 | P2 | feature | [021 — Notify the user when a reminder falls due](021-local-notifications-for-reminders.md) |
@@ -45,6 +44,7 @@
 
 | Pri | Type | Ticket |
 | --- | --- | --- |
+| P1 | bug | [097 — Size Caddy limits per route and serve the web app on its own subdomain](097-caddy-routes-and-web-site.md) |
 | P2 | feature | [080 — Plant search does not know rare cultivars such as Rosier La Fraîcheur](080-search-misses-rare-cultivars.md) |
 
 ## blocked

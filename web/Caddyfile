@@ -1,0 +1,29 @@
+# Serves the static Expo web build inside the `web` container (ticket 097).
+# Plain http on an internal port: TLS, security headers and the CSP are the
+# edge Caddy's job (deploy/Caddyfile), which is the only public entry point.
+{
+	# No admin API listener and no certificates to manage: http only, behind
+	# the edge Caddy.
+	admin off
+	auto_https off
+}
+
+:8080 {
+	root * /srv
+
+	# Expo hashes the file names under /_expo/static and /assets, so they never
+	# change content: cache them for a year.
+	@hashed path /_expo/static/* /assets/*
+	header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+	# index.html names those hashed files: it must be revalidated every time,
+	# or a deploy would leave browsers on the old bundle. The SPA fallback
+	# below serves index.html for any unknown path, so those answers must not
+	# be cached either: hence "everything but the hashed files".
+	@shell not path /_expo/static/* /assets/*
+	header @shell Cache-Control "no-cache"
+
+	# Single-page app: client-side routes (/plant/abc) are not files.
+	try_files {path} /index.html
+	file_server
+}

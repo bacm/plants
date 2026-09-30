@@ -1,0 +1,22 @@
+# Keeps the web image's build context (the repo root, web/Dockerfile) to what
+# `expo export` needs, and keeps secrets and build output out of it.
+node_modules
+.git
+.github
+.expo
+dist
+dist-release
+.bundle-check
+web-build
+playwright-report
+test-results
+server
+deploy
+e2e
+docs
+ios
+android
+.env
+.env.*
+**/.env
+**/.env.*

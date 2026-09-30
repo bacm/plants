@@ -1,14 +1,54 @@
 # Overlay for a VPS that already runs its own Caddy on ports 80/443 (ticket
 # 079): deploy/deploy.sh adds this file when SHARED_CADDY_NETWORK is set.
-# This stack's Caddy is then never started, and the API joins that Caddy's
-# external Docker network under an unambiguous name, `plants-api`. The shared
-# Caddyfile needs a site block for the domain:
+# This stack's Caddy is then never started, and the API and the web app join
+# that Caddy's external Docker network under unambiguous names, `plants-api`
+# and `plants-web`. The shared Caddyfile needs a site block for each domain
+# (the body limits are per route, see deploy/Caddyfile for the reasons):
+#
+# Behind Cloudflare, that Caddy also needs the same global options block as
+# deploy/Caddyfile (trusted_proxies with Cloudflare's ranges and
+# client_ip_headers), or the API sees Cloudflare's IPs instead of the
+# visitors'. Copy it from there at the top of the shared Caddyfile.
+#
+#   plants-api.example.com {
+#       handle /sync/push {
+#           request_body {
+#               max_size 5MB
+#           }
+#           reverse_proxy plants-api:8000
+#       }
+#       @photoUpload {
+#           method PUT
+#           path /photos/*
+#       }
+#       handle @photoUpload {
+#           request_body {
+#               max_size 16MB
+#           }
+#           reverse_proxy plants-api:8000
+#       }
+#       handle {
+#           request_body {
+#               max_size 8KB
+#           }
+#           reverse_proxy plants-api:8000
+#       }
+#   }
 #
 #   plants.example.com {
+#       header {
+#           Strict-Transport-Security "max-age=31536000; includeSubDomains"
+#           X-Content-Type-Options "nosniff"
+#           X-Frame-Options "DENY"
+#           Referrer-Policy "strict-origin-when-cross-origin"
+#           Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+#           Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://upload.wikimedia.org https://thumb.wikimedia.org; connect-src 'self' https://plants-api.example.com; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+#           -Server
+#       }
 #       request_body {
 #           max_size 8KB
 #       }
-#       reverse_proxy plants-api:8000
+#       reverse_proxy plants-web:8080
 #   }
 services:
   caddy:
@@ -24,6 +64,13 @@ services:
       shared:
         aliases:
           - plants-api
+
+  web:
+    networks:
+      default: {}
+      shared:
+        aliases:
+          - plants-web
 
 volumes:
   garden_data:

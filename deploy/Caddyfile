@@ -1,12 +1,23 @@
-{$API_DOMAIN} {
-	# Automatic HTTPS via Let's Encrypt (or ZeroSSL) for {$API_DOMAIN}.
-
-	# The only payload /search accepts is a short JSON query string; nothing
-	# legitimate needs more than a few hundred bytes.
-	request_body {
-		max_size 8KB
+# Both domains are proxied by Cloudflare, so the TCP peer Caddy sees is always
+# a Cloudflare address, never the visitor's. Caddy only believes
+# CF-Connecting-IP / X-Forwarded-For when the connection really comes from one
+# of these ranges, so a visitor reaching the VPS directly cannot spoof them.
+# Caddy then passes the real client IP to the API in X-Forwarded-For (uvicorn
+# runs with --proxy-headers), which the per-IP limits of ticket 098 rely on.
+# The list must be refreshed when Cloudflare publishes new ranges:
+# https://www.cloudflare.com/ips-v4 and https://www.cloudflare.com/ips-v6
+{
+	servers {
+		trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+		client_ip_headers CF-Connecting-IP X-Forwarded-For
 	}
+}
 
+# Two sites, one Caddy: the API on {$API_DOMAIN}, the web app on {$WEB_DOMAIN}
+# (ticket 097). Both get automatic HTTPS via Let's Encrypt (or ZeroSSL). This
+# is the only public entry point; the `api` and `web` containers publish no port.
+
+{$API_DOMAIN} {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Content-Type-Options "nosniff"
@@ -27,5 +38,75 @@
 		}
 	}
 
-	reverse_proxy api:8000
+	# Body limits are per route: one site-wide cap sized for /search (a short
+	# JSON query) would refuse sync and photo uploads. Caddy runs the `handle`
+	# blocks in order and only the first match, so the small default must come
+	# last. The limits are a cheap first line of defence; the API enforces its
+	# own, stricter ones.
+
+	# A sync push carries up to 1000 rows.
+	handle /sync/push {
+		request_body {
+			max_size 5MB
+		}
+		reverse_proxy api:8000
+	}
+
+	# A photo upload; the API itself refuses anything over 15 MB, so this only
+	# has to leave it a little room for the request framing. Only PUT: a GET
+	# of a photo falls through to the small default below.
+	@photoUpload {
+		method PUT
+		path /photos/*
+	}
+	handle @photoUpload {
+		request_body {
+			max_size 16MB
+		}
+		reverse_proxy api:8000
+	}
+
+	# Everything else (/search, /health, /sync/pull, GET /photos/*, /auth/*):
+	# nothing legitimate sends more than a few hundred bytes.
+	handle {
+		request_body {
+			max_size 8KB
+		}
+		reverse_proxy api:8000
+	}
+}
+
+{$WEB_DOMAIN} {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Nothing in the app uses these browser features.
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		# react-native-web injects inline <style> (hence 'unsafe-inline' for
+		# styles only; scripts stay 'self'). Photos are shown from blob: URLs
+		# and plant search images come from Wikimedia (server/app.py only
+		# accepts those two hosts). The app talks to the API on its own
+		# domain, which is why connect-src names it.
+		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://upload.wikimedia.org https://thumb.wikimedia.org; connect-src 'self' https://{$API_DOMAIN}; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+		-Server
+	}
+
+	log {
+		output stdout
+		format filter {
+			wrap json
+			fields {
+				request>headers>Authorization delete
+			}
+		}
+	}
+
+	# A static site: it never receives a body worth reading.
+	request_body {
+		max_size 8KB
+	}
+
+	reverse_proxy web:8080
 }

@@ -10,6 +10,17 @@ on:
     paths:
       - 'server/**'
       - 'deploy/**'
+      # The web app is built into its own image on the VPS (ticket 097), so
+      # its sources trigger a deploy too.
+      - 'web/**'
+      - 'app/**'
+      - 'components/**'
+      - 'lib/**'
+      - 'assets/**'
+      - 'app.json'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.dockerignore'
       - '.github/workflows/deploy-server.yml'
   workflow_dispatch:
 
@@ -47,6 +58,11 @@ jobs:
       - name: Docker image builds and starts
         run: server/docker-smoke.sh
 
+      # A broken web build must fail here, before anything is deployed. The
+      # URL is a placeholder: only the build is being tested.
+      - name: Web image builds
+        run: docker build -f web/Dockerfile --build-arg EXPO_PUBLIC_PLANT_API_URL=https://example.invalid .
+
   deploy:
     needs: test
     runs-on: ubuntu-latest
@@ -65,9 +81,10 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           API_TOKENS: ${{ secrets.API_TOKENS }}
           API_DOMAIN: ${{ vars.API_DOMAIN }}
+          WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
         run: |
           missing=()
-          for name in VPS_HOST VPS_SSH_KEY VPS_KNOWN_HOSTS OPENAI_API_KEY API_TOKENS API_DOMAIN; do
+          for name in VPS_HOST VPS_SSH_KEY VPS_KNOWN_HOSTS OPENAI_API_KEY API_TOKENS API_DOMAIN WEB_DOMAIN; do
             [ -n "${!name}" ] || missing+=("$name")
           done
           if [ "${#missing[@]}" -gt 0 ]; then
@@ -95,6 +112,7 @@ jobs:
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           API_DOMAIN: ${{ vars.API_DOMAIN }}
+          WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
           SEARCH_DAILY_BUDGET: ${{ vars.SEARCH_DAILY_BUDGET }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
           SHARED_CADDY_NETWORK: ${{ vars.SHARED_CADDY_NETWORK }}
@@ -103,6 +121,7 @@ jobs:
         run: |
           {
             printf 'API_DOMAIN=%s\n' "$API_DOMAIN"
+            printf 'WEB_DOMAIN=%s\n' "$WEB_DOMAIN"
             printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY"
             printf 'API_TOKENS=%s\n' "$API_TOKENS"
             [ -n "$SEARCH_DAILY_BUDGET" ] && printf 'SEARCH_DAILY_BUDGET=%s\n' "$SEARCH_DAILY_BUDGET"
@@ -116,9 +135,12 @@ jobs:
       - name: Health check
         env:
           API_DOMAIN: ${{ vars.API_DOMAIN }}
+          WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
         run: |
-          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors \
-            "https://$API_DOMAIN/health"
+          for url in "https://$API_DOMAIN/health" "https://$WEB_DOMAIN/"; do
+            curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors \
+              --output /dev/null "$url"
+          done
 
       - name: Remove SSH key
         if: always()

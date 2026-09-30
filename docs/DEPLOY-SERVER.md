@@ -2,7 +2,7 @@
 
 The search server (`server/`) must run somewhere reachable over HTTPS before
 plant search works in a release build. It runs on a VPS as a Docker Compose
-stack: the API plus Caddy, which gets and renews a TLS certificate
+stack: the API, the web app (ticket 097) and Caddy, which gets and renews a TLS certificate
 automatically. GitHub Actions deploys it (ticket 079): every push to `main`
 that touches `server/` or `deploy/` is tested, then that exact commit is
 deployed, with the OpenAI key and the API tokens coming from GitHub secrets.
@@ -10,6 +10,7 @@ deployed, with the OpenAI key and the API tokens coming from GitHub secrets.
 Replace throughout:
 
 - `203.0.113.10` with the VPS's IP address;
+- `plants.example.com` with the web app's domain (its own subdomain);
 - `plants-api.example.com` with the server's domain — or, without a domain,
   a free [sslip.io](https://sslip.io) name: the IP with dashes,
   `203-0-113-10.sslip.io`.
@@ -25,7 +26,10 @@ Replace throughout:
 
 ## 2. The VPS
 
-Any provider, **Ubuntu 24.04**, 1 vCPU / 1 GB RAM. Give it your Mac's SSH
+Any provider, **Ubuntu 24.04**, 1 vCPU / 2 GB RAM. The web image is built on
+the VPS, and `expo export` needs about 2 GB: on a smaller VPS, add swap first
+(`sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap
+/swapfile && sudo swapon /swapfile`, plus a line in `/etc/fstab` to keep it). Give it your Mac's SSH
 public key when creating it:
 
 ```bash
@@ -84,12 +88,27 @@ and the key GitHub uses (step 6) can only run the deploy script.
 
 ## 5. DNS
 
-Create an **A** record `plants-api.example.com` → `203.0.113.10` at your
-registrar (nothing to do with sslip.io). Check from your Mac:
+Create two **A** records at your registrar (nothing to do with sslip.io):
+`plants-api.example.com` → `203.0.113.10` for the API, and
+`plants.example.com` → `203.0.113.10` for the web app. Check from your Mac:
 
 ```bash
 dig +short plants-api.example.com     # must print the VPS IP
+dig +short plants.example.com         # must print the VPS IP
 ```
+
+### Behind Cloudflare
+
+If the domains are proxied by Cloudflare (orange cloud), set its SSL/TLS mode to
+**Full (strict)**: Caddy holds a valid certificate, and "Flexible" would loop
+or send traffic in clear. Caddy then only sees Cloudflare's addresses, so
+`deploy/Caddyfile` starts with a global block trusting Cloudflare's ranges
+(<https://www.cloudflare.com/ips-v4>, <https://www.cloudflare.com/ips-v6>) and
+reading the visitor's IP from `CF-Connecting-IP`; it is only believed when the
+connection really comes from those ranges. Refresh the list when Cloudflare
+publishes new ranges. Optionally, limit ports 80/443 in `ufw` to those ranges
+so nothing reaches the VPS around Cloudflare. A shared Caddy (step 8b) needs the
+same global block.
 
 ## 6. Nothing to clone
 
@@ -156,11 +175,15 @@ gh secret set OPENAI_API_KEY --env production   # paste the key from step 1 when
 gh secret set API_TOKENS --env production --body "<token1>,<token2>"
 
 gh variable set API_DOMAIN --env production --body "plants-api.example.com"
+gh variable set WEB_DOMAIN --env production --body "plants.example.com"
 gh variable set SEARCH_DAILY_BUDGET --env production --body "500"
 ```
 
-`ALLOWED_ORIGINS` is optional (only if the web build calls this server):
-`gh variable set ALLOWED_ORIGINS --env production --body "https://…"`.
+`WEB_DOMAIN` is required. `ALLOWED_ORIGINS` is optional: when unset, the deploy
+sets it to `https://plants.example.com` (the web app's origin). Set it only to
+allow other origins as well:
+`gh variable set ALLOWED_ORIGINS --env production --body "https://…,https://…"`
+(then include the web origin yourself).
 
 Optional manual approval of every deploy: GitHub → Settings → Environments →
 `production` → **Required reviewers** → add yourself.
@@ -178,17 +201,55 @@ on:
 gh variable set SHARED_CADDY_NETWORK --env production --body "proxy"
 ```
 
-The deploy then leaves this stack's Caddy off and attaches the API to that
-network as `plants-api` (`deploy/docker-compose.shared-caddy.yml`). Add the
-site to that Caddy's `Caddyfile`, then validate and reload it — a reload
-doesn't interrupt the other sites:
+The deploy then leaves this stack's Caddy off and attaches the API and the web
+app to that network as `plants-api` and `plants-web`
+(`deploy/docker-compose.shared-caddy.yml`). Add both sites to that Caddy's
+`Caddyfile`, then validate and reload it — a reload doesn't interrupt the other
+sites. The API's body limits are per route (sync and photo uploads are larger
+than a search), that Caddy needs the global `trusted_proxies` block from
+`deploy/Caddyfile` if the domains are behind Cloudflare, and the web site needs the security headers and CSP of
+`deploy/Caddyfile`:
 
 ```
 plants-api.example.com {
+    handle /sync/push {
+        request_body {
+            max_size 5MB
+        }
+        reverse_proxy plants-api:8000
+    }
+    @photoUpload {
+        method PUT
+        path /photos/*
+    }
+    handle @photoUpload {
+        request_body {
+            max_size 16MB
+        }
+        reverse_proxy plants-api:8000
+    }
+    handle {
+        request_body {
+            max_size 8KB
+        }
+        reverse_proxy plants-api:8000
+    }
+}
+
+plants.example.com {
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+        Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://upload.wikimedia.org https://thumb.wikimedia.org; connect-src 'self' https://plants-api.example.com; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        -Server
+    }
     request_body {
         max_size 8KB
     }
-    reverse_proxy plants-api:8000
+    reverse_proxy plants-web:8080
 }
 ```
 
@@ -204,8 +265,9 @@ gh workflow run deploy-server.yml
 gh run watch
 ```
 
-The run tests the server, builds the image, deploys the commit and calls
-`https://plants-api.example.com/health`. Then check authentication by hand:
+The run tests the server, checks that the web image builds, deploys the commit
+and calls `https://plants-api.example.com/health` and
+`https://plants.example.com/`. Then check authentication by hand:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' -X POST https://plants-api.example.com/search \
@@ -235,9 +297,19 @@ npm run deploy:iphone
 de plantes**, paste the device's token, **Enregistrer le jeton**. It is kept in
 the iOS Keychain, never in the app bundle.
 
+## The web app
+
+`https://plants.example.com` serves the Expo web build (`expo export
+--platform web`), as its own container (`web/Dockerfile`) behind the same
+Caddy. Every deploy rebuilds it from the commit, on the VPS (about 2 GB of RAM
+during the build; see step 2 for swap). The API's public URL is baked into the
+bundle at build time as `EXPO_PUBLIC_PLANT_API_URL=https://$API_DOMAIN`: a URL,
+not a secret (CLAUDE.md rule 2). Changes to `app/`, `components/`, `lib/`,
+`assets/` or `web/` trigger a deploy like changes to `server/` do.
+
 ## Day to day
 
-- **Deploy:** push to `main` (changes under `server/` or `deploy/`), or
+- **Deploy:** push to `main` (changes under `server/`, `deploy/` or the web app's sources), or
   `gh workflow run deploy-server.yml`.
 - **Rotate the OpenAI key:** create the new one, `gh secret set OPENAI_API_KEY
 --env production`, run the workflow, then revoke the old one.
@@ -284,7 +356,7 @@ writes may sit in `garden.db-wal`.
   the known `KEY=value`
   lines, checks the required ones are present, checks out that commit, then
   atomically writes `deploy/.env` with mode 600 and restarts the stack. It
-  fails, and the workflow with it, if the API is not healthy within 90 s.
+  fails, and the workflow with it, if the API or the web app is not healthy within 90 s.
 - The VPS host key is pinned in `VPS_KNOWN_HOSTS`: a runner never trusts a
   host it hasn't been told about.
 - `deploy/.env` on the VPS is still plain text: the container has to read the
@@ -297,6 +369,6 @@ Deploy by hand on the VPS, as `deploy`, with the environment file on stdin:
 
 ```bash
 cd ~/plants && git fetch && SHA=$(git rev-parse origin/main)
-printf 'API_DOMAIN=%s\nOPENAI_API_KEY=%s\nAPI_TOKENS=%s\n' \
-  plants-api.example.com "$OPENAI_API_KEY" "$API_TOKENS" | deploy/deploy.sh "$SHA"
+printf 'API_DOMAIN=%s\nWEB_DOMAIN=%s\nOPENAI_API_KEY=%s\nAPI_TOKENS=%s\n' \
+  plants-api.example.com plants.example.com "$OPENAI_API_KEY" "$API_TOKENS" | deploy/deploy.sh "$SHA"
 ```
