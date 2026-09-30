@@ -28,12 +28,13 @@ for example to trace the garden plan on a big screen.
       the reverse (checked by hand, steps noted in the PR)
 - [ ] With the server unreachable, the web app shows an error instead of an
       empty garden
-- [ ] The web build is served by Caddy behind a password
-      (`docs/DEPLOY-SERVER.md`), and the web origin is in `ALLOWED_ORIGINS`
+- [ ] Every request uses the session cookie (`credentials: 'include'`);
+      photos are fetched with it and shown from a blob URL, since an `<img>`
+      alone cannot prove the session cross-origin
 - [ ] `npm run verify` and `npm run e2e:web` pass
 
 ## Notes
 
-Depends on 092 and 093. The web app is online only: no offline queue. The
-bearer token is entered in Réglages, as on the phone, and never baked into the
-bundle (CLAUDE.md rule 2).
+Depends on 092, 093, 097 (web site on its own subdomain), 098/100 (accounts)
+and 101 (login screen). The web app is online only: no offline queue. No
+credential is ever baked into the bundle (CLAUDE.md rule 2).

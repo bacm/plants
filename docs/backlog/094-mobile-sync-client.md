@@ -33,6 +33,6 @@ phone's edits never reach the web.
 
 ## Notes
 
-Depends on 091–093. It uses the server URL and the token already set in
-Réglages for plant search. Rule 1 (await every promise) matters here: an
+Depends on 091–093 and on accounts (098, 100, 101): sync runs only when the
+phone is logged in, with the account's device token. Rule 1 (await every promise) matters here: an
 un-awaited push would silently mark rows as sent.
