@@ -7,7 +7,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from '../Icon';
 import { FormSection } from '../form';
 import { colors, spacing, typography, colorHex } from '../../lib/theme';
-import { isUnknown, labelFor, PROPAGATION, TOXICITY } from '../../lib/enums';
+import { isUnknown, labelFor, BLOOM_ABUNDANCE, PROPAGATION, TOXICITY } from '../../lib/enums';
 import { monthShort, monthName, MONTH_LETTERS, isMonthInRange } from '../../lib/months';
 import {
   ficheTechniqueTiles,
@@ -42,6 +42,11 @@ export function InfoTab({ plant, onEdit }) {
               {monthName(plant.bloomStartMonth)} → {monthName(plant.bloomEndMonth)}
             </Text>
           </View>
+          {!isUnknown(plant.bloomAbundance) ? (
+            <Text style={styles.bloomAbundance}>
+              Abondance : {labelFor(BLOOM_ABUNDANCE, plant.bloomAbundance)}
+            </Text>
+          ) : null}
           <View style={styles.monthStrip}>
             {MONTH_LETTERS.map((letter, i) => {
               const month = i + 1;
@@ -239,6 +244,7 @@ const styles = StyleSheet.create({
 
   bloomHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
   bloomTitle: { ...typography.title, fontSize: 15, color: colors.text },
+  bloomAbundance: { ...typography.bodySmall, color: colors.textSecondary },
   bloomRange: { ...typography.bodySmall, color: colors.textSecondary },
   monthStrip: { flexDirection: 'row', gap: 4 },
   monthCell: { flex: 1, alignItems: 'center', gap: 6 },

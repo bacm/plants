@@ -36,6 +36,7 @@ import {
   PLANT_TYPES,
   SUN,
   WATER,
+  BLOOM_ABUNDANCE,
   SOIL_TYPES,
   SOIL_PH,
   PROPAGATION,
@@ -329,6 +330,12 @@ export function PlantForm({
               />
               {!noFlowering && (
                 <>
+                  <ChipGroup
+                    label="Abondance"
+                    options={BLOOM_ABUNDANCE}
+                    value={form.bloomAbundance}
+                    onChange={(v) => setField('bloomAbundance', v)}
+                  />
                   <MonthRangePicker
                     label="Période"
                     start={toMonth(form.bloomStartMonth)}

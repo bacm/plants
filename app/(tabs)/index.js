@@ -27,6 +27,7 @@ import { longDateLabel } from '../../lib/months';
 import { groupDueTasks, latenessLabel } from '../../lib/dashboard';
 import { showMessage, confirm } from '../../lib/dialogs';
 import { plural } from '../../lib/text';
+import { isMinorBloom } from '../../lib/bloomCoverage';
 import { REMINDER_KINDS, labelFor, iconFor } from '../../lib/enums';
 import {
   deriveSeasonalTasks,
@@ -361,7 +362,8 @@ export default function Dashboard() {
                   key={p.id}
                   activeOpacity={0.9}
                   onPress={() => router.push(`/plant/${p.id}`)}
-                  style={styles.bloomCard}>
+                  accessibilityHint={isMinorBloom(p) ? 'floraison insignifiante' : undefined}
+                  style={[styles.bloomCard, isMinorBloom(p) && styles.minorBloom]}>
                   <View style={styles.bloomImageWrap}>
                     {p.photoUri ? (
                       <Image source={{ uri: p.photoUri }} style={styles.bloomImage} />
@@ -600,6 +602,7 @@ const styles = StyleSheet.create({
   bloomScroll: { marginRight: -spacing.lg },
   bloomScrollContent: { gap: 12, paddingRight: spacing.lg },
   bloomCard: { width: BLOOM_CARD_WIDTH, gap: 10 },
+  minorBloom: { opacity: 0.5 },
   bloomImageWrap: {
     width: BLOOM_CARD_WIDTH,
     height: BLOOM_IMAGE_HEIGHT,

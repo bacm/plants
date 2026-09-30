@@ -154,6 +154,7 @@ Tu es une base de données botanique. Pour la recherche "{query}", fournis une l
     "flower_color": "couleur des fleurs",
     "bloom_start": 1-12,
     "bloom_end": 1-12,
+    "bloom_abundance": "insignificant|moderate|abundant",
     "height": 50,
     "width": 30,
     "deciduous": true,
@@ -183,6 +184,7 @@ RÈGLES:
 - soil_ph: pH du sol (acidic=acide, neutral=neutre, alkaline=alcalin)
 - propagation: méthode de multiplication (seed=semis, cutting=bouture, division=division, layering=marcotte, grafting=greffe)
 - toxicity: toxicité (none=aucune, pets=animaux, humans=humains, all=tous)
+- bloom_abundance: abondance de la floraison (insignificant=fleurs présentes mais discrètes, sans valeur ornementale, ex. la plupart des érables et de nombreuses graminées; moderate=modérée; abundant=floraison massive et spectaculaire, ex. les rosiers); null si la plante ne fleurit pas ou si inconnu
 - Respecte exactement ce format JSON
 - Laisse null pour les champs inconnus
 """

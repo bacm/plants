@@ -1,6 +1,6 @@
 ---
 id: 089
-title: Bring the mock-up up to date with tickets 086 to 088
+title: Bring the mock-up up to date with tickets 086 to 090
 status: open
 priority: P2
 type: chore
@@ -31,6 +31,8 @@ reference for the next screens.
       colour, label "Photo d'accueil"
 - [ ] Plant detail Photos tab: one thumbnail carries the cover badge (round,
       overlayDark, small highlight `star`, top-left)
+- [ ] Plant form bloom section gets an "Abondance" chip row (Insignifiante · Modérée ·
+      Abondante), and bloom lists show insignificant blooms last and dimmed
 - [ ] Artboards compared against the app's web build at 390×844
 
 ## Notes

@@ -533,3 +533,24 @@ def test_openai_request_body_precise_uses_reasoning_model():
     assert body["max_completion_tokens"] == 16000
     assert "temperature" not in body
     assert "max_tokens" not in body
+
+
+def test_prompt_asks_for_bloom_abundance():
+    prompt = app_module.build_prompt("erable")
+    assert '"bloom_abundance": "insignificant|moderate|abundant"' in prompt
+    assert "insignificant=" in prompt
+
+
+def test_bloom_abundance_passes_through_search(monkeypatch, client):
+    text = '[{"id": "acer-1", "scientific_name": "Acer", "bloom_abundance": "insignificant"}]'
+    _set_call_openai(monkeypatch, result=text)
+
+    async def fake_fetch(client_, scientific_name):
+        return None
+
+    monkeypatch.setattr(app_module, "fetch_wikipedia_image", fake_fetch)
+
+    res = client.post("/search", json={"query": "acer"}, headers=AUTH)
+
+    assert res.status_code == 200
+    assert res.json()["plants"][0]["bloom_abundance"] == "insignificant"

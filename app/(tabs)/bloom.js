@@ -7,7 +7,7 @@ import Icon from '../../components/Icon';
 import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
 import { getPlants, getPlantsBloomingInMonth } from '../../lib/db';
 import { MONTH_SHORT, MONTH_LETTERS, monthName } from '../../lib/months';
-import { bloomMonthsOf, bloomSegments, bloomGaps } from '../../lib/bloomCoverage';
+import { bloomMonthsOf, bloomSegments, bloomGaps, isMinorBloom } from '../../lib/bloomCoverage';
 
 // Left edge of month `m` (1-12) on a 12-column track, as a percentage.
 // A width of N months is monthOffset(N + 1).
@@ -52,6 +52,7 @@ export default function BloomScreen() {
         .filter((row) => row.months.length > 0)
         .sort(
           (a, b) =>
+            Number(isMinorBloom(a.plant)) - Number(isMinorBloom(b.plant)) ||
             a.plant.bloomStartMonth - b.plant.bloomStartMonth ||
             a.plant.name.localeCompare(b.plant.name)
         ),
@@ -135,7 +136,8 @@ export default function BloomScreen() {
                     key={p.id}
                     activeOpacity={0.9}
                     onPress={() => router.push(`/plant/${p.id}`)}
-                    style={styles.cardWrap}>
+                    accessibilityHint={isMinorBloom(p) ? 'floraison insignifiante' : undefined}
+                    style={[styles.cardWrap, isMinorBloom(p) && styles.minorBloom]}>
                     <GlassCard>
                       <View style={styles.row}>
                         <View
@@ -203,8 +205,11 @@ export default function BloomScreen() {
                       key={plant.id}
                       activeOpacity={0.9}
                       onPress={() => router.push(`/plant/${plant.id}`)}
-                      style={styles.yearRow}
-                      accessibilityLabel={`${plant.name} : ${rangeLabel}`}>
+                      style={[styles.yearRow, isMinorBloom(plant) && styles.minorBloom]}
+                      accessibilityLabel={`${plant.name} : ${rangeLabel}`}
+                      accessibilityHint={
+                        isMinorBloom(plant) ? 'floraison insignifiante' : undefined
+                      }>
                       <View style={styles.yearLabelCol}>
                         <Text style={styles.yearRowName} numberOfLines={1}>
                           {plant.name}
@@ -281,6 +286,7 @@ const styles = StyleSheet.create({
   sectionTitle: { ...typography.title, color: colors.text, marginBottom: spacing.md },
   emptyText: { ...typography.bodySmall, color: colors.textSecondary },
   cardWrap: { marginBottom: spacing.sm },
+  minorBloom: { opacity: 0.5 },
   row: { flexDirection: 'row', alignItems: 'center' },
   colorDot: { width: 12, height: 12, borderRadius: 6, marginRight: spacing.md },
   plantInfo: { flex: 1 },
