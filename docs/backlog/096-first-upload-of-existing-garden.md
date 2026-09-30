@@ -1,7 +1,7 @@
 ---
 id: 096
 title: Upload the phone's existing garden to the server the first time
-status: open
+status: in-progress
 priority: P2
 type: feature
 ---
@@ -30,3 +30,7 @@ owner could believe data was lost.
 ## Notes
 
 Depends on 094. Do it on Wi-Fi: the photos weigh several hundred MB.
+
+"First sync done" is stored per phone, not per account: signing in with
+another account on the same phone does not offer the first sync again. Fine
+for a single owner; revisit if a phone is ever shared between accounts.

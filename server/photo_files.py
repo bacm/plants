@@ -103,6 +103,22 @@ class PhotoFiles:
             return 0
         return total
 
+    def count(self, account_id):
+        """Number of stored photo files of this account (temp uploads excluded)."""
+        directory = self._account_directory(account_id)
+        total = 0
+        try:
+            with os.scandir(directory) as entries:
+                for entry in entries:
+                    if not entry.is_file(follow_symlinks=False):
+                        continue
+                    stem, dot, ext = entry.name.rpartition(".")
+                    if dot and stem and ext in MEDIA_TYPES:
+                        total += 1
+        except FileNotFoundError:
+            return 0
+        return total
+
     def legacy_files(self):
         """Files sitting directly in the root: the flat layout from before 100."""
         try:

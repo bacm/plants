@@ -1,6 +1,6 @@
 // Keeps the phone's garden in step with the server (ticket 094). Native only:
 // on the web nothing runs and the context is an inert default. Sync runs when
-// the phone is signed in, at app start, whenever the app becomes active, on
+// the phone is signed in and its first sync is done (ticket 096), at app start, whenever the app becomes active, on
 // request (pull-to-refresh, "Synchroniser maintenant") and 5 s after a local
 // write. Never two at once (lib/syncRunner.js). Offline failures are quiet: the
 // state carries the message, the next trigger retries.
@@ -31,10 +31,12 @@ import {
   readPhotoBytes,
   markPhotoUploaded,
   downloadPhoto,
+  getLocalSyncCounts,
 } from '../lib/db';
 import { runSync, LAST_SYNC_KEY } from '../lib/sync';
 import { createSyncApi } from '../lib/syncApi';
 import { createSyncRunner } from '../lib/syncRunner';
+import { runFirstSync, FIRST_STARTED_KEY, FIRST_COMPLETED_KEY } from '../lib/firstSync';
 
 const WRITE_DELAY_MS = 5000;
 
@@ -48,10 +50,19 @@ const store = {
   readPhotoBytes,
   markPhotoUploaded,
   downloadPhoto,
+  getLocalSyncCounts,
 };
 
-const IDLE = { running: false, lastSyncAt: null, error: null, changeCount: 0 };
-const INERT = { ...IDLE, syncNow: async () => null };
+const FIRST_IDLE = {
+  loaded: false,
+  startedAt: null,
+  completedAt: null,
+  running: false,
+  progress: null,
+  result: null,
+};
+const IDLE = { running: false, lastSyncAt: null, error: null, changeCount: 0, first: FIRST_IDLE };
+const INERT = { ...IDLE, syncNow: async () => null, startFirstSync: async () => null };
 
 const SyncContext = createContext(INERT);
 
@@ -89,10 +100,74 @@ export function SyncProvider({ children }) {
     []
   );
 
+  // Ticket 096: the first sync is started by the user (Réglages). Until it has
+  // completed, nothing below starts a sync by itself.
+  const firstRunner = useMemo(
+    () =>
+      createSyncRunner(async () => {
+        const token = await getDeviceToken();
+        if (!token) return null;
+        const patchFirst = (patch) => setState((s) => ({ ...s, first: { ...s.first, ...patch } }));
+        patchFirst({
+          running: true,
+          progress: null,
+          result: null,
+          startedAt: new Date().toISOString(),
+        });
+        let result;
+        try {
+          result = await runFirstSync({
+            store,
+            api: createSyncApi(token),
+            onProgress: (progress) => patchFirst({ progress }),
+          });
+        } catch (e) {
+          result = { status: 'error', message: e.message, differences: [] };
+        }
+        const done = result.status === 'done';
+        const lastSyncAt = done ? await getSetting(LAST_SYNC_KEY) : null;
+        setState((s) => ({
+          ...s,
+          lastSyncAt: lastSyncAt ?? s.lastSyncAt,
+          changeCount: s.changeCount + 1,
+          first: {
+            ...s.first,
+            running: false,
+            progress: null,
+            result,
+            completedAt: done ? new Date().toISOString() : null,
+          },
+        }));
+        if (result.kind === 'unauthorized') await refreshRef.current();
+        return result;
+      }),
+    []
+  );
+
   const enabled = Platform.OS !== 'web' && status === 'signedIn';
+  const firstDone = Boolean(state.first.completedAt);
 
   useEffect(() => {
     if (!enabled) return undefined;
+    let cancelled = false;
+    (async () => {
+      const [startedAt, completedAt] = await Promise.all([
+        getSetting(FIRST_STARTED_KEY),
+        getSetting(FIRST_COMPLETED_KEY),
+      ]);
+      if (cancelled) return;
+      setState((s) => ({
+        ...s,
+        first: s.first.running ? s.first : { ...s.first, loaded: true, startedAt, completedAt },
+      }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled || !firstDone) return undefined;
     let cancelled = false;
     (async () => {
       const lastSyncAt = await getSetting(LAST_SYNC_KEY);
@@ -113,11 +188,22 @@ export function SyncProvider({ children }) {
       appSub.remove();
       unsubscribe();
     };
-  }, [enabled, runner]);
+  }, [enabled, firstDone, runner]);
 
-  const syncNow = useCallback(async () => (enabled ? runner.request() : null), [enabled, runner]);
+  const syncNow = useCallback(
+    async () => (enabled && firstDone ? runner.request() : null),
+    [enabled, firstDone, runner]
+  );
 
-  const value = useMemo(() => ({ ...state, syncNow }), [state, syncNow]);
+  const startFirstSync = useCallback(
+    async () => (enabled && !firstDone && !runner.isRunning() ? firstRunner.request() : null),
+    [enabled, firstDone, runner, firstRunner]
+  );
+
+  const value = useMemo(
+    () => ({ ...state, syncNow, startFirstSync }),
+    [state, syncNow, startFirstSync]
+  );
   return <SyncContext.Provider value={value}>{children}</SyncContext.Provider>;
 }
 

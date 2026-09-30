@@ -32,7 +32,7 @@ from accounts import (
 )
 from photo_files import MAX_PHOTO_BYTES, MEDIA_TYPES, PhotoFiles, detect_extension, valid_photo_id
 from sync_store import SyncStore
-from sync_validation import SyncValidationError, validate_push
+from sync_validation import SYNC_SCHEMA, SyncValidationError, validate_push
 
 logger = logging.getLogger("plant_search")
 
@@ -792,6 +792,15 @@ def create_app():
     ):
         account_id = current_account(request)["id"]
         return get_sync_store().pull(account_id, since, limit)
+
+    @app.get("/sync/stats")
+    def sync_stats(request: Request):
+        account_id = current_account(request)["id"]
+        counts = get_sync_store().live_counts(account_id)
+        return {
+            "rows": {table: counts.get(table, 0) for table in SYNC_SCHEMA},
+            "photoFiles": photo_files.count(account_id),
+        }
 
     def check_photo_id(photo_id):
         if not valid_photo_id(photo_id):

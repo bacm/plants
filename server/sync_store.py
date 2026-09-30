@@ -146,6 +146,16 @@ class SyncStore:
             return None
         return "deleted" if found[0] else "live"
 
+    def live_counts(self, account_id):
+        """{table: number of live rows} for this account only."""
+        with closing(self._connect()) as conn:
+            found = conn.execute(
+                "SELECT tbl, COUNT(*) FROM garden_rows "
+                "WHERE account_id = ? AND deleted_at IS NULL GROUP BY tbl",
+                (account_id,),
+            ).fetchall()
+        return {table: count for table, count in found}
+
     def pull(self, account_id, since, limit):
         with closing(self._connect()) as conn:
             found = conn.execute(

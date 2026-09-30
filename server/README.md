@@ -78,6 +78,11 @@ stores nothing; more than 1000 rows answers 413.
 rows are included, with their `deletedAt`. While `more` is true, pull again
 with `since` set to the returned `revision`.
 
+`GET /sync/stats` answers `{"rows": {"<table>": <live row count>, ...},
+"photoFiles": <number>}` for the caller's account only: rows with no
+`deletedAt` for each synced table, and the photo files stored for it. The app
+compares them with its own counts after the first sync (ticket 096).
+
 ## Photos
 
 Photo files are stored in a `photos/` directory next to the sync database

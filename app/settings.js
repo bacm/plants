@@ -10,6 +10,7 @@ import { PrimaryButton } from '../components/form';
 import { useAccount } from '../components/AccountProvider';
 import { useSync } from '../components/SyncProvider';
 import { relativeTimeFr } from '../lib/relativeTime';
+import { firstSyncView } from '../lib/firstSync';
 import Icon from '../components/Icon';
 import { colors, typography, radius } from '../lib/theme';
 import { showMessage, confirm } from '../lib/dialogs';
@@ -80,6 +81,10 @@ export default function SettingsScreen() {
       : sync.lastSyncAt
         ? `Synchronisé ${relativeTimeFr(sync.lastSyncAt)}`
         : 'Jamais synchronisé';
+
+  const first = sync.first;
+  const showFirstSync = onPhone && first.loaded && !first.completedAt;
+  const firstView = firstSyncView(first);
 
   const handleLogout = async () => {
     const proceed = await confirm({
@@ -231,8 +236,58 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </View>
-            {onPhone ? (
+            {showFirstSync ? (
+              <View style={styles.firstSync}>
+                <Text style={styles.cardTitle}>{firstView.title}</Text>
+                <Text style={styles.cardHint} accessibilityLiveRegion="polite">
+                  {firstView.text}
+                </Text>
+                {firstView.lines.map((line, index) => (
+                  <Text
+                    key={line}
+                    style={[styles.cardHint, index === 0 && styles.syncLineError]}
+                    accessibilityLiveRegion="polite">
+                    {line}
+                  </Text>
+                ))}
+                {firstView.showActions ? (
+                  <>
+                    <TouchableOpacity
+                      style={[
+                        styles.outlineBtn,
+                        (exporting || importing) && styles.outlineBtnDisabled,
+                      ]}
+                      onPress={handleExport}
+                      disabled={exporting || importing}
+                      accessibilityRole="button"
+                      accessibilityState={{ disabled: exporting || importing, busy: exporting }}>
+                      <Text style={styles.outlineBtnText}>
+                        {exporting
+                          ? exportProgress
+                            ? `Export… ${exportProgress}`
+                            : 'Export en cours…'
+                          : 'Exporter d’abord une sauvegarde'}
+                      </Text>
+                    </TouchableOpacity>
+                    <PrimaryButton
+                      label={firstView.primaryLabel}
+                      disabled={exporting}
+                      onPress={() => sync.startFirstSync()}
+                    />
+                    {firstView.hint ? (
+                      <Text style={styles.limitsHint}>{firstView.hint}</Text>
+                    ) : null}
+                  </>
+                ) : null}
+              </View>
+            ) : null}
+            {onPhone && first.loaded && first.completedAt ? (
               <>
+                {first.result?.status === 'done' ? (
+                  <Text style={styles.syncLine} accessibilityLiveRegion="polite">
+                    {first.result.message}
+                  </Text>
+                ) : null}
                 <Text
                   style={[styles.syncLine, sync.error && !sync.running && styles.syncLineError]}
                   accessibilityLiveRegion="polite">
@@ -391,6 +446,7 @@ const styles = StyleSheet.create({
   outlineBtnDisabled: { opacity: 0.5 },
   outlineBtnText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 15, color: colors.text },
 
+  firstSync: { gap: 12 },
   cardHeaderCentered: { alignItems: 'center' },
   avatar: {
     width: 44,

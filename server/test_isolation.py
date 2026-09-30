@@ -355,3 +355,35 @@ def test_invalid_account_id_is_refused_without_touching_the_filesystem(tmp_path,
         with pytest.raises(ValueError):
             call()
     assert list(tmp_path.rglob("*")) == []
+
+
+# --- sync stats ---------------------------------------------------------------
+
+
+def stats(client, who):
+    return client.get("/sync/stats", headers=who["headers"])
+
+
+def test_stats_count_live_rows_and_files_per_account(client, accounts):
+    a, b = accounts["a"], accounts["b"]
+    assert stats(client, a).json()["photoFiles"] == 0
+    assert stats(client, a).json()["rows"]["zones"] == 0
+    push(client, a, {"zones": [row("z1"), row("z2"), row("z3")], "photos": [photo_row("ph1")]})
+    push(client, a, {"zones": [row("z3", NEW, deletedAt=NEW)]})
+    assert put_photo(client, a, "ph1", JPEG_A).status_code == 201
+    push(client, b, {"zones": [row("z9")], "photos": [photo_row("ph1"), photo_row("ph2")]})
+    put_photo(client, b, "ph2", JPEG_B)
+
+    a_stats = stats(client, a).json()
+    assert a_stats["rows"]["zones"] == 2
+    assert a_stats["rows"]["photos"] == 1
+    assert a_stats["rows"]["plants"] == 0
+    assert a_stats["photoFiles"] == 1
+    b_stats = stats(client, b).json()
+    assert b_stats["rows"]["zones"] == 1
+    assert b_stats["rows"]["photos"] == 2
+    assert b_stats["photoFiles"] == 1
+
+
+def test_stats_require_an_account(client):
+    assert client.get("/sync/stats").status_code == 401
