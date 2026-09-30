@@ -1,6 +1,12 @@
 // Ticket 082: move a photo to another plant from the photo viewer.
 const path = require('node:path');
 const { test, expect } = require('@playwright/test');
+const { mockAuthApi } = require('./helpers');
+
+// The web app is gated behind a login (ticket 101): start every test signed in.
+test.beforeEach(async ({ context }) => {
+  await mockAuthApi(context);
+});
 const {
   visibleText,
   screenTitle,

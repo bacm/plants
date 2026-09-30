@@ -2,6 +2,12 @@
 // swipe is a horizontal scroll of the pager, done here by setting scrollLeft.
 const path = require('node:path');
 const { test, expect } = require('@playwright/test');
+const { mockAuthApi } = require('./helpers');
+
+// The web app is gated behind a login (ticket 101): start every test signed in.
+test.beforeEach(async ({ context }) => {
+  await mockAuthApi(context);
+});
 const { visibleText, screenTitle, tabButton } = require('./helpers');
 
 test('swipe from one photo of a plant to the next in the lightbox', async ({ page }) => {

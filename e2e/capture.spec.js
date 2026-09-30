@@ -6,6 +6,12 @@
 // bar's central button -> select the plant in the strip -> shoot -> close ->
 // the shot shows up on the plant's Photos tab as a real, decodable image.
 const { test, expect } = require('@playwright/test');
+const { mockAuthApi } = require('./helpers');
+
+// The web app is gated behind a login (ticket 101): start every test signed in.
+test.beforeEach(async ({ context }) => {
+  await mockAuthApi(context);
+});
 const {
   visibleText,
   screenTitle,

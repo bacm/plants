@@ -1,7 +1,7 @@
 ---
 id: 101
 title: Sign up and log in from the app, on the phone and the web
-status: open
+status: in-progress
 priority: P2
 type: feature
 ---
@@ -28,9 +28,9 @@ Without these screens, no one can use the web app or sync their phone.
       it locally; the phone's local garden is kept
 - [ ] Clear messages for pending, refused, locked-out and wrong credentials,
       without revealing whether an email exists
-- [ ] The old token field is removed, and the server stops accepting
-      `API_TOKENS` on `/search` (kept by 098 for the installed app); `npm run verify` and `npm run e2e:web`
-      pass
+- [ ] The old token field is removed from Réglages (the app no longer offers
+      it); removing `API_TOKENS` server-side is ticket 104, after the owner's
+      iPhone runs this version. `npm run verify` and `npm run e2e:web` pass
 
 ## Notes
 

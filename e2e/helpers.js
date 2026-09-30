@@ -56,4 +56,67 @@ async function expectStoredPhotoLoads(page) {
   );
 }
 
-module.exports = { visibleText, screenTitle, tabButton, backButton, expectStoredPhotoLoads };
+// Ticket 101: the web app is gated behind a login, and the specs run without a
+// server. This stands in for the /auth routes with page.route on a browser
+// context (so every page of the test is covered). `state.signedIn` is what
+// /auth/me answers from; a 200 login sets it, logout clears it. Set
+// `state.loginReply` / `state.signupReply` ({ status, body }) to script the
+// answers, and read `state.requests` to see what the app sent.
+const TEST_ACCOUNT = { id: 'acc-1', email: 'camille@exemple.fr', isAdmin: false };
+
+async function mockAuthApi(context, { signedIn = true } = {}) {
+  const state = {
+    signedIn,
+    loginReply: { status: 200, body: { account: TEST_ACCOUNT } },
+    signupReply: { status: 202, body: { status: 'pending' } },
+    requests: [],
+  };
+
+  await context.route('**/auth/*', async (route) => {
+    const request = route.request();
+    const origin = request.headers().origin || '*';
+    const cors = {
+      'access-control-allow-origin': origin,
+      'access-control-allow-credentials': 'true',
+      'access-control-allow-headers': 'content-type',
+    };
+    if (request.method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: cors });
+      return;
+    }
+    const name = new URL(request.url()).pathname.split('/').pop();
+    const body = request.postData() ? JSON.parse(request.postData()) : null;
+    state.requests.push({ name, body });
+    const json = (status, payload) =>
+      route.fulfill({
+        status,
+        headers: { ...cors, 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+    if (name === 'me') {
+      await (state.signedIn ? json(200, TEST_ACCOUNT) : json(401, { detail: 'Non authentifié' }));
+    } else if (name === 'login') {
+      if (state.loginReply.status === 200) state.signedIn = true;
+      await json(state.loginReply.status, state.loginReply.body);
+    } else if (name === 'signup') {
+      await json(state.signupReply.status, state.signupReply.body);
+    } else if (name === 'logout') {
+      state.signedIn = false;
+      await route.fulfill({ status: 204, headers: cors });
+    } else {
+      await route.fulfill({ status: 404, headers: cors });
+    }
+  });
+  return state;
+}
+
+module.exports = {
+  visibleText,
+  screenTitle,
+  tabButton,
+  backButton,
+  expectStoredPhotoLoads,
+  mockAuthApi,
+  TEST_ACCOUNT,
+};

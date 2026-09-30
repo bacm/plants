@@ -8,3 +8,4 @@ export { FormSection } from './FormSection';
 export { PrimaryButton } from './PrimaryButton';
 export { Segmented } from './Segmented';
 export { StickyFooter } from './StickyFooter';
+export { PasswordField } from './PasswordField';

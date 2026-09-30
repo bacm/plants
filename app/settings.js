@@ -1,12 +1,13 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useRouter } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../components/ScreenHeader';
-import { Field, PrimaryButton } from '../components/form';
+import { PrimaryButton } from '../components/form';
+import { useAccount } from '../components/AccountProvider';
 import Icon from '../components/Icon';
 import { colors, typography, radius } from '../lib/theme';
 import { showMessage, confirm } from '../lib/dialogs';
@@ -15,8 +16,6 @@ import {
   isGardenEmpty,
   previewBackupFile,
   importGardenFromFile,
-  getApiToken,
-  setApiToken,
 } from '../lib/db';
 
 function todayFileName() {
@@ -61,45 +60,25 @@ export default function SettingsScreen() {
   const [exporting, setExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(null);
   const [importing, setImporting] = useState(false);
-  const [hasToken, setHasToken] = useState(false);
-  const [tokenInput, setTokenInput] = useState('');
-  const [savingToken, setSavingToken] = useState(false);
+  const router = useRouter();
+  const { status, account, logout } = useAccount();
+  const [signingOut, setSigningOut] = useState(false);
 
-  useFocusEffect(
-    useCallback(() => {
-      getApiToken().then((token) => setHasToken(!!token));
-    }, [])
-  );
-
-  const handleSaveToken = async () => {
-    setSavingToken(true);
-    try {
-      await setApiToken(tokenInput);
-      setTokenInput('');
-      const token = await getApiToken();
-      setHasToken(!!token);
-      showMessage('Jeton enregistré', 'La recherche de plantes est activée.');
-    } catch (e) {
-      showMessage('Erreur', `Impossible d'enregistrer le jeton : ${e.message}`);
-    } finally {
-      setSavingToken(false);
-    }
-  };
-
-  const handleDeleteToken = async () => {
+  const handleLogout = async () => {
     const proceed = await confirm({
-      title: 'Supprimer le jeton ?',
-      message:
-        'La recherche de plantes ne fonctionnera plus tant qu’un nouveau jeton n’est pas ajouté.',
-      confirmLabel: 'Supprimer',
+      title: 'Se déconnecter ?',
+      message: 'Votre jardin reste sur cet appareil.',
+      confirmLabel: 'Se déconnecter',
       destructive: true,
     });
     if (!proceed) return;
+    setSigningOut(true);
     try {
-      await setApiToken('');
-      setHasToken(false);
+      await logout();
     } catch (e) {
-      showMessage('Erreur', `Impossible de supprimer le jeton : ${e.message}`);
+      showMessage('Erreur', `Impossible de se déconnecter : ${e.message}`);
+    } finally {
+      setSigningOut(false);
     }
   };
 
@@ -186,50 +165,68 @@ export default function SettingsScreen() {
       contentContainerStyle={[styles.content, { paddingTop: insets.top + 12 }]}>
       <ScreenHeader title="Réglages" large />
 
-      <View style={styles.section}>
-        <Text style={styles.eyebrow}>Recherche de plantes</Text>
+      {status === 'signedOut' ? (
+        <View style={styles.section}>
+          <Text style={styles.eyebrow}>Compte</Text>
 
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={[styles.iconSquare, { backgroundColor: colors.sun }]}>
-              <Icon name="key-outline" size={20} color={colors.text} />
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <View style={[styles.iconSquare, { backgroundColor: colors.softGreen }]}>
+                <Icon name="account-outline" size={20} color={colors.text} />
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={styles.cardTitle}>Pas connecté</Text>
+                <Text style={styles.cardHint}>
+                  Votre jardin reste sur ce téléphone. Connectez-vous pour le retrouver sur le web.
+                </Text>
+              </View>
             </View>
-            <View style={styles.cardHeaderText}>
-              <Text style={styles.cardTitle}>Jeton d’accès</Text>
-              <Text style={styles.cardHint}>
-                Fourni par votre serveur de recherche. Il reste sur cet appareil.
-              </Text>
-              <Text style={styles.tokenStatus}>
-                {hasToken ? 'Jeton enregistré' : 'Aucun jeton'}
-              </Text>
-            </View>
-          </View>
-          <Field
-            value={tokenInput}
-            onChangeText={setTokenInput}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            placeholder="Collez le jeton ici"
-            accessibilityLabel="Jeton d’accès"
-          />
-          <PrimaryButton
-            label="Enregistrer le jeton"
-            loadingLabel="Enregistrement…"
-            loading={savingToken}
-            disabled={!tokenInput.trim()}
-            onPress={handleSaveToken}
-          />
-          {hasToken ? (
+            <PrimaryButton label="Se connecter" onPress={() => router.push('/account/login')} />
             <TouchableOpacity
-              style={styles.deleteTokenBtn}
-              onPress={handleDeleteToken}
+              style={styles.outlineBtn}
+              onPress={() => router.push('/account/signup')}
               accessibilityRole="button">
-              <Text style={styles.deleteTokenBtnText}>Supprimer le jeton</Text>
+              <Text style={styles.outlineBtnText}>Créer un compte</Text>
             </TouchableOpacity>
-          ) : null}
+          </View>
         </View>
-      </View>
+      ) : null}
+
+      {status === 'signedIn' ? (
+        <View style={styles.section}>
+          <Text style={styles.eyebrow}>Compte</Text>
+
+          <View style={styles.card}>
+            <View style={[styles.cardHeader, styles.cardHeaderCentered]}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{(account?.email?.[0] ?? '?').toUpperCase()}</Text>
+              </View>
+              <View style={styles.cardHeaderText}>
+                <Text style={styles.accountEmail} numberOfLines={1}>
+                  {account?.email || 'Compte connecté'}
+                </Text>
+                <Text style={styles.cardHint}>
+                  {Platform.OS === 'web' ? 'Connecté sur ce navigateur' : 'Connecté sur cet iPhone'}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.outlineBtn, signingOut && styles.outlineBtnDisabled]}
+              onPress={handleLogout}
+              disabled={signingOut}
+              accessibilityRole="button">
+              <Text style={[styles.outlineBtnText, styles.logoutText]}>
+                {signingOut ? 'Déconnexion…' : 'Se déconnecter'}
+              </Text>
+            </TouchableOpacity>
+            <Text style={styles.limitsHint}>
+              {Platform.OS === 'web'
+                ? 'Se déconnecter ne supprime rien de votre jardin.'
+                : 'Se déconnecter ne supprime rien de ce téléphone.'}
+            </Text>
+          </View>
+        </View>
+      ) : null}
 
       <View style={styles.section}>
         <Text style={styles.eyebrow}>Sauvegarde de votre jardin</Text>
@@ -349,13 +346,19 @@ const styles = StyleSheet.create({
   outlineBtnDisabled: { opacity: 0.5 },
   outlineBtnText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 15, color: colors.text },
 
-  tokenStatus: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 13, color: colors.accent },
-  deleteTokenBtn: { alignItems: 'center', paddingVertical: 8 },
-  deleteTokenBtnText: {
-    fontFamily: 'InstrumentSans_600SemiBold',
-    fontSize: 15,
-    color: colors.danger,
+  cardHeaderCentered: { alignItems: 'center' },
+  avatar: {
+    width: 44,
+    height: 44,
+    flexShrink: 0,
+    borderRadius: 22,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
+  avatarText: { fontFamily: 'Fraunces_400Regular', fontSize: 20, color: '#fff' },
+  accountEmail: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 17, color: colors.text },
+  logoutText: { color: colors.danger },
 
   spacer: { flex: 1 },
   footer: { alignItems: 'center', gap: 2 },

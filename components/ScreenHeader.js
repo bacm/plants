@@ -5,18 +5,21 @@ import { useRouter } from 'expo-router';
 import Icon from './Icon';
 import { colors, spacing, typography, radius } from '../lib/theme';
 
+// `title` may be omitted (app/account/sent.js draws its own centred one).
 // `right`: an optional node rendered at the row's end, next to the title
 // (e.g. app/sort.js's "Importer" pill) -- ignored when `large` is set, since
 // that layout has no room for a trailing node.
+// `backFallback` (ticket 101): where the back button goes when there is nothing
+// to go back to, e.g. '/account/login' on the gated web.
 // `large` (ticket 071, app/settings.js): stacks the back button above a 40pt
 // title instead of the usual side-by-side row, matching the mock-up's
 // Réglages layout.
-export function ScreenHeader({ title, subtitle, right, large }) {
+export function ScreenHeader({ title, subtitle, right, large, backFallback = '/(tabs)' }) {
   const router = useRouter();
 
   const goBack = () => {
     if (router.canGoBack()) router.back();
-    else router.replace('/(tabs)');
+    else router.replace(backFallback);
   };
 
   const backBtn = (
@@ -47,9 +50,11 @@ export function ScreenHeader({ title, subtitle, right, large }) {
     <View style={styles.container}>
       {backBtn}
       <View style={styles.textCol}>
-        <Text style={styles.title} accessibilityRole="header">
-          {title}
-        </Text>
+        {title ? (
+          <Text style={styles.title} accessibilityRole="header">
+            {title}
+          </Text>
+        ) : null}
         {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       </View>
       {right ? <View>{right}</View> : null}
