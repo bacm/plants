@@ -8,6 +8,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initDb, migratePhotosToAppStorage } from '../lib/db';
 import { AccountProvider, useAccount } from '../components/AccountProvider';
 import { SyncProvider } from '../components/SyncProvider';
+import { SyncBanner } from '../components/SyncBanner';
 import { showMessage } from '../lib/dialogs';
 import { colors } from '../lib/theme';
 import { fonts } from '../lib/fonts';
@@ -37,6 +38,7 @@ function WebGate({ children }) {
   return (
     <View style={styles.fill}>
       {children}
+      {gated && status === 'signedIn' ? <SyncBanner /> : null}
       {blocked ? (
         <View style={styles.cover} accessibilityLabel="Chargement">
           <ActivityIndicator color={colors.accent} />

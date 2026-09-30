@@ -254,9 +254,9 @@ test.describe('web smoke', () => {
     await expectStoredPhotoLoads(page);
   });
 
-  // Ticket 020: export the garden, delete a plant, then restore it (photo
-  // included) by importing the file just downloaded.
-  test('export -> delete a plant -> import the backup restores it', async ({ page }) => {
+  // Ticket 020: export the garden (photo included). The import half moved to
+  // the phone with ticket 095.
+  test('export downloads a backup holding the plant and its photo', async ({ page }) => {
     const zoneName = `E2E Backup Zone ${Date.now()}`;
     const plantName = `E2E Backup Plant ${Date.now()}`;
 
@@ -331,49 +331,9 @@ test.describe('web smoke', () => {
     await download.saveAs(backupPath);
     expect(fs.existsSync(backupPath)).toBe(true);
 
-    // --- Delete the plant through its confirmation (ticket 042) ---
-    await backButton(page).click(); // settings -> dashboard
-    await tabButton(page, 'Zones').click();
-    await visibleText(page, zoneName).click();
-    await visibleText(page, plantName).click();
-    await expect(visibleText(page, plantName)).toBeVisible();
-    await visibleText(page, 'Actions').click();
-    await visibleText(page, 'Supprimer la plante').click();
-    // useDeletePlant navigates to router.dismissTo('/(tabs)'), i.e. the dashboard.
-    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
-
-    // --- Réglages: import the file just downloaded, accepting the
-    // replace-my-garden confirmation ---
-    await page.locator('[aria-label="Réglages"]:visible').click();
-    await expect(visibleText(page, 'Réglages')).toBeVisible();
-
-    const importChooserPromise = page.waitForEvent('filechooser', { timeout: 5000 });
-    await visibleText(page, 'Importer une sauvegarde').click();
-    const importChooser = await importChooserPromise;
-    await importChooser.setFiles(backupPath);
-    await expect
-      .poll(() => dialogMessages.some((m) => m.includes('restauré')), { timeout: 10000 })
-      .toBe(true);
-
-    // --- The plant and its photo are back after a reload ---
-    // The imported photo now holds a real `data:` URL (importGarden rebuilt
-    // it from the archive's base64), not a `blob:` one, so a hard navigation
-    // from here on is safe. (After a reload, expo-router's history is empty,
-    // so 'Retour' -- router.back() -- would be a no-op here; go straight
-    // to '/' instead.)
-    await page.reload();
-    await expect(visibleText(page, 'Réglages')).toBeVisible();
-    await page.goto('/');
-    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
-    await tabButton(page, 'Zones').click();
-    await expect(visibleText(page, zoneName)).toBeVisible();
-    await visibleText(page, zoneName).click();
-    await expect(visibleText(page, plantName)).toBeVisible();
-    await visibleText(page, plantName).click();
-    await visibleText(page, 'Photos').click();
-    await expect(visibleText(page, 'Mes photos')).toBeVisible();
-    await expect(page.locator('img:visible').first()).toBeVisible();
-    await expectStoredPhotoLoads(page);
+    // Ticket 095: the web garden comes from the server, so importing a backup
+    // is disabled here (covered in web-sync.spec.js); the export stays.
+    expect(fs.readFileSync(backupPath, 'utf8')).toContain(plantName);
   });
 
   // Tickets 022/031: a plant's pruning month derives a "Ce mois-ci au jardin"

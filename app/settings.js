@@ -14,6 +14,7 @@ import { firstSyncView } from '../lib/firstSync';
 import Icon from '../components/Icon';
 import { colors, typography, radius } from '../lib/theme';
 import { showMessage, confirm } from '../lib/dialogs';
+import { unsyncedLogoutMessage } from '../lib/logoutGuard';
 import {
   exportGardenToFile,
   isGardenEmpty,
@@ -28,6 +29,8 @@ function todayFileName() {
 
 const IMPORT_BLOCKED_MESSAGE =
   'Déconnectez-vous pour importer une sauvegarde : l’import remplacerait votre jardin sans le synchroniser.';
+const IMPORT_WEB_MESSAGE =
+  'Sur le web, votre jardin vient du serveur : importez une sauvegarde depuis le téléphone, déconnecté.';
 
 function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count > 1 ? plural : singular}`;
@@ -72,7 +75,10 @@ export default function SettingsScreen() {
   const sync = useSync();
   const onPhone = Platform.OS !== 'web';
   // Ticket 094: an import would replace the garden without syncing it.
-  const importBlocked = onPhone && status === 'signedIn';
+  // Ticket 095: on the web the garden comes from the server; an import would
+  // only touch the cache and never delete server rows.
+  const importBlocked = !onPhone || status === 'signedIn';
+  const importBlockedMessage = onPhone ? IMPORT_BLOCKED_MESSAGE : IMPORT_WEB_MESSAGE;
 
   const syncLine = sync.running
     ? 'Synchronisation…'
@@ -89,13 +95,25 @@ export default function SettingsScreen() {
   const handleLogout = async () => {
     const proceed = await confirm({
       title: 'Se déconnecter ?',
-      message: 'Votre jardin reste sur cet appareil.',
+      message: onPhone
+        ? 'Votre jardin reste sur cet appareil.'
+        : 'Votre jardin reste sur le serveur.',
       confirmLabel: 'Se déconnecter',
       destructive: true,
     });
     if (!proceed) return;
     setSigningOut(true);
     try {
+      // Ticket 095: sync first; ask only if something would be left unsent.
+      if (await sync.unsyncedBeforeLogout()) {
+        const leave = await confirm({
+          title: 'Modifications non envoyées',
+          message: unsyncedLogoutMessage(Platform.OS),
+          confirmLabel: 'Se déconnecter quand même',
+          destructive: true,
+        });
+        if (!leave) return;
+      }
       await logout();
     } catch (e) {
       showMessage('Erreur', `Impossible de se déconnecter : ${e.message}`);
@@ -127,7 +145,7 @@ export default function SettingsScreen() {
 
   const handleImport = async () => {
     if (importBlocked) {
-      showMessage('Import impossible', IMPORT_BLOCKED_MESSAGE);
+      showMessage('Import impossible', importBlockedMessage);
       return;
     }
     let result;
@@ -358,7 +376,7 @@ export default function SettingsScreen() {
               <Text style={styles.cardHint}>
                 Remplace entièrement le jardin actuel par le contenu du fichier choisi.
               </Text>
-              {importBlocked ? <Text style={styles.cardHint}>{IMPORT_BLOCKED_MESSAGE}</Text> : null}
+              {importBlocked ? <Text style={styles.cardHint}>{importBlockedMessage}</Text> : null}
             </View>
           </View>
           <TouchableOpacity
