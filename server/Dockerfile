@@ -10,7 +10,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app.py sync_store.py sync_validation.py sync_schema.json ./
+COPY app.py sync_store.py sync_validation.py photo_files.py sync_schema.json ./
 
 RUN useradd --create-home --shell /usr/sbin/nologin appuser \
     && mkdir /data && chown appuser /data
