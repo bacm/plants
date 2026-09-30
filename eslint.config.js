@@ -11,6 +11,8 @@ module.exports = [
       'dist-release/**',
       '.bundle-check/**',
       '.expo/**',
+      // Git worktrees the tooling creates inside the repo (their own checkout).
+      '.claude/worktrees/**',
       'ios/**',
       'android/**',
       // Python virtualenv for the server; some pip packages (e.g. urllib3,

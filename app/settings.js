@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from '
 import { useFocusEffect } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
-import { File, Paths } from 'expo-file-system';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -11,8 +10,14 @@ import { Field, PrimaryButton } from '../components/form';
 import Icon from '../components/Icon';
 import { colors, typography, radius } from '../lib/theme';
 import { showMessage, confirm } from '../lib/dialogs';
-import { exportGarden, isGardenEmpty, importGarden, getApiToken, setApiToken } from '../lib/db';
-import { buildBackup, parseBackup } from '../lib/backupFormat';
+import {
+  exportGardenToFile,
+  isGardenEmpty,
+  previewBackupFile,
+  importGardenFromFile,
+  getApiToken,
+  setApiToken,
+} from '../lib/db';
 
 function todayFileName() {
   const iso = new Date().toISOString().slice(0, 10);
@@ -23,18 +28,15 @@ function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count > 1 ? plural : singular}`;
 }
 
-async function exportOnNative(json, fileName) {
-  const file = new File(Paths.cache, fileName);
-  file.write(json);
+async function shareOnNative(uri) {
   const available = await Sharing.isAvailableAsync();
   if (!available) {
     throw new Error("Le partage de fichiers n'est pas disponible sur cet appareil.");
   }
-  await Sharing.shareAsync(file.uri, { mimeType: 'application/json' });
+  await Sharing.shareAsync(uri, { mimeType: 'application/json' });
 }
 
-function exportOnWeb(json, fileName) {
-  const blob = new Blob([json], { type: 'application/json' });
+function downloadOnWeb(blob, fileName) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
@@ -45,17 +47,19 @@ function exportOnWeb(json, fileName) {
   URL.revokeObjectURL(url);
 }
 
-async function readPickedFileText(asset) {
-  if (Platform.OS === 'web') {
-    const response = await fetch(asset.uri);
-    return response.text();
-  }
-  return new File(asset.uri).text();
+// What lib/db reads the backup from: the picked File on web, the file uri
+// on native. It is read in chunks there, never as one string.
+async function pickedSource(asset) {
+  if (Platform.OS !== 'web') return asset.uri;
+  if (asset.file) return asset.file;
+  const response = await fetch(asset.uri);
+  return response.blob();
 }
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
   const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(null);
   const [importing, setImporting] = useState(false);
   const [hasToken, setHasToken] = useState(false);
   const [tokenInput, setTokenInput] = useState('');
@@ -102,19 +106,21 @@ export default function SettingsScreen() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const { tables, photoData, unsortedPhotoData } = await exportGarden();
-      const backup = buildBackup({ tables, photoData, unsortedPhotoData });
-      const json = JSON.stringify(backup, null, 2);
       const fileName = todayFileName();
+      const { uri, blob } = await exportGardenToFile({
+        fileName,
+        onProgress: (done, total) => setExportProgress(`${done} / ${total} photos`),
+      });
       if (Platform.OS === 'web') {
-        exportOnWeb(json, fileName);
+        downloadOnWeb(blob, fileName);
       } else {
-        await exportOnNative(json, fileName);
+        await shareOnNative(uri);
       }
     } catch (e) {
       showMessage('Erreur', `Impossible d'exporter le jardin : ${e.message}`);
     } finally {
       setExporting(false);
+      setExportProgress(null);
     }
   };
 
@@ -133,8 +139,8 @@ export default function SettingsScreen() {
 
     setImporting(true);
     try {
-      const text = await readPickedFileText(result.assets[0]);
-      const parsed = parseBackup(text);
+      const source = await pickedSource(result.assets[0]);
+      const parsed = await previewBackupFile(source);
       if (!parsed.ok) {
         showMessage('Sauvegarde invalide', parsed.error);
         return;
@@ -152,7 +158,7 @@ export default function SettingsScreen() {
         if (!proceed) return;
       }
 
-      const { imported, skippedPhotos } = await importGarden(backup);
+      const { imported, skippedPhotos } = await importGardenFromFile(source, backup);
       const lines = [
         `${pluralize(imported.zones, 'zone')}, ${pluralize(imported.plants, 'plante')}, ${pluralize(imported.reminders, 'rappel')}, ${pluralize(imported.care_logs, 'soin')} et ${pluralize(imported.photos, 'photo')} restaurés.`,
       ];
@@ -242,7 +248,7 @@ export default function SettingsScreen() {
           </View>
           <PrimaryButton
             label="Exporter mon jardin"
-            loadingLabel="Export en cours…"
+            loadingLabel={exportProgress ? `Export… ${exportProgress}` : 'Export en cours…'}
             loading={exporting}
             disabled={importing}
             onPress={handleExport}

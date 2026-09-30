@@ -66,3 +66,5 @@ __pycache__/
 
 # Maestro (npm run e2e:ios)
 /.maestro-output/
+# Git worktrees created by the tooling inside the repo
+.claude/worktrees/
