@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { initDb, migratePhotosToAppStorage } from '../lib/db';
 import { AccountProvider, useAccount } from '../components/AccountProvider';
+import { SyncProvider } from '../components/SyncProvider';
 import { showMessage } from '../lib/dialogs';
 import { colors } from '../lib/theme';
 import { fonts } from '../lib/fonts';
@@ -93,15 +94,17 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="dark" />
       <AccountProvider>
-        <WebGate>
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: colors.background },
-              animation: 'slide_from_right',
-            }}
-          />
-        </WebGate>
+        <SyncProvider>
+          <WebGate>
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.background },
+                animation: 'slide_from_right',
+              }}
+            />
+          </WebGate>
+        </SyncProvider>
       </AccountProvider>
     </GestureHandlerRootView>
   );

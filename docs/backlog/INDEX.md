@@ -20,7 +20,6 @@
 | P2 | feature | [058 — Turn the dashboard into "Aujourd'hui au jardin](058-home-today-in-the-garden.md) |
 | P2 | feature | [059 — Guide the first launch to a first zone, plant and photo](059-first-launch-onboarding.md) |
 | P2 | chore | [089 — Bring the mock-up up to date with tickets 086 to 090](089-sync-mockup-photo-viewer.md) |
-| P2 | feature | [094 — Sync the phone's garden with the server, offline first](094-mobile-sync-client.md) |
 | P2 | feature | [095 — Make the web app read and edit the server's garden](095-web-app-reads-and-writes-server.md) |
 | P2 | feature | [096 — Upload the phone's existing garden to the server the first time](096-first-upload-of-existing-garden.md) |
 | P2 | feature | [099 — Let the admin approve, refuse and manage accounts](099-admin-approves-accounts.md) |
@@ -43,6 +42,7 @@
 | --- | --- | --- |
 | P1 | bug | [102 — Export and import a large garden without one giant string](102-stream-large-garden-backups.md) |
 | P2 | feature | [080 — Plant search does not know rare cultivars such as Rosier La Fraîcheur](080-search-misses-rare-cultivars.md) |
+| P2 | feature | [094 — Sync the phone's garden with the server, offline first](094-mobile-sync-client.md) |
 | P2 | feature | [101 — Sign up and log in from the app, on the phone and the web](101-login-screens-in-the-app.md) |
 
 ## blocked

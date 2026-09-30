@@ -1,7 +1,7 @@
 ---
 id: 094
 title: Sync the phone's garden with the server, offline first
-status: open
+status: in-progress
 priority: P2
 type: feature
 ---

@@ -8,6 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { PrimaryButton } from '../components/form';
 import { useAccount } from '../components/AccountProvider';
+import { useSync } from '../components/SyncProvider';
+import { relativeTimeFr } from '../lib/relativeTime';
 import Icon from '../components/Icon';
 import { colors, typography, radius } from '../lib/theme';
 import { showMessage, confirm } from '../lib/dialogs';
@@ -22,6 +24,9 @@ function todayFileName() {
   const iso = new Date().toISOString().slice(0, 10);
   return `jardin-${iso}.json`;
 }
+
+const IMPORT_BLOCKED_MESSAGE =
+  'Déconnectez-vous pour importer une sauvegarde : l’import remplacerait votre jardin sans le synchroniser.';
 
 function pluralize(count, singular, plural = `${singular}s`) {
   return `${count} ${count > 1 ? plural : singular}`;
@@ -63,6 +68,18 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { status, account, logout } = useAccount();
   const [signingOut, setSigningOut] = useState(false);
+  const sync = useSync();
+  const onPhone = Platform.OS !== 'web';
+  // Ticket 094: an import would replace the garden without syncing it.
+  const importBlocked = onPhone && status === 'signedIn';
+
+  const syncLine = sync.running
+    ? 'Synchronisation…'
+    : sync.error
+      ? sync.error
+      : sync.lastSyncAt
+        ? `Synchronisé ${relativeTimeFr(sync.lastSyncAt)}`
+        : 'Jamais synchronisé';
 
   const handleLogout = async () => {
     const proceed = await confirm({
@@ -104,6 +121,10 @@ export default function SettingsScreen() {
   };
 
   const handleImport = async () => {
+    if (importBlocked) {
+      showMessage('Import impossible', IMPORT_BLOCKED_MESSAGE);
+      return;
+    }
     let result;
     try {
       result = await DocumentPicker.getDocumentAsync({
@@ -210,6 +231,23 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </View>
+            {onPhone ? (
+              <>
+                <Text
+                  style={[styles.syncLine, sync.error && !sync.running && styles.syncLineError]}
+                  accessibilityLiveRegion="polite">
+                  {syncLine}
+                </Text>
+                <TouchableOpacity
+                  style={[styles.outlineBtn, sync.running && styles.outlineBtnDisabled]}
+                  onPress={() => sync.syncNow()}
+                  disabled={sync.running}
+                  accessibilityRole="button"
+                  accessibilityState={{ disabled: sync.running, busy: sync.running }}>
+                  <Text style={styles.outlineBtnText}>Synchroniser maintenant</Text>
+                </TouchableOpacity>
+              </>
+            ) : null}
             <TouchableOpacity
               style={[styles.outlineBtn, signingOut && styles.outlineBtnDisabled]}
               onPress={handleLogout}
@@ -265,15 +303,22 @@ export default function SettingsScreen() {
               <Text style={styles.cardHint}>
                 Remplace entièrement le jardin actuel par le contenu du fichier choisi.
               </Text>
+              {importBlocked ? <Text style={styles.cardHint}>{IMPORT_BLOCKED_MESSAGE}</Text> : null}
             </View>
           </View>
           <TouchableOpacity
-            style={[styles.outlineBtn, (exporting || importing) && styles.outlineBtnDisabled]}
+            style={[
+              styles.outlineBtn,
+              (exporting || importing || importBlocked) && styles.outlineBtnDisabled,
+            ]}
             onPress={handleImport}
-            disabled={exporting || importing}
+            disabled={exporting || importing || importBlocked}
             accessibilityRole="button"
             accessibilityLabel={importing ? 'Import en cours…' : 'Importer une sauvegarde'}
-            accessibilityState={{ disabled: exporting || importing, busy: importing }}>
+            accessibilityState={{
+              disabled: exporting || importing || importBlocked,
+              busy: importing,
+            }}>
             <Text style={styles.outlineBtnText}>
               {importing ? 'Import en cours…' : 'Importer une sauvegarde'}
             </Text>
@@ -359,6 +404,8 @@ const styles = StyleSheet.create({
   avatarText: { fontFamily: 'Fraunces_400Regular', fontSize: 20, color: '#fff' },
   accountEmail: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 17, color: colors.text },
   logoutText: { color: colors.danger },
+  syncLine: { ...typography.bodySmall, color: colors.textSecondary },
+  syncLineError: { color: colors.danger },
 
   spacer: { flex: 1 },
   footer: { alignItems: 'center', gap: 2 },

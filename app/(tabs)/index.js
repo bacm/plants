@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import Icon from '../../components/Icon';
+import { useSync } from '../../components/SyncProvider';
 import { colors, spacing, typography, radius, colorHex, reminderTint } from '../../lib/theme';
 import {
   getDueTodayReminders,
@@ -106,11 +107,21 @@ export default function Dashboard() {
     }, [load])
   );
 
+  // Ticket 094: a sync that brought rows in reloads the dashboard.
+  const { syncNow, changeCount } = useSync();
+  useEffect(() => {
+    if (changeCount > 0) load();
+  }, [changeCount, load]);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await load();
-    setRefreshing(false);
-  }, [load]);
+    try {
+      await syncNow();
+      await load();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [load, syncNow]);
 
   const handleDone = async (reminder) => {
     try {
