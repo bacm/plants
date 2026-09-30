@@ -162,10 +162,10 @@ def test_auth_required(client, headers):
 
 def test_store_persists_across_instances(db_path):
     first = SyncStore(db_path)
-    first.push({"zones": [zone("z1")]})
+    first.push("acc", {"zones": [zone("z1")]})
     second = SyncStore(db_path)
-    assert second.pull(0, 10)["changes"]["zones"][0]["id"] == "z1"
-    assert second.push({"zones": [zone("z2")]})["revision"] == 2
+    assert second.pull("acc", 0, 10)["changes"]["zones"][0]["id"] == "z1"
+    assert second.push("acc", {"zones": [zone("z2")]})["revision"] == 2
 
 
 def test_normalize_timestamp():

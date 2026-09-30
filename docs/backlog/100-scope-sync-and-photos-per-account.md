@@ -1,7 +1,7 @@
 ---
 id: 100
 title: Keep each account's garden and photos separate on the server
-status: open
+status: in-progress
 priority: P1
 type: security
 ---

@@ -45,6 +45,12 @@ RATE_LIMIT_MAX_REQUESTS = 20
 RATE_LIMIT_WINDOW_SECONDS = 60
 
 SEARCH_DAILY_BUDGET_DEFAULT = 500
+SEARCH_DAILY_BUDGET_PER_ACCOUNT_DEFAULT = 100
+# Budget key of requests authenticated with the legacy API_TOKENS bearer, which
+# belongs to no account (ticket 101 removes it).
+LEGACY_TOKEN_BUDGET_KEY = "legacy-token"
+
+PHOTO_QUOTA_BYTES_DEFAULT = 5 * 1024**3
 
 SYNC_DB_PATH_DEFAULT = "data/garden.db"
 
@@ -437,18 +443,23 @@ def create_app():
             f"API_TOKENS entries must each be at least {MIN_API_TOKEN_LENGTH} characters."
         )
 
-    raw_budget = os.environ.get("SEARCH_DAILY_BUDGET")
-    if raw_budget is None or not raw_budget.strip():
-        daily_budget_limit = SEARCH_DAILY_BUDGET_DEFAULT
-    else:
+    def positive_int_env(name, default):
+        raw = os.environ.get(name)
+        if raw is None or not raw.strip():
+            return default
         try:
-            daily_budget_limit = int(raw_budget)
+            value = int(raw)
         except ValueError:
-            daily_budget_limit = -1
-        if daily_budget_limit <= 0:
-            raise RuntimeError(
-                "SEARCH_DAILY_BUDGET environment variable must be a positive integer."
-            )
+            value = -1
+        if value <= 0:
+            raise RuntimeError(f"{name} environment variable must be a positive integer.")
+        return value
+
+    daily_budget_limit = positive_int_env("SEARCH_DAILY_BUDGET", SEARCH_DAILY_BUDGET_DEFAULT)
+    account_budget_limit = positive_int_env(
+        "SEARCH_DAILY_BUDGET_PER_ACCOUNT", SEARCH_DAILY_BUDGET_PER_ACCOUNT_DEFAULT
+    )
+    photo_quota_bytes = positive_int_env("PHOTO_QUOTA_BYTES", PHOTO_QUOTA_BYTES_DEFAULT)
 
     app = FastAPI()
     app.state.api_tokens = api_tokens
@@ -473,6 +484,15 @@ def create_app():
             return app.state.account_store
 
     photo_files = PhotoFiles(os.path.join(os.path.dirname(os.path.abspath(sync_db_path)), "photos"))
+    legacy_photo_files = photo_files.legacy_files()
+    if legacy_photo_files:
+        # Not an error: they are simply unreachable now that files are per account.
+        logger.warning(
+            "%s flat photo files found in %s from before per-account storage (ticket 100); "
+            "they are not served to anyone",
+            len(legacy_photo_files),
+            photo_files.directory,
+        )
 
     allowed_origins = [
         origin.strip()
@@ -495,6 +515,16 @@ def create_app():
 
     budget = DailyBudget(daily_budget_limit)
     app.state.budget = budget
+    # One budget per account (or per legacy token), created on first use.
+    account_budgets = {}
+    app.state.account_budgets = account_budgets
+    account_budgets_lock = threading.Lock()
+
+    def account_budget(key):
+        with account_budgets_lock:
+            if key not in account_budgets:
+                account_budgets[key] = DailyBudget(account_budget_limit)
+            return account_budgets[key]
 
     signup_limiter = RateLimiter(SIGNUP_LIMIT, SIGNUP_WINDOW_SECONDS)
     app.state.signup_limiter = signup_limiter
@@ -530,7 +560,7 @@ def create_app():
         `__Host-session` cookie is a web session. A bearer header that does not
         resolve is final: it never falls back to the cookie. Cookie-authenticated
         requests that change data are CSRF-checked. The account is left on
-        `request.state.account` (the data is not scoped per account yet; 100).
+        `request.state.account`, which the data routes scope their storage by.
         """
         header = request.headers.get("Authorization")
         if header:
@@ -552,11 +582,7 @@ def create_app():
         return account
 
     def current_account(request):
-        """Auth dependency of every data route: the account or a 401.
-
-        NOTE: the sync store and photo files are not scoped per account yet
-        (ticket 100); until then every approved account reaches the same garden.
-        """
+        """Auth dependency of every data route: the account or a 401."""
         account = authenticate(request)
         if account is None:
             logger.warning(
@@ -687,14 +713,29 @@ def create_app():
         # The legacy API_TOKENS bearer is accepted here only, because the
         # installed phone app still sends it; ticket 101 (login in the app)
         # removes it. Any approved account's credential works too.
-        if not _is_authorized(
-            request.headers.get("Authorization"), app.state.api_tokens
-        ) and await run_in_threadpool(authenticate, request) is None:
-            logger.warning("Rejected unauthorized /search request from %s", client_host)
-            raise HTTPException(
-                status_code=401, detail="Unauthorized", headers={"WWW-Authenticate": "Bearer"}
-            )
+        if _is_authorized(request.headers.get("Authorization"), app.state.api_tokens):
+            budget_key = LEGACY_TOKEN_BUDGET_KEY
+        else:
+            account = await run_in_threadpool(authenticate, request)
+            if account is None:
+                logger.warning("Rejected unauthorized /search request from %s", client_host)
+                raise HTTPException(
+                    status_code=401, detail="Unauthorized", headers={"WWW-Authenticate": "Bearer"}
+                )
+            budget_key = account["id"]
 
+        # Per-account first, and the global budget only once that passed: a
+        # refused request must not burn calls the other accounts need.
+        own_budget = account_budget(budget_key)
+        if not own_budget.try_spend():
+            if own_budget.should_warn():
+                logger.warning(
+                    "Plant search daily budget of %s calls reached for %s", own_budget.limit, budget_key
+                )
+            raise HTTPException(
+                status_code=429,
+                detail="Limite quotidienne de recherches atteinte pour ce compte.",
+            )
         if not app.state.budget.try_spend():
             if app.state.budget.should_warn():
                 logger.warning("Plant search daily budget of %s calls reached", app.state.budget.limit)
@@ -723,15 +764,15 @@ def create_app():
     # Plain `def`: the sqlite calls block, so FastAPI runs them in its thread pool.
     @app.post("/sync/push")
     def sync_push(request: Request, payload: Any = Body(default=None)):
-        current_account(request)
+        account_id = current_account(request)["id"]
         try:
             changes = validate_push(payload)
         except SyncValidationError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail)
-        result = get_sync_store().push(changes)
+        result = get_sync_store().push(account_id, changes)
         for table, row_id in result["deleted"]:
             if table in ("photos", "unsorted_photos"):
-                photo_files.delete(row_id)
+                photo_files.delete(account_id, row_id)
         return {"accepted": result["accepted"], "revision": result["revision"]}
 
     @app.get("/sync/pull")
@@ -740,8 +781,8 @@ def create_app():
         since: int = Query(0, ge=0),
         limit: int = Query(500, ge=1, le=1000),
     ):
-        current_account(request)
-        return get_sync_store().pull(since, limit)
+        account_id = current_account(request)["id"]
+        return get_sync_store().pull(account_id, since, limit)
 
     def check_photo_id(photo_id):
         if not valid_photo_id(photo_id):
@@ -749,14 +790,14 @@ def create_app():
 
     @app.put("/photos/{photo_id}")
     async def put_photo(photo_id: str, request: Request):
-        await run_in_threadpool(current_account, request)
+        account_id = (await run_in_threadpool(current_account, request))["id"]
         check_photo_id(photo_id)
-        state = await run_in_threadpool(get_sync_store().photo_row_state, photo_id)
+        state = await run_in_threadpool(get_sync_store().photo_row_state, account_id, photo_id)
         if state is None:
             raise HTTPException(status_code=404, detail="Unknown photo")
         if state == "deleted":
             raise HTTPException(status_code=410, detail="Photo deleted")
-        if photo_files.path_for(photo_id) is not None:
+        if photo_files.path_for(account_id, photo_id) is not None:
             return {"stored": False}
 
         declared = request.headers.get("Content-Length")
@@ -778,14 +819,20 @@ def create_app():
         if ext is None or content_type != MEDIA_TYPES[ext]:
             raise HTTPException(status_code=415, detail="Unsupported image type")
 
-        await run_in_threadpool(photo_files.save, photo_id, data, ext)
+        # After the idempotent "already stored" answer above, so a client
+        # retrying a finished upload is never told the space is full.
+        used = await run_in_threadpool(photo_files.usage_bytes, account_id)
+        if used + len(data) > photo_quota_bytes:
+            raise HTTPException(status_code=507, detail="Espace photo plein (quota atteint).")
+
+        await run_in_threadpool(photo_files.save, account_id, photo_id, data, ext)
         return JSONResponse({"stored": True}, status_code=201)
 
     @app.get("/photos/{photo_id}")
     def get_photo(photo_id: str, request: Request):
-        current_account(request)
+        account_id = current_account(request)["id"]
         check_photo_id(photo_id)
-        path = photo_files.path_for(photo_id)
+        path = photo_files.path_for(account_id, photo_id)
         if path is None:
             raise HTTPException(status_code=404, detail="No such photo")
         media_type = MEDIA_TYPES[os.path.splitext(path)[1][1:]]

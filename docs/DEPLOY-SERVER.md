@@ -179,6 +179,10 @@ gh variable set WEB_DOMAIN --env production --body "plants.example.com"
 gh variable set SEARCH_DAILY_BUDGET --env production --body "500"
 ```
 
+Optional variables: `SEARCH_DAILY_BUDGET_PER_ACCOUNT` (search calls per account
+per day, default 100) and `PHOTO_QUOTA_BYTES` (photo space per account, default
+5 GiB).
+
 `WEB_DOMAIN` is required. `ALLOWED_ORIGINS` is optional: when unset, the deploy
 sets it to `https://plants.example.com` (the web app's origin). Set it only to
 allow other origins as well:
@@ -373,8 +377,9 @@ docker compose -f ~/plants/deploy/docker-compose.yml exec -T api python -c \
 docker compose -f ~/plants/deploy/docker-compose.yml cp api:/data/backup.db ./garden-$(date +%F).db
 ```
 
-Photo files (ticket 093) live in `/data/photos/`, in the same volume, so the
-backup must copy that directory too:
+Photo files (tickets 093, 100) live in `/data/photos/<account id>/`, in the same
+volume, one directory per account, so the backup must copy the whole
+`/data/photos` directory too:
 
 ```bash
 docker compose -f ~/plants/deploy/docker-compose.yml cp api:/data/photos ./photos-backup

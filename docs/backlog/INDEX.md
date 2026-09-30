@@ -12,7 +12,6 @@
 | P1 | feature | [029 — Record when plants actually bloom and compare year over year](029-observed-bloom-history.md) |
 | P1 | chore | [040 — Walk the app on a real iOS or Android device after the refactors](040-native-smoke-test-on-device.md) |
 | P1 | bug | [062 — The camera screen cannot be closed on iOS](062-camera-screen-cannot-be-closed-on-ios.md) |
-| P1 | security | [100 — Keep each account's garden and photos separate on the server](100-scope-sync-and-photos-per-account.md) |
 | P2 | feature | [021 — Notify the user when a reminder falls due](021-local-notifications-for-reminders.md) |
 | P2 | feature | [028 — Postpone outdoor watering reminders after enough rain](028-rain-aware-watering.md) |
 | P2 | feature | [030 — Frame repeat photos with a ghost overlay and build a timelapse](030-aligned-photos-and-timelapse.md) |
@@ -43,6 +42,7 @@
 
 | Pri | Type | Ticket |
 | --- | --- | --- |
+| P1 | security | [100 — Keep each account's garden and photos separate on the server](100-scope-sync-and-photos-per-account.md) |
 | P2 | feature | [080 — Plant search does not know rare cultivars such as Rosier La Fraîcheur](080-search-misses-rare-cultivars.md) |
 
 ## blocked

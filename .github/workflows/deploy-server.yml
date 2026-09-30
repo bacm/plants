@@ -114,6 +114,8 @@ jobs:
           API_DOMAIN: ${{ vars.API_DOMAIN }}
           WEB_DOMAIN: ${{ vars.WEB_DOMAIN }}
           SEARCH_DAILY_BUDGET: ${{ vars.SEARCH_DAILY_BUDGET }}
+          SEARCH_DAILY_BUDGET_PER_ACCOUNT: ${{ vars.SEARCH_DAILY_BUDGET_PER_ACCOUNT }}
+          PHOTO_QUOTA_BYTES: ${{ vars.PHOTO_QUOTA_BYTES }}
           ALLOWED_ORIGINS: ${{ vars.ALLOWED_ORIGINS }}
           SHARED_CADDY_NETWORK: ${{ vars.SHARED_CADDY_NETWORK }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -125,6 +127,8 @@ jobs:
             printf 'OPENAI_API_KEY=%s\n' "$OPENAI_API_KEY"
             printf 'API_TOKENS=%s\n' "$API_TOKENS"
             [ -n "$SEARCH_DAILY_BUDGET" ] && printf 'SEARCH_DAILY_BUDGET=%s\n' "$SEARCH_DAILY_BUDGET"
+            [ -n "$SEARCH_DAILY_BUDGET_PER_ACCOUNT" ] && printf 'SEARCH_DAILY_BUDGET_PER_ACCOUNT=%s\n' "$SEARCH_DAILY_BUDGET_PER_ACCOUNT"
+            [ -n "$PHOTO_QUOTA_BYTES" ] && printf 'PHOTO_QUOTA_BYTES=%s\n' "$PHOTO_QUOTA_BYTES"
             printf 'ALLOWED_ORIGINS=%s\n' "$ALLOWED_ORIGINS"
             printf 'SHARED_CADDY_NETWORK=%s\n' "$SHARED_CADDY_NETWORK"
           } | ssh -i ~/.ssh/deploy_key \

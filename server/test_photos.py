@@ -8,7 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app as app_module
-from conftest import approved_device_token
+from conftest import approved_account
 from photo_files import MAX_PHOTO_BYTES, PhotoFiles, detect_extension, valid_photo_id
 
 
@@ -24,8 +24,9 @@ def db_path(tmp_path):
 
 
 @pytest.fixture
-def photos_dir(db_path):
-    return db_path.parent / "photos"
+def photos_dir(db_path, client):
+    # The test account's own directory (files are per account, ticket 100).
+    return db_path.parent / "photos" / client.account_id
 
 
 @pytest.fixture
@@ -34,7 +35,7 @@ def client(monkeypatch, db_path):
     test_client = TestClient(app_module.create_app())
     # The data routes take an approved account's device token (ticket 098);
     # the legacy API_TOKENS bearer no longer works on them.
-    token = approved_device_token(db_path)
+    test_client.account_id, token = approved_account(db_path)
     test_client.auth_headers = {"Authorization": f"Bearer {token}"}
     return test_client
 
@@ -72,19 +73,30 @@ def test_valid_photo_id():
     assert not valid_photo_id("a/b")
 
 
+ACCOUNT = "11111111-1111-4111-8111-111111111111"
+
+
 def test_photo_files(tmp_path):
     files = PhotoFiles(tmp_path / "photos")
-    assert files.path_for("p1") is None
-    files.save("p1", b"data", "png")
-    assert files.path_for("p1").endswith("p1.png")
-    assert sorted(os.listdir(tmp_path / "photos")) == ["p1.png"]
-    files.delete("p1")
-    assert files.path_for("p1") is None
-    files.delete("p1")
+    assert files.path_for(ACCOUNT, "p1") is None
+    files.save(ACCOUNT, "p1", b"data", "png")
+    assert files.path_for(ACCOUNT, "p1").endswith(f"{ACCOUNT}/p1.png")
+    assert sorted(os.listdir(tmp_path / "photos" / ACCOUNT)) == ["p1.png"]
+    files.delete(ACCOUNT, "p1")
+    assert files.path_for(ACCOUNT, "p1") is None
+    files.delete(ACCOUNT, "p1")
     with pytest.raises(ValueError):
-        files.save("../x", b"d", "png")
+        files.save(ACCOUNT, "../x", b"d", "png")
     with pytest.raises(ValueError):
-        files.save("p2", b"d", "exe")
+        files.save(ACCOUNT, "p2", b"d", "exe")
+
+
+def test_usage_bytes(tmp_path):
+    files = PhotoFiles(tmp_path / "photos")
+    assert files.usage_bytes(ACCOUNT) == 0
+    files.save(ACCOUNT, "p1", b"12345", "png")
+    files.save(ACCOUNT, "p2", b"123", "jpg")
+    assert files.usage_bytes(ACCOUNT) == 8
 
 
 @pytest.mark.parametrize(

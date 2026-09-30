@@ -21,9 +21,14 @@ def _test_environment(monkeypatch, tmp_path):
         monkeypatch.setenv("SYNC_DB_PATH", str(tmp_path / "default" / "garden.db"))
 
 
-def approved_device_token(db_path, email="gardener@example.com"):
-    """An approved account on `db_path` and one of its device tokens."""
+def approved_account(db_path, email="gardener@example.com"):
+    """An approved account on `db_path`: (account id, one of its device tokens)."""
     store = AccountStore(db_path)
     store.create_admin(email, PASSWORD)
     account = store.verify_login(email, PASSWORD).account
-    return store.issue_credential(account["id"], "device", "test")
+    return account["id"], store.issue_credential(account["id"], "device", "test")
+
+
+def approved_device_token(db_path, email="gardener@example.com"):
+    """An approved account on `db_path` and one of its device tokens."""
+    return approved_account(db_path, email)[1]
