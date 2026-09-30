@@ -15,15 +15,21 @@ import time
 import urllib.parse
 from collections import OrderedDict, deque
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal, Optional
 
 import httpx
 from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.concurrency import run_in_threadpool
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 
+from accounts import (
+    SESSION_LIFETIME,
+    AccountStore,
+    normalize_email,
+    password_problem,
+)
 from photo_files import MAX_PHOTO_BYTES, MEDIA_TYPES, PhotoFiles, detect_extension, valid_photo_id
 from sync_store import SyncStore
 from sync_validation import SyncValidationError, validate_push
@@ -41,6 +47,24 @@ RATE_LIMIT_WINDOW_SECONDS = 60
 SEARCH_DAILY_BUDGET_DEFAULT = 500
 
 SYNC_DB_PATH_DEFAULT = "data/garden.db"
+
+SESSION_COOKIE = "__Host-session"
+STATE_CHANGING_METHODS = ("POST", "PUT", "PATCH", "DELETE")
+
+SIGNUP_LIMIT = 5
+SIGNUP_WINDOW_SECONDS = 3600
+# Signups waiting for the owner's approval. Beyond this the form closes, so a
+# bot cannot bury the owner under thousands of pending accounts.
+PENDING_ACCOUNTS_CAP = 50
+LOGIN_FAILURES_PER_IP = 20
+LOGIN_FAILURES_WINDOW_SECONDS = 15 * 60
+MAX_DEVICE_NAME_LENGTH = 100
+
+NOT_APPROVED_DETAILS = {
+    "pending": "Compte en attente d'approbation",
+    "refused": "Compte refusé",
+    "disabled": "Compte désactivé",
+}
 
 MIN_API_TOKEN_LENGTH = 32
 
@@ -99,6 +123,21 @@ class RateLimiter:
         self.clock = clock
         self._hits = {}
 
+    def _prune(self, key):
+        cutoff = self.clock() - self.window_seconds
+        hits = self._hits.setdefault(key, deque())
+        while hits and hits[0] < cutoff:
+            hits.popleft()
+        return hits
+
+    def is_full(self, key):
+        """True if `key` already used up its quota, without counting a hit."""
+        return len(self._prune(key)) >= self.max_requests
+
+    def record(self, key):
+        """Count a hit unconditionally (used to count only failures)."""
+        self._prune(key).append(self.clock())
+
     def allow(self, key):
         now = self.clock()
         cutoff = now - self.window_seconds
@@ -109,6 +148,20 @@ class RateLimiter:
             return False
         hits.append(now)
         return True
+
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    # Honeypot: hidden in the form, so only a bot fills it in.
+    website: str = ""
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+    client: Literal["web", "device"]
+    deviceName: Optional[str] = None
 
 
 class DailyBudget:
@@ -331,6 +384,20 @@ def parse_plants(text):
     return plants[:5]
 
 
+def _client_host(request):
+    return request.client.host if request.client else "unknown"
+
+
+def _bearer_token(header):
+    """The token of an `Authorization: Bearer <token>` header, else None."""
+    if not header:
+        return None
+    scheme, _, presented = header.partition(" ")
+    if scheme.lower() != "bearer" or not presented.strip():
+        return None
+    return presented.strip()
+
+
 def _is_authorized(header, tokens):
     """Check an `Authorization` header against the configured tokens.
 
@@ -396,6 +463,15 @@ def create_app():
                 app.state.sync_store = SyncStore(sync_db_path)
             return app.state.sync_store
 
+    account_store_lock = threading.Lock()
+
+    def get_account_store():
+        # Same lazy opening as the sync store, on the same SQLite file.
+        with account_store_lock:
+            if getattr(app.state, "account_store", None) is None:
+                app.state.account_store = AccountStore(sync_db_path)
+            return app.state.account_store
+
     photo_files = PhotoFiles(os.path.join(os.path.dirname(os.path.abspath(sync_db_path)), "photos"))
 
     allowed_origins = [
@@ -407,6 +483,9 @@ def create_app():
         app.add_middleware(
             CORSMiddleware,
             allow_origins=allowed_origins,
+            # The web app sends its session cookie with fetch credentials:
+            # 'include'. Credentials require explicit origins, never "*".
+            allow_credentials=True,
             allow_methods=["GET", "POST", "PUT"],
             allow_headers=["Content-Type", "Authorization"],
         )
@@ -416,6 +495,184 @@ def create_app():
 
     budget = DailyBudget(daily_budget_limit)
     app.state.budget = budget
+
+    signup_limiter = RateLimiter(SIGNUP_LIMIT, SIGNUP_WINDOW_SECONDS)
+    app.state.signup_limiter = signup_limiter
+    # Only failed logins are recorded in this one.
+    login_failure_limiter = RateLimiter(LOGIN_FAILURES_PER_IP, LOGIN_FAILURES_WINDOW_SECONDS)
+    app.state.login_failure_limiter = login_failure_limiter
+
+    def check_origin(request, required):
+        """CSRF guard: the Origin header must be one of ALLOWED_ORIGINS.
+
+        `required` is True for requests authenticated by the cookie, which the
+        browser attaches by itself to a forged cross-site request. Login and
+        signup (no cookie yet) only check it when the browser sent one, which
+        it always does on a cross-origin POST. The phone sends no Origin.
+        """
+        origin = request.headers.get("Origin")
+        if origin is None and not required:
+            return
+        if origin not in allowed_origins:
+            logger.warning(
+                "Rejected %s %s from %s: origin refused (%s)",
+                request.method,
+                request.url.path,
+                _client_host(request),
+                "missing" if origin is None else "not allowed",
+            )
+            raise HTTPException(status_code=403, detail="Origine refusée")
+
+    def authenticate(request):
+        """The approved account behind the request's credential, or None.
+
+        `Authorization: Bearer` is a device token; without that header the
+        `__Host-session` cookie is a web session. A bearer header that does not
+        resolve is final: it never falls back to the cookie. Cookie-authenticated
+        requests that change data are CSRF-checked. The account is left on
+        `request.state.account` (the data is not scoped per account yet; 100).
+        """
+        header = request.headers.get("Authorization")
+        if header:
+            token = _bearer_token(header)
+            via_cookie = False
+            kind = "device"
+        else:
+            token = request.cookies.get(SESSION_COOKIE)
+            via_cookie = True
+            kind = "session"
+        if not token:
+            return None
+        account = get_account_store().resolve_token(token, kind)
+        if account is None:
+            return None
+        if via_cookie and request.method in STATE_CHANGING_METHODS:
+            check_origin(request, True)
+        request.state.account = account
+        return account
+
+    def current_account(request):
+        """Auth dependency of every data route: the account or a 401.
+
+        NOTE: the sync store and photo files are not scoped per account yet
+        (ticket 100); until then every approved account reaches the same garden.
+        """
+        account = authenticate(request)
+        if account is None:
+            logger.warning(
+                "Rejected unauthenticated %s %s from %s",
+                request.method,
+                request.url.path,
+                _client_host(request),
+            )
+            raise HTTPException(
+                status_code=401, detail="Unauthorized", headers={"WWW-Authenticate": "Bearer"}
+            )
+        return account
+
+    def public_account(account):
+        return {"id": account["id"], "email": account["email"], "isAdmin": account["isAdmin"]}
+
+    def too_many_attempts(seconds):
+        minutes = max(1, -(-int(seconds) // 60))
+        return HTTPException(
+            status_code=429,
+            detail=f"Trop de tentatives. Réessayez dans {minutes} minutes.",
+            headers={"Retry-After": str(max(1, int(seconds)))},
+        )
+
+    @app.post("/auth/signup", status_code=202)
+    def signup(payload: SignupRequest, request: Request):
+        host = _client_host(request)
+        check_origin(request, False)
+        if not signup_limiter.allow(host):
+            logger.warning("Rejected signup from %s: rate limited", host)
+            raise HTTPException(
+                status_code=429,
+                detail="Trop de demandes. Réessayez plus tard.",
+                headers={"Retry-After": str(SIGNUP_WINDOW_SECONDS)},
+            )
+        if payload.website.strip():
+            # Answers like a success so the bot learns nothing; stores nothing.
+            logger.warning("Rejected signup from %s: honeypot filled", host)
+            return {"status": "pending"}
+        email = normalize_email(payload.email)
+        if email is None:
+            raise HTTPException(status_code=400, detail="Adresse e-mail invalide.")
+        problem = password_problem(payload.password)
+        if problem:
+            raise HTTPException(status_code=400, detail=problem)
+        store = get_account_store()
+        if store.count_pending() >= PENDING_ACCOUNTS_CAP:
+            logger.warning("Signups closed: %s pending accounts (request from %s)", PENDING_ACCOUNTS_CAP, host)
+            raise HTTPException(status_code=503, detail="Inscriptions temporairement fermées")
+        # Same answer whether or not the email already had an account.
+        if not store.create_pending(email, payload.password):
+            logger.info("Signup from %s for an existing account", host)
+        return {"status": "pending"}
+
+    @app.post("/auth/login")
+    def login(payload: LoginRequest, request: Request, response: Response):
+        host = _client_host(request)
+        check_origin(request, False)
+        if login_failure_limiter.is_full(host):
+            logger.warning("Rejected login from %s: too many failures from this address", host)
+            raise too_many_attempts(LOGIN_FAILURES_WINDOW_SECONDS)
+        store = get_account_store()
+        result = store.verify_login(payload.email, payload.password)
+        if result.outcome == "locked":
+            login_failure_limiter.record(host)
+            logger.warning("Rejected login from %s: account %s locked", host, result.account_id)
+            raise too_many_attempts((result.until - datetime.now(timezone.utc)).total_seconds())
+        if result.outcome == "bad_credentials":
+            login_failure_limiter.record(host)
+            logger.warning(
+                "Rejected login from %s: bad credentials (account %s)", host, result.account_id or "unknown"
+            )
+            raise HTTPException(status_code=401, detail="Identifiants invalides")
+        if result.outcome == "not_approved":
+            # The status is revealed only because the password was right.
+            logger.warning(
+                "Rejected login from %s: account %s is %s", host, result.account_id, result.status
+            )
+            raise HTTPException(status_code=403, detail=NOT_APPROVED_DETAILS[result.status])
+
+        body = {"account": public_account(result.account)}
+        if payload.client == "web":
+            token = store.issue_credential(result.account_id, "session", "web")
+            response.set_cookie(
+                SESSION_COOKIE,
+                token,
+                max_age=int(SESSION_LIFETIME.total_seconds()),
+                path="/",
+                secure=True,
+                httponly=True,
+                samesite="strict",
+            )
+        else:
+            label = (payload.deviceName or "").strip()[:MAX_DEVICE_NAME_LENGTH] or "device"
+            body["token"] = store.issue_credential(result.account_id, "device", label)
+        return body
+
+    @app.post("/auth/logout", status_code=204)
+    def logout(request: Request):
+        account = current_account(request)
+        get_account_store().revoke_credential(account["credential"])
+        response = Response(status_code=204)
+        response.set_cookie(
+            SESSION_COOKIE,
+            "",
+            max_age=0,
+            path="/",
+            secure=True,
+            httponly=True,
+            samesite="strict",
+        )
+        return response
+
+    @app.get("/auth/me")
+    def me(request: Request):
+        return public_account(current_account(request))
 
     @app.get("/health")
     async def health():
@@ -427,7 +684,12 @@ def create_app():
         if not app.state.limiter.allow(client_host):
             raise HTTPException(status_code=429, detail="Too many requests")
 
-        if not _is_authorized(request.headers.get("Authorization"), app.state.api_tokens):
+        # The legacy API_TOKENS bearer is accepted here only, because the
+        # installed phone app still sends it; ticket 101 (login in the app)
+        # removes it. Any approved account's credential works too.
+        if not _is_authorized(
+            request.headers.get("Authorization"), app.state.api_tokens
+        ) and await run_in_threadpool(authenticate, request) is None:
             logger.warning("Rejected unauthorized /search request from %s", client_host)
             raise HTTPException(
                 status_code=401, detail="Unauthorized", headers={"WWW-Authenticate": "Bearer"}
@@ -458,18 +720,10 @@ def create_app():
 
         return {"plants": plants}
 
-    def require_token(request):
-        if not _is_authorized(request.headers.get("Authorization"), app.state.api_tokens):
-            client_host = request.client.host if request.client else "unknown"
-            logger.warning("Rejected unauthorized %s request from %s", request.url.path, client_host)
-            raise HTTPException(
-                status_code=401, detail="Unauthorized", headers={"WWW-Authenticate": "Bearer"}
-            )
-
     # Plain `def`: the sqlite calls block, so FastAPI runs them in its thread pool.
     @app.post("/sync/push")
     def sync_push(request: Request, payload: Any = Body(default=None)):
-        require_token(request)
+        current_account(request)
         try:
             changes = validate_push(payload)
         except SyncValidationError as exc:
@@ -486,7 +740,7 @@ def create_app():
         since: int = Query(0, ge=0),
         limit: int = Query(500, ge=1, le=1000),
     ):
-        require_token(request)
+        current_account(request)
         return get_sync_store().pull(since, limit)
 
     def check_photo_id(photo_id):
@@ -495,7 +749,7 @@ def create_app():
 
     @app.put("/photos/{photo_id}")
     async def put_photo(photo_id: str, request: Request):
-        require_token(request)
+        await run_in_threadpool(current_account, request)
         check_photo_id(photo_id)
         state = await run_in_threadpool(get_sync_store().photo_row_state, photo_id)
         if state is None:
@@ -529,7 +783,7 @@ def create_app():
 
     @app.get("/photos/{photo_id}")
     def get_photo(photo_id: str, request: Request):
-        require_token(request)
+        current_account(request)
         check_photo_id(photo_id)
         path = photo_files.path_for(photo_id)
         if path is None:

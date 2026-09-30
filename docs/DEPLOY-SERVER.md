@@ -219,12 +219,17 @@ new > Caddyfile`), or restart the container, and check with `docker exec
 instead of the file avoids it.
 
 ```
+# header_up: uvicorn trusts the LEFTMOST X-Forwarded-For entry, so replace the
+# chain with the single address Caddy resolved, or a client can spoof its IP
+# (see deploy/Caddyfile). Keep it on every reverse_proxy to the API.
 plants-api.example.com {
     handle /sync/push {
         request_body {
             max_size 5MB
         }
-        reverse_proxy plants-api:8000
+        reverse_proxy plants-api:8000 {
+            header_up X-Forwarded-For {client_ip}
+        }
     }
     @photoUpload {
         method PUT
@@ -234,13 +239,17 @@ plants-api.example.com {
         request_body {
             max_size 16MB
         }
-        reverse_proxy plants-api:8000
+        reverse_proxy plants-api:8000 {
+            header_up X-Forwarded-For {client_ip}
+        }
     }
     handle {
         request_body {
             max_size 8KB
         }
-        reverse_proxy plants-api:8000
+        reverse_proxy plants-api:8000 {
+            header_up X-Forwarded-For {client_ip}
+        }
     }
 }
 
@@ -285,6 +294,30 @@ curl -s -o /dev/null -w '%{http_code}\n' -X POST https://plants-api.example.com/
 curl -X POST https://plants-api.example.com/search -H 'Content-Type: application/json' \
   -H "Authorization: Bearer <token1>" -d '{"query":"rose"}'
 # a list of plants
+```
+
+### First admin account
+
+Accounts are approved by hand, and nobody can sign up as an admin. Create the
+first admin on the VPS, as `deploy` (it asks for the password twice, 12
+characters minimum):
+
+```bash
+docker compose -f ~/plants/deploy/docker-compose.yml exec api python -m accounts create-admin --email you@example.com
+```
+
+With `SHARED_CADDY_NETWORK` set, the deploy also uses the overlay file, so pass
+both `-f` files:
+
+```bash
+docker compose -f ~/plants/deploy/docker-compose.yml -f ~/plants/deploy/docker-compose.shared-caddy.yml \
+  exec api python -m accounts create-admin --email you@example.com
+```
+
+or skip compose and name the container directly:
+
+```bash
+docker exec -it plants-api-1 python -m accounts create-admin --email you@example.com
 ```
 
 If HTTPS doesn't answer, on the VPS as `deploy`:

@@ -1,7 +1,7 @@
 ---
 id: 098
 title: Add user accounts that the owner must approve before first login
-status: open
+status: in-progress
 priority: P1
 type: security
 ---
@@ -29,7 +29,8 @@ in or to cut one off.
       HttpOnly + Secure + SameSite=Strict session cookie (web) or a device
       token (phone, stored in SecureStore); `POST /auth/logout` revokes it
 - [ ] Every data route (`/sync/*`, `/photos/*`, `/search`) resolves the
-      account from the cookie or the device token; `API_TOKENS` is removed
+      account from the cookie or the device token; `API_TOKENS` is still
+      accepted on `/search` only, until 101 ships login in the phone app
 - [ ] Anti-abuse: login limited per IP and per account (after 5 failures,
       growing lockout); signup limited per IP with a honeypot field and a cap
       on pending accounts; the same error whether or not the email exists;
@@ -48,3 +49,11 @@ Owner decisions (2026-09-30): each user has their own garden; accounts need
 the owner's approval (no CAPTCHA). No email is sent (no SMTP): a forgotten
 password is reset by an admin (099). Account data lives in the same SQLite
 database as the sync store.
+
+`API_TOKENS` stays on `/search` because the installed iPhone app sends it for
+plant search; removing it before 101 would break search on the phone. 101
+removes it.
+
+The web app (garden.bacm.me) and the API (plants.bacm.me) are the same site
+(bacm.me), so a SameSite=Strict cookie set by the API is sent with the web
+app's `fetch(..., { credentials: 'include' })`.

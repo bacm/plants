@@ -10,12 +10,17 @@
 # client_ip_headers), or the API sees Cloudflare's IPs instead of the
 # visitors'. Copy it from there at the top of the shared Caddyfile.
 #
+#   # header_up: uvicorn trusts the LEFTMOST X-Forwarded-For entry, so replace
+#   # the chain with the single address Caddy resolved, or a client can spoof
+#   # its IP (see deploy/Caddyfile).
 #   plants-api.example.com {
 #       handle /sync/push {
 #           request_body {
 #               max_size 5MB
 #           }
-#           reverse_proxy plants-api:8000
+#           reverse_proxy plants-api:8000 {
+#               header_up X-Forwarded-For {client_ip}
+#           }
 #       }
 #       @photoUpload {
 #           method PUT
@@ -25,13 +30,17 @@
 #           request_body {
 #               max_size 16MB
 #           }
-#           reverse_proxy plants-api:8000
+#           reverse_proxy plants-api:8000 {
+#               header_up X-Forwarded-For {client_ip}
+#           }
 #       }
 #       handle {
 #           request_body {
 #               max_size 8KB
 #           }
-#           reverse_proxy plants-api:8000
+#           reverse_proxy plants-api:8000 {
+#               header_up X-Forwarded-For {client_ip}
+#           }
 #       }
 #   }
 #

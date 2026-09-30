@@ -25,7 +25,8 @@ OPENAI_API_KEY=sk-... API_TOKENS=$(openssl rand -hex 32) uvicorn app:app --host 
 ```
 
 Every call to `/search` must then send `Authorization: Bearer <token>` with
-one of the tokens in `API_TOKENS`. `/health` stays open.
+one of the tokens in `API_TOKENS` (or an account credential, see Accounts).
+`/health` stays open.
 
 For a real deployment (Docker + Caddy on a VPS), see
 [`docs/DEPLOY-SERVER.md`](../docs/DEPLOY-SERVER.md).
@@ -49,8 +50,8 @@ python -m pytest -q
 ## Sync
 
 The garden is stored as whole rows, keyed by `(table, id)`, with a global
-revision number that grows on each accepted write. Both endpoints need the same
-`Authorization: Bearer <token>` as `/search`. Columns allowed per table are in
+revision number that grows on each accepted write. Both endpoints need an
+approved account's credential (see Accounts), not an `API_TOKENS` token. Columns allowed per table are in
 `sync_schema.json`, shared with the app.
 
 `POST /sync/push` with `{"changes": {"<table>": [row, ...]}}`. Each row is an
@@ -72,7 +73,7 @@ with `since` set to the returned `revision`.
 
 Photo files are stored in a `photos/` directory next to the sync database
 (`dirname(SYNC_DB_PATH)/photos/`, created on first use), one file per photo id.
-Both routes need the same bearer token. The id must match `[A-Za-z0-9-]{1,64}`
+Both routes need an account credential. The id must match `[A-Za-z0-9-]{1,64}`
 (else 400).
 
 `PUT /photos/{photo_id}` with the raw image as body. The id must be a `photos`
@@ -86,6 +87,63 @@ or `unsorted_photos` row already pushed via `/sync/push` (unknown: 404; soft-del
 `Cache-Control: private, max-age=31536000, immutable`; 404 if there is none.
 
 Pushing a `photos` or `unsorted_photos` row with `deletedAt` deletes its file.
+
+## Accounts
+
+Accounts live in the same SQLite file as the sync store (`SYNC_DB_PATH`), in
+their own tables (`accounts.py`). Passwords are hashed with scrypt (n=2**15) and
+a per-account salt, 12 to 256 characters; login tokens are stored only as a
+SHA-256 hash. The `SCRYPT_N` environment variable lowers the scrypt cost and
+exists only for the test suite (`conftest.py` sets it): never set it on the
+server.
+
+| Route               | What it does                                                                                                                                                           |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `POST /auth/signup` | `{email, password, website}` creates a **pending** account. Always 202 `{"status":"pending"}`, whether or not the email existed.                                       |
+| `POST /auth/login`  | `{email, password, client: "web"\|"device", deviceName?}`. Web: sets the session cookie. Device: returns `{"token"}`. Both return `{"account": {id, email, isAdmin}}`. |
+| `POST /auth/logout` | Revokes the credential that authenticated the request and clears the cookie (204).                                                                                     |
+| `GET /auth/me`      | The account of the credential, or 401.                                                                                                                                 |
+
+Statuses: `pending` (after signup), `approved`, `refused`, `disabled`. Only an
+`approved` account can log in or use a credential; a credential also stops
+working if its account leaves `approved`. Until the admin screens (ticket 099),
+approval is a manual `UPDATE accounts SET status = 'approved' ...`.
+
+- **Web**: `__Host-session` cookie (`Secure; HttpOnly; SameSite=Strict; Path=/`,
+  30 days). The web app calls the API with `credentials: 'include'`.
+- **Device** (the phone): `Authorization: Bearer <token>`, no expiry, revocable
+  with logout.
+- Data routes (`/sync/*`, `/photos/*`) resolve the account from the bearer
+  device token, else from the cookie. `/search` also still accepts a legacy
+  `API_TOKENS` bearer, until ticket 101 removes it. The garden is not scoped per
+  account yet (ticket 100).
+- **Lockout**: kept per normalized email for every well-formed address, known
+  or not (table `login_throttle`, keyed by a hash), so a lockout never reveals
+  that an account exists. The 5th consecutive failed password locks the email for 1
+  minute, doubling with each further failure up to 1 hour (429 with
+  `Retry-After`; the password is not checked while locked). A success resets it.
+  Per IP, 20 failed logins in 15 minutes answer 429 too.
+- **Same answer**: an unknown email and a wrong password both give 401
+  `Identifiants invalides` (scrypt runs either way, so timing does not tell).
+  The account status (403) is revealed only when the password is right.
+- **Signup abuse**: 5 signups per hour per IP (429); `website` is a honeypot
+  field, hidden in the form: if filled the answer is the usual 202 but nothing is
+  stored; at 50 pending accounts signup answers 503.
+- **CSRF**: a state-changing request (POST, PUT, PATCH, DELETE) authenticated by
+  the **cookie** must carry an `Origin` header listed in `ALLOWED_ORIGINS`, else
+  403 `Origine refusée`. Login and signup check `Origin` when one is sent. A
+  request with a bearer token and no `Origin` (the phone) is fine.
+- Every rejected attempt is logged with the client IP and the reason, never the
+  password, and the account id rather than the email.
+
+First admin, on the server (not through signup):
+
+```bash
+docker compose exec api python -m accounts create-admin --email you@example.com
+```
+
+It asks for the password twice. See `docs/DEPLOY-SERVER.md` for the exact
+command on the VPS.
 
 ## Notes
 

@@ -8,9 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app as app_module
+from conftest import approved_device_token
 from sync_store import SyncStore
 
-AUTH = {"Authorization": f"Bearer {os.environ['API_TOKENS'].split(',')[0].strip()}"}
 
 
 @pytest.fixture
@@ -21,18 +21,25 @@ def db_path(tmp_path):
 @pytest.fixture
 def client(monkeypatch, db_path):
     monkeypatch.setenv("SYNC_DB_PATH", str(db_path))
-    return TestClient(app_module.create_app())
+    test_client = TestClient(app_module.create_app())
+    # The data routes take an approved account's device token (ticket 098);
+    # the legacy API_TOKENS bearer no longer works on them.
+    token = approved_device_token(db_path)
+    test_client.auth_headers = {"Authorization": f"Bearer {token}"}
+    return test_client
 
 
 def zone(id_, updated="2026-09-30T10:00:00.000Z", **extra):
     return {"id": id_, "name": f"Zone {id_}", "updatedAt": updated, **extra}
 
 
-def push(client, changes, headers=AUTH):
+def push(client, changes, headers=None):
+    headers = client.auth_headers if headers is None else headers
     return client.post("/sync/push", json={"changes": changes}, headers=headers)
 
 
-def pull(client, headers=AUTH, **params):
+def pull(client, headers=None, **params):
+    headers = client.auth_headers if headers is None else headers
     return client.get("/sync/pull", params=params, headers=headers)
 
 
@@ -136,8 +143,8 @@ def test_too_many_rows(client):
 
 
 def test_bad_body_shape(client):
-    assert client.post("/sync/push", json=[1], headers=AUTH).status_code == 400
-    assert client.post("/sync/push", json={"x": 1}, headers=AUTH).status_code == 400
+    assert client.post("/sync/push", json=[1], headers=client.auth_headers).status_code == 400
+    assert client.post("/sync/push", json={"x": 1}, headers=client.auth_headers).status_code == 400
 
 
 @pytest.mark.parametrize("params", [{"since": -1}, {"limit": 0}, {"limit": 1001}, {"since": "x"}])

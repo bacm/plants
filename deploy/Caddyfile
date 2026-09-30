@@ -17,6 +17,11 @@
 # (ticket 097). Both get automatic HTTPS via Let's Encrypt (or ZeroSSL). This
 # is the only public entry point; the `api` and `web` containers publish no port.
 
+# Every `reverse_proxy api:8000` below replaces X-Forwarded-For with the one
+# address Caddy resolved ({client_ip}: CF-Connecting-IP from a trusted
+# Cloudflare peer, else the TCP peer). Without it Caddy appends to whatever
+# chain the client sent, and uvicorn (--proxy-headers) believes the LEFTMOST
+# entry, so `X-Forwarded-For: 6.6.6.6` would dodge every per-IP limit.
 {$API_DOMAIN} {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -49,7 +54,9 @@
 		request_body {
 			max_size 5MB
 		}
-		reverse_proxy api:8000
+		reverse_proxy api:8000 {
+			header_up X-Forwarded-For {client_ip}
+		}
 	}
 
 	# A photo upload; the API itself refuses anything over 15 MB, so this only
@@ -63,7 +70,9 @@
 		request_body {
 			max_size 16MB
 		}
-		reverse_proxy api:8000
+		reverse_proxy api:8000 {
+			header_up X-Forwarded-For {client_ip}
+		}
 	}
 
 	# Everything else (/search, /health, /sync/pull, GET /photos/*, /auth/*):
@@ -72,7 +81,9 @@
 		request_body {
 			max_size 8KB
 		}
-		reverse_proxy api:8000
+		reverse_proxy api:8000 {
+			header_up X-Forwarded-For {client_ip}
+		}
 	}
 }
 

@@ -8,9 +8,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 import app as app_module
+from conftest import approved_device_token
 from photo_files import MAX_PHOTO_BYTES, PhotoFiles, detect_extension, valid_photo_id
 
-AUTH = {"Authorization": f"Bearer {os.environ['API_TOKENS'].split(',')[0].strip()}"}
 
 JPEG = b"\xff\xd8\xff\xe0" + b"j" * 50
 PNG = b"\x89PNG\r\n\x1a\n" + b"p" * 50
@@ -31,15 +31,21 @@ def photos_dir(db_path):
 @pytest.fixture
 def client(monkeypatch, db_path):
     monkeypatch.setenv("SYNC_DB_PATH", str(db_path))
-    return TestClient(app_module.create_app())
+    test_client = TestClient(app_module.create_app())
+    # The data routes take an approved account's device token (ticket 098);
+    # the legacy API_TOKENS bearer no longer works on them.
+    token = approved_device_token(db_path)
+    test_client.auth_headers = {"Authorization": f"Bearer {token}"}
+    return test_client
 
 
 def push_photo(client, id_="ph1", table="photos", **extra):
     row = {"id": id_, "updatedAt": "2026-09-30T10:00:00.000Z", **extra}
-    return client.post("/sync/push", json={"changes": {table: [row]}}, headers=AUTH)
+    return client.post("/sync/push", json={"changes": {table: [row]}}, headers=client.auth_headers)
 
 
-def put(client, id_, body, content_type="image/jpeg", headers=AUTH):
+def put(client, id_, body, content_type="image/jpeg", headers=None):
+    headers = client.auth_headers if headers is None else headers
     return client.put(
         f"/photos/{id_}", content=body, headers={**headers, "Content-Type": content_type}
     )
@@ -90,7 +96,7 @@ def test_round_trip(client, body, content_type, media):
     response = put(client, "ph1", body, content_type)
     assert response.status_code == 201
     assert response.json() == {"stored": True}
-    got = client.get("/photos/ph1", headers=AUTH)
+    got = client.get("/photos/ph1", headers=client.auth_headers)
     assert got.status_code == 200
     assert got.content == body
     assert got.headers["content-type"] == media
@@ -123,7 +129,7 @@ def test_deleted_row_410(client):
 @pytest.mark.parametrize("bad", ["..%2Fetc", "a" * 65, "a.b", "%2e%2e"])
 def test_bad_id_never_writes_outside(client, tmp_path, bad):
     assert put(client, bad, JPEG).status_code in (400, 404)
-    assert client.get(f"/photos/{bad}", headers=AUTH).status_code in (400, 404)
+    assert client.get(f"/photos/{bad}", headers=client.auth_headers).status_code in (400, 404)
     assert [p for p in tmp_path.rglob("*") if p.suffix in (".jpg", ".png")] == []
 
 
@@ -158,7 +164,7 @@ def test_auth_required(client):
 
 
 def test_get_missing_404(client):
-    assert client.get("/photos/ph1", headers=AUTH).status_code == 404
+    assert client.get("/photos/ph1", headers=client.auth_headers).status_code == 404
 
 
 def test_push_deleted_row_removes_file(client, photos_dir):
@@ -168,7 +174,7 @@ def test_push_deleted_row_removes_file(client, photos_dir):
     response = push_photo(client, updatedAt="2026-09-30T12:00:00.000Z", deletedAt="2026-09-30T12:00:00.000Z")
     assert response.json() == {"accepted": 1, "revision": 2}
     assert not (photos_dir / "ph1.jpg").exists()
-    assert client.get("/photos/ph1", headers=AUTH).status_code == 404
+    assert client.get("/photos/ph1", headers=client.auth_headers).status_code == 404
 
 
 def test_push_response_keys_unchanged(client):

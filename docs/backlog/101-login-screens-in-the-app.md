@@ -28,7 +28,8 @@ Without these screens, no one can use the web app or sync their phone.
       it locally; the phone's local garden is kept
 - [ ] Clear messages for pending, refused, locked-out and wrong credentials,
       without revealing whether an email exists
-- [ ] The old token field is removed; `npm run verify` and `npm run e2e:web`
+- [ ] The old token field is removed, and the server stops accepting
+      `API_TOKENS` on `/search` (kept by 098 for the installed app); `npm run verify` and `npm run e2e:web`
       pass
 
 ## Notes
