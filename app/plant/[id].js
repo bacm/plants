@@ -43,7 +43,9 @@ import {
   markReminderDone,
   createCareLog,
   deleteCareLog,
+  updatePlant,
 } from '../../lib/db';
+import { pickCoverPhoto } from '../../lib/coverPhoto';
 import { PLANT_TYPES, isUnknown, labelFor, iconFor } from '../../lib/enums';
 import { parseISODate } from '../../lib/validation';
 import { parseImageUrls } from '../../lib/plantFields';
@@ -362,7 +364,21 @@ export default function PlantDetailScreen() {
     );
   }
 
-  const coverPhoto = photos[0];
+  const coverPhoto = pickCoverPhoto(photos, plant.coverPhotoId);
+  // Ticket 088: the lightbox toggle marks/unmarks the shown photo as the cover.
+  const selectedIsChosenCover =
+    !!selectedPhoto &&
+    plant.coverPhotoId === selectedPhoto.id &&
+    coverPhoto?.id === selectedPhoto.id;
+  async function toggleCoverPhoto() {
+    try {
+      updatePlant(plant.id, { coverPhotoId: selectedIsChosenCover ? null : selectedPhoto.id });
+    } catch (e) {
+      showMessage('Erreur', `Impossible de changer la photo d'accueil : ${e.message}`);
+      return;
+    }
+    await load();
+  }
   const remoteImageUrl =
     !coverPhoto && !remoteImageError ? parseImageUrls(plant.imageUrls)[0] : null;
   const hasHeroImage = Boolean(coverPhoto || remoteImageUrl);
@@ -385,6 +401,7 @@ export default function PlantDetailScreen() {
         return (
           <PhotosTab
             photos={photos}
+            coverPhotoId={coverPhoto?.id}
             bloomDates={bloomDates}
             onAddPhoto={showAddPhotoOptions}
             onSelectPhoto={(photo) => setSelectedPhotoId(photo.id)}
@@ -572,6 +589,26 @@ export default function PlantDetailScreen() {
               <Icon name="chevron-left" size={18} color="#fff" />
               <Text style={styles.lightboxBackText}>Retour</Text>
             </TouchableOpacity>
+            {selectedPhoto && (
+              <TouchableOpacity
+                style={styles.lightboxCoverBtn}
+                onPress={toggleCoverPhoto}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  selectedIsChosenCover
+                    ? "Retirer comme photo d'accueil"
+                    : "Choisir comme photo d'accueil"
+                }>
+                <Icon
+                  name={selectedIsChosenCover ? 'star' : 'star-outline'}
+                  size={18}
+                  color={selectedIsChosenCover ? colors.highlight : '#fff'}
+                />
+                <Text style={styles.lightboxBackText}>
+                  {selectedIsChosenCover ? "Photo d'accueil" : 'Mettre en accueil'}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
           {selectedPhoto && (
             <View style={styles.lightboxImageContainer}>
@@ -853,6 +890,16 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: spacing.lg,
     zIndex: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  lightboxCoverBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm,
+    paddingLeft: spacing.lg,
   },
   lightboxBackBtn: {
     flexDirection: 'row',

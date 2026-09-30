@@ -1,16 +1,16 @@
-// Ticket 087: swipe between a plant's photos in the lightbox. On web the
-// swipe is a horizontal scroll of the pager, done here by setting scrollLeft.
+// Ticket 088: choose a plant's cover photo from the lightbox; the plant detail
+// hero then shows it instead of the newest photo.
 const path = require('node:path');
 const { test, expect } = require('@playwright/test');
 const { visibleText, screenTitle, tabButton } = require('./helpers');
 
-test('swipe from one photo of a plant to the next in the lightbox', async ({ page }) => {
+test('choose an older photo as the plant cover from the lightbox', async ({ page }) => {
   const pageErrors = [];
   page.on('pageerror', (err) => pageErrors.push(String(err)));
 
   const stamp = Date.now();
-  const zoneName = `E2E Swipe Zone ${stamp}`;
-  const plantName = `E2E Swipe Plant ${stamp}`;
+  const zoneName = `E2E Cover Zone ${stamp}`;
+  const plantName = `E2E Cover Plant ${stamp}`;
 
   await page.goto('/');
   await expect(visibleText(page, 'Votre jardin')).toBeVisible();
@@ -39,18 +39,23 @@ test('swipe from one photo of a plant to the next in the lightbox', async ({ pag
     await expect(page.getByPlaceholder('AAAA-MM-JJ')).toHaveCount(0);
   }
 
-  // Newest first: the May photo opens as 1 / 2.
-  await page.getByLabel('Photo du 2026-05-01').click();
-  const lightbox = page.getByRole('dialog');
-  await expect(lightbox.getByText('2026-05-01 · 1 / 2')).toBeVisible();
+  const hero = page.locator('img:visible').first();
+  const heroSrcBefore = await hero.getAttribute('src');
 
-  await lightbox.evaluate((root) => {
-    const pager = [...root.querySelectorAll('div')].find(
-      (el) => el.scrollWidth > el.clientWidth + 1 && getComputedStyle(el).overflowX !== 'hidden'
-    );
-    pager.scrollLeft = pager.clientWidth;
-  });
-  await expect(lightbox.getByText('2026-04-01 · 2 / 2')).toBeVisible();
+  await page.getByLabel('Photo du 2026-04-01').click();
+  const lightbox = page.getByRole('dialog');
+  await lightbox.getByRole('button', { name: "Choisir comme photo d'accueil" }).click();
+  await expect(
+    lightbox.getByRole('button', { name: "Retirer comme photo d'accueil" })
+  ).toBeVisible();
+  await lightbox.getByRole('button', { name: 'Retour', exact: true }).click();
+  await expect(lightbox).toHaveCount(0);
+
+  // The April thumbnail is now the plant's cover, so the hero shows it.
+  const aprilSrc = await page.getByLabel('Photo du 2026-04-01').locator('img').getAttribute('src');
+  const maySrc = await page.getByLabel('Photo du 2026-05-01').locator('img').getAttribute('src');
+  expect(heroSrcBefore).toBe(maySrc);
+  await expect(hero).toHaveAttribute('src', aprilSrc);
 
   expect(pageErrors, `page errors: ${JSON.stringify(pageErrors)}`).toEqual([]);
 });

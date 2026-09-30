@@ -7,7 +7,14 @@ import Icon from '../Icon';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { groupPhotosByMonth } from '../../lib/photoGroups';
 
-export function PhotosTab({ photos, bloomDates, onAddPhoto, onSelectPhoto, onDeletePhoto }) {
+export function PhotosTab({
+  photos,
+  coverPhotoId,
+  bloomDates,
+  onAddPhoto,
+  onSelectPhoto,
+  onDeletePhoto,
+}) {
   const groups = groupPhotosByMonth(photos);
 
   return (
@@ -47,8 +54,16 @@ export function PhotosTab({ photos, bloomDates, onAddPhoto, onSelectPhoto, onDel
                   // No text sits on the photo itself, so this is the only
                   // selector Maestro (e2e/ios) has for tapping/long-pressing
                   // a specific photo. See docs/backlog/055.
-                  accessibilityLabel={`Photo du ${photo.date}`}>
+                  accessibilityLabel={`Photo du ${photo.date}`}
+                  // Ticket 088: kept out of the label so selectors matching
+                  // "Photo du <date>" exactly (Maestro) still find the tile.
+                  accessibilityHint={photo.id === coverPhotoId ? "Photo d'accueil" : undefined}>
                   <Image source={{ uri: photo.uri }} style={styles.photoImage} resizeMode="cover" />
+                  {photo.id === coverPhotoId ? (
+                    <View style={styles.coverBadge} pointerEvents="none">
+                      <Icon name="star" size={12} color={colors.highlight} />
+                    </View>
+                  ) : null}
                   {bloomDates?.has(photo.date) ? (
                     <View style={styles.bloomPill}>
                       <View style={styles.bloomDot} />
@@ -109,6 +124,17 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   photoImage: { width: '100%', height: '100%' },
+  coverBadge: {
+    position: 'absolute',
+    left: 6,
+    top: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.overlayDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bloomPill: {
     position: 'absolute',
     left: 6,
