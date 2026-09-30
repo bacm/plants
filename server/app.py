@@ -26,6 +26,9 @@ from pydantic import BaseModel, field_validator
 
 from accounts import (
     SESSION_LIFETIME,
+    TRANSITIONS,
+    AccountConflict,
+    AccountNotFound,
     AccountStore,
     normalize_email,
     password_problem,
@@ -705,6 +708,62 @@ def create_app():
     @app.get("/auth/me")
     def me(request: Request):
         return public_account(current_account(request))
+
+    def admin_account(request):
+        """Auth dependency of the /admin routes: an admin account or a 403."""
+        account = current_account(request)
+        if not account["isAdmin"]:
+            logger.warning(
+                "Rejected %s %s from %s: account %s is not an admin",
+                request.method,
+                request.url.path,
+                _client_host(request),
+                account["id"],
+            )
+            raise HTTPException(status_code=403, detail="Réservé à l'administrateur")
+        return account
+
+    def admin_call(function, *args):
+        try:
+            return function(*args)
+        except AccountNotFound as exc:
+            raise HTTPException(status_code=404, detail=str(exc))
+        except AccountConflict as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
+
+    @app.get("/admin/accounts")
+    def admin_list_accounts(request: Request):
+        admin_account(request)
+        store = get_account_store()
+        store.purge_refused()
+        return store.list_accounts()
+
+    def admin_transition(action):
+        def handler(account_id: str, request: Request):
+            admin = admin_account(request)
+            admin_call(get_account_store().transition, account_id, action, admin["id"])
+            logger.info("Admin %s: %s account %s", admin["id"], action, account_id)
+            return {"status": "ok"}
+
+        return handler
+
+    for _action in TRANSITIONS:
+        app.post(f"/admin/accounts/{{account_id}}/{_action}")(admin_transition(_action))
+
+    @app.post("/admin/accounts/{account_id}/reset-password")
+    def admin_reset_password(account_id: str, request: Request):
+        admin = admin_account(request)
+        temporary = admin_call(get_account_store().reset_password, account_id)
+        # The password itself is never logged.
+        logger.info("Admin %s: reset password of account %s", admin["id"], account_id)
+        return JSONResponse({"temporaryPassword": temporary}, headers={"Cache-Control": "no-store"})
+
+    @app.post("/admin/accounts/{account_id}/revoke-sessions")
+    def admin_revoke_sessions(account_id: str, request: Request):
+        admin = admin_account(request)
+        admin_call(get_account_store().revoke_account_credentials, account_id)
+        logger.info("Admin %s: revoked sessions of account %s", admin["id"], account_id)
+        return {"status": "ok"}
 
     @app.get("/health")
     async def health():

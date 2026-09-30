@@ -126,8 +126,33 @@ server.
 
 Statuses: `pending` (after signup), `approved`, `refused`, `disabled`. Only an
 `approved` account can log in or use a credential; a credential also stops
-working if its account leaves `approved`. Until the admin screens (ticket 099),
-approval is a manual `UPDATE accounts SET status = 'approved' ...`.
+working if its account leaves `approved`.
+
+### Administration (admin accounts only)
+
+Every route needs an admin credential (403 `Réservé à l'administrateur`
+otherwise, 401 without one); cookie requests go through the CSRF check.
+
+| Route                                       | What it does                                                                                                       |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `GET /admin/accounts`                       | `[{id, email, status, isAdmin, createdAt, decidedAt}]`, pending first (oldest first), then by email. Purges first. |
+| `POST /admin/accounts/{id}/approve`         | pending or refused -> approved                                                                                     |
+| `POST /admin/accounts/{id}/refuse`          | pending -> refused; revokes its credentials                                                                        |
+| `POST /admin/accounts/{id}/disable`         | approved -> disabled; revokes its credentials                                                                      |
+| `POST /admin/accounts/{id}/enable`          | disabled -> approved                                                                                               |
+| `POST /admin/accounts/{id}/reset-password`  | `{"temporaryPassword"}`, shown once (16 characters, stored only as a hash); revokes all credentials                |
+| `POST /admin/accounts/{id}/revoke-sessions` | revokes every session and device token of the account                                                              |
+
+Any other transition answers 409, an unknown id 404, and an admin cannot refuse
+or disable their own account (409). Refused accounts are deleted 30 days after
+the decision, when `GET /admin/accounts` is called and by `purge` below.
+
+The same actions from the command line (same rules, run in the container):
+
+    python -m accounts list
+    python -m accounts approve|refuse|disable|enable --email them@example.com
+    python -m accounts reset-password --email them@example.com   # prints the temporary password
+    python -m accounts purge
 
 - **Web**: `__Host-session` cookie (`Secure; HttpOnly; SameSite=Strict; Path=/`,
   30 days). The web app calls the API with `credentials: 'include'`.

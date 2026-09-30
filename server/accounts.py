@@ -11,12 +11,16 @@ hash, so a leaked database file does not hand out working credentials. A
 token is 32 random bytes, so a fast hash is enough for it (unlike a password).
 
 Account lifecycle: signup creates a `pending` account that cannot do anything
-until the owner sets it to `approved`. Approval is done by an admin (ticket
-099); until then it is a manual UPDATE. The first admin is created with the
-command line at the bottom of this file, not through signup.
+until an admin sets it to `approved` (admin screen, /admin/* routes, or the
+command line below). Allowed moves are in TRANSITIONS. Refused accounts are
+deleted 30 days after the decision (`purge_refused`). The first admin is
+created with the command line, not through signup.
 
 Usage on the server:
     docker compose exec api python -m accounts create-admin --email you@example.com
+    docker compose exec api python -m accounts list
+    docker compose exec api python -m accounts approve --email them@example.com
+    (also refuse, disable, enable, reset-password, purge)
 """
 
 import argparse
@@ -101,9 +105,31 @@ CREATE INDEX IF NOT EXISTS credentials_account ON credentials (account_id);
 
 ACCOUNT_COLUMNS = "id, email, status, is_admin"
 
+# action -> (statuses it may start from, status it leads to)
+TRANSITIONS = {
+    "approve": (("pending", "refused"), "approved"),
+    "refuse": (("pending",), "refused"),
+    "disable": (("approved",), "disabled"),
+    "enable": (("disabled",), "approved"),
+}
+# Actions that end an account's access: its credentials are revoked with them.
+REVOKING_ACTIONS = ("refuse", "disable")
+REFUSED_RETENTION = timedelta(days=30)
+# No 0/O/1/l/I: a temporary password is read out or typed from a message.
+TEMP_PASSWORD_ALPHABET = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+TEMP_PASSWORD_LENGTH = 16
+
 
 class AccountError(ValueError):
     """Invalid input or a conflict; the message is safe to show to the caller."""
+
+
+class AccountNotFound(AccountError):
+    """No account with that id."""
+
+
+class AccountConflict(AccountError):
+    """The action is not allowed in the account's current state."""
 
 
 def utcnow():
@@ -237,7 +263,7 @@ class AccountStore:
             return conn.execute("SELECT COUNT(*) FROM accounts WHERE status = 'pending'").fetchone()[0]
 
     def set_status(self, account_id, status, now=None):
-        """Change an account's status. Used by tests now, by the admin routes in 099."""
+        """Set a status unconditionally (no transition rules). Tests only; use transition()."""
         if status not in STATUSES:
             raise AccountError("Statut inconnu.")
         with closing(self._connect()) as conn:
@@ -245,6 +271,109 @@ class AccountStore:
                 "UPDATE accounts SET status = ?, decided_at = ? WHERE id = ?",
                 (status, _stamp(now or utcnow()), account_id),
             )
+
+    def list_accounts(self):
+        """Every account, pending first (oldest request first), then by email."""
+        with closing(self._connect()) as conn:
+            rows = conn.execute(
+                "SELECT id, email, status, is_admin, created_at, decided_at FROM accounts "
+                "ORDER BY status != 'pending', "
+                "CASE WHEN status = 'pending' THEN created_at END, email"
+            ).fetchall()
+        return [
+            {**_account(row[:4]), "createdAt": row[4], "decidedAt": row[5]} for row in rows
+        ]
+
+    def find_id(self, email):
+        """The id of the account with that email, else raises AccountNotFound."""
+        with closing(self._connect()) as conn:
+            row = conn.execute(
+                "SELECT id FROM accounts WHERE email = ?", (normalize_email(email),)
+            ).fetchone()
+        if row is None:
+            raise AccountNotFound("Aucun compte avec cette adresse e-mail.")
+        return row[0]
+
+    def _get(self, conn, account_id):
+        row = conn.execute(
+            "SELECT id, email, status, is_admin FROM accounts WHERE id = ?", (account_id,)
+        ).fetchone()
+        if row is None:
+            raise AccountNotFound("Compte introuvable.")
+        return _account(row)
+
+    def transition(self, account_id, action, acting_id=None, now=None):
+        """Apply approve/refuse/disable/enable. Raises AccountNotFound or AccountConflict.
+
+        An admin cannot refuse or disable their own account. Refusing or
+        disabling revokes every credential of the account.
+        """
+        if action not in TRANSITIONS:
+            raise AccountError("Action inconnue.")
+        sources, target = TRANSITIONS[action]
+        now = now or utcnow()
+        with closing(self._connect()) as conn:
+            account = self._get(conn, account_id)
+            if action in REVOKING_ACTIONS and account_id == acting_id:
+                raise AccountConflict("Vous ne pouvez pas désactiver votre propre compte.")
+            if account["status"] not in sources:
+                raise AccountConflict("Cette action n'est pas possible pour ce compte.")
+            # Guarded on the old status too, so two admins racing cannot both win.
+            changed = conn.execute(
+                "UPDATE accounts SET status = ?, decided_at = ? WHERE id = ? AND status = ?",
+                (target, _stamp(now), account_id, account["status"]),
+            ).rowcount
+            if not changed:
+                raise AccountConflict("Cette action n'est pas possible pour ce compte.")
+        if action in REVOKING_ACTIONS:
+            self.revoke_account_credentials(account_id, now)
+
+    def revoke_account_credentials(self, account_id, now=None):
+        """Revoke every session and device token of an account."""
+        with closing(self._connect()) as conn:
+            self._get(conn, account_id)
+            conn.execute(
+                "UPDATE credentials SET revoked_at = ? WHERE account_id = ? AND revoked_at IS NULL",
+                (_stamp(now or utcnow()), account_id),
+            )
+
+    def reset_password(self, account_id, now=None):
+        """Set a random temporary password, revoke all credentials, return the password.
+
+        The password is returned once and stored only as a hash. The email's
+        login lockout is cleared so the person can use it straight away.
+        """
+        temporary = "".join(
+            secrets.choice(TEMP_PASSWORD_ALPHABET) for _ in range(TEMP_PASSWORD_LENGTH)
+        )
+        salt = secrets.token_bytes(SALT_BYTES)
+        with closing(self._connect()) as conn:
+            account = self._get(conn, account_id)
+            conn.execute(
+                "UPDATE accounts SET password_hash = ?, salt = ? WHERE id = ?",
+                (self._hash(temporary, salt), salt, account_id),
+            )
+            conn.execute(
+                "DELETE FROM login_throttle WHERE email_key = ?", (hash_token(account["email"]),)
+            )
+        self.revoke_account_credentials(account_id, now)
+        return temporary
+
+    def purge_refused(self, now=None):
+        """Delete refused accounts decided more than 30 days ago; returns how many."""
+        cutoff = _stamp((now or utcnow()) - REFUSED_RETENTION)
+        with closing(self._connect()) as conn:
+            ids = [
+                row[0]
+                for row in conn.execute(
+                    "SELECT id FROM accounts WHERE status = 'refused' AND decided_at < ?",
+                    (cutoff,),
+                ).fetchall()
+            ]
+            for account_id in ids:
+                conn.execute("DELETE FROM credentials WHERE account_id = ?", (account_id,))
+                conn.execute("DELETE FROM accounts WHERE id = ?", (account_id,))
+        return len(ids)
 
     def verify_login(self, email, password, now=None):
         now = now or utcnow()
@@ -383,13 +512,47 @@ def create_admin_command(args, db_path=None):
     return 0
 
 
+def _store(db_path):
+    return AccountStore(db_path or os.environ.get("SYNC_DB_PATH") or SYNC_DB_PATH_DEFAULT)
+
+
+def manage_command(args, db_path=None):
+    """list / approve / refuse / disable / enable / reset-password / purge."""
+    store = _store(db_path)
+    try:
+        if args.command == "list":
+            for account in store.list_accounts():
+                admin = " admin" if account["isAdmin"] else ""
+                print(f"{account['status']:9} {account['email']}{admin}  {account['createdAt']}")
+        elif args.command == "purge":
+            print(f"{store.purge_refused()} compte(s) refusé(s) supprimé(s).")
+        else:
+            account_id = store.find_id(args.email)
+            if args.command == "reset-password":
+                print(store.reset_password(account_id))
+            else:
+                store.transition(account_id, args.command)
+                print(f"{args.command}: {normalize_email(args.email)}")
+    except AccountError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    return 0
+
+
 def main(argv=None, db_path=None):
     parser = argparse.ArgumentParser(prog="accounts", description=__doc__.split("\n")[0])
     commands = parser.add_subparsers(dest="command", required=True)
     create = commands.add_parser("create-admin", help="create an approved administrator account")
     create.add_argument("--email", required=True)
+    commands.add_parser("list", help="list accounts, pending first")
+    commands.add_parser("purge", help="delete refused accounts older than 30 days")
+    for name in ("approve", "refuse", "disable", "enable", "reset-password"):
+        sub = commands.add_parser(name, help=f"{name} an account")
+        sub.add_argument("--email", required=True)
     args = parser.parse_args(argv)
-    return create_admin_command(args, db_path)
+    if args.command == "create-admin":
+        return create_admin_command(args, db_path)
+    return manage_command(args, db_path)
 
 
 if __name__ == "__main__":

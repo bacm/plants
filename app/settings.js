@@ -9,6 +9,7 @@ import { ScreenHeader } from '../components/ScreenHeader';
 import { PrimaryButton } from '../components/form';
 import { useAccount } from '../components/AccountProvider';
 import { useSync } from '../components/SyncProvider';
+import { AdminEntry } from '../components/AdminEntry';
 import { relativeTimeFr } from '../lib/relativeTime';
 import { firstSyncView } from '../lib/firstSync';
 import Icon from '../components/Icon';
@@ -254,6 +255,7 @@ export default function SettingsScreen() {
                 </Text>
               </View>
             </View>
+            <AdminEntry />
             {showFirstSync ? (
               <View style={styles.firstSync}>
                 <Text style={styles.cardTitle}>{firstView.title}</Text>

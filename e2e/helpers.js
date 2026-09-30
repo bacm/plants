@@ -63,7 +63,10 @@ async function expectStoredPhotoLoads(page) {
 // `state.signedIn` is what /auth/me answers from; a 200 login sets it (and
 // `state.account`), logout clears it. Set `state.loginReply` / `state.signupReply`
 // ({ status, body }) to script the answers, and read `state.requests` to see
-// what the app sent. `state.server` is the signed-in account's garden:
+// what the app sent. Ticket 099: `isAdmin` makes the account an admin, and the
+// /admin/accounts routes are answered from `state.accounts` (pending and
+// approved accounts, changed by approve/refuse/...); `state.adminRequests`
+// lists the actions. `state.server` is the signed-in account's garden:
 // `seed(table, row)`, `rows` (what it holds), `photos` (id -> { bytes, mime }),
 // `pushes` (every pushed change set). `state.down = true` makes /sync and
 // /photos unreachable (a network error). Every garden starts empty.
@@ -100,13 +103,39 @@ function makeFakeServer() {
   return server;
 }
 
-async function mockAuthApi(context, { signedIn = true } = {}) {
+async function mockAuthApi(context, { signedIn = true, isAdmin = false } = {}) {
+  const account = { ...TEST_ACCOUNT, isAdmin };
   const servers = new Map();
   const state = {
+    accounts: [
+      {
+        ...account,
+        status: 'approved',
+        createdAt: '2026-01-01T00:00:00Z',
+        decidedAt: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'acc-2',
+        email: 'nouvelle@exemple.fr',
+        status: 'pending',
+        isAdmin: false,
+        createdAt: new Date().toISOString(),
+        decidedAt: null,
+      },
+      {
+        id: 'acc-3',
+        email: 'jardin.paul@exemple.fr',
+        status: 'pending',
+        isAdmin: false,
+        createdAt: new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString(),
+        decidedAt: null,
+      },
+    ],
+    adminRequests: [],
     signedIn,
-    account: TEST_ACCOUNT,
+    account,
     down: false,
-    loginReply: { status: 200, body: { account: TEST_ACCOUNT } },
+    loginReply: { status: 200, body: { account } },
     signupReply: { status: 202, body: { status: 'pending' } },
     requests: [],
     serverFor(accountId) {
@@ -157,6 +186,56 @@ async function mockAuthApi(context, { signedIn = true } = {}) {
       await route.fulfill({ status: 204, headers: cors });
     } else {
       await route.fulfill({ status: 404, headers: cors });
+    }
+  });
+
+  // Ticket 099: answered from state.accounts, with the same transitions as
+  // the server; only while the signed-in account is an admin.
+  const targets = {
+    approve: 'approved',
+    refuse: 'refused',
+    disable: 'disabled',
+    enable: 'approved',
+  };
+  await context.route('**/admin/accounts**', async (route) => {
+    const request = route.request();
+    const cors = corsFor(request);
+    if (request.method() === 'OPTIONS') {
+      await route.fulfill({ status: 204, headers: cors });
+      return;
+    }
+    const json = (status, payload) =>
+      route.fulfill({
+        status,
+        headers: { ...cors, 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    if (!state.signedIn) {
+      await json(401, { detail: 'Non authentifié' });
+      return;
+    }
+    if (!state.account.isAdmin) {
+      await json(403, { detail: 'Réservé à l’administrateur' });
+      return;
+    }
+    const parts = new URL(request.url()).pathname.split('/').filter(Boolean);
+    if (request.method() === 'GET') {
+      await json(200, state.accounts);
+      return;
+    }
+    const [, , id, action] = parts;
+    state.adminRequests.push({ id, action });
+    const target = state.accounts.find((a) => a.id === id);
+    if (!target) {
+      await json(404, { detail: 'Compte introuvable.' });
+    } else if (action === 'reset-password') {
+      await json(200, { temporaryPassword: 'Temporaire2345678' });
+    } else if (action === 'revoke-sessions') {
+      await json(200, { status: 'ok' });
+    } else {
+      target.status = targets[action];
+      target.decidedAt = new Date().toISOString();
+      await json(200, { status: 'ok' });
     }
   });
 
