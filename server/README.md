@@ -68,6 +68,25 @@ stores nothing; more than 1000 rows answers 413.
 rows are included, with their `deletedAt`. While `more` is true, pull again
 with `since` set to the returned `revision`.
 
+## Photos
+
+Photo files are stored in a `photos/` directory next to the sync database
+(`dirname(SYNC_DB_PATH)/photos/`, created on first use), one file per photo id.
+Both routes need the same bearer token. The id must match `[A-Za-z0-9-]{1,64}`
+(else 400).
+
+`PUT /photos/{photo_id}` with the raw image as body. The id must be a `photos`
+or `unsorted_photos` row already pushed via `/sync/push` (unknown: 404; soft-deleted:
+410). Accepted types, detected from the bytes and required to match the
+`Content-Type` header: `image/jpeg`, `image/png`, `image/webp`, `image/heic`
+(anything else: 415). Maximum 15 MB (413). Answers 201 `{"stored": true}`, or 200
+`{"stored": false}` if a file already exists (the existing file is kept).
+
+`GET /photos/{photo_id}` returns the file with its media type and
+`Cache-Control: private, max-age=31536000, immutable`; 404 if there is none.
+
+Pushing a `photos` or `unsorted_photos` row with `deletedAt` deletes its file.
+
 ## Notes
 
 - Behind a reverse proxy, run uvicorn with `--proxy-headers` so the rate

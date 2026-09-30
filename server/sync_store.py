@@ -50,6 +50,7 @@ class SyncStore:
 
     def push(self, changes):
         accepted = 0
+        deleted = []
         with closing(self._connect()) as conn:
             # IMMEDIATE takes the write lock up front, so two pushes can never
             # be handed the same revision numbers.
@@ -79,11 +80,31 @@ class SyncStore:
                             ),
                         )
                         accepted += 1
+                        if row.get("deletedAt"):
+                            deleted.append((table, row["id"]))
                 conn.execute("COMMIT")
             except BaseException:
                 conn.execute("ROLLBACK")
                 raise
-            return {"accepted": accepted, "revision": self._latest_revision(conn)}
+            # "deleted" is internal (used to remove photo files); the HTTP
+            # layer strips it.
+            return {
+                "accepted": accepted,
+                "revision": self._latest_revision(conn),
+                "deleted": deleted,
+            }
+
+    def photo_row_state(self, photo_id):
+        """None if no photo row is known, else "live" or "deleted"."""
+        with closing(self._connect()) as conn:
+            found = conn.execute(
+                "SELECT deleted_at FROM rows WHERE tbl IN ('photos', 'unsorted_photos') "
+                "AND id = ? ORDER BY revision DESC LIMIT 1",
+                (photo_id,),
+            ).fetchone()
+        if found is None:
+            return None
+        return "deleted" if found[0] else "live"
 
     def pull(self, since, limit):
         with closing(self._connect()) as conn:

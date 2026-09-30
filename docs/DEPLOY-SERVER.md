@@ -260,6 +260,13 @@ docker compose -f ~/plants/deploy/docker-compose.yml exec -T api python -c \
 docker compose -f ~/plants/deploy/docker-compose.yml cp api:/data/backup.db ./garden-$(date +%F).db
 ```
 
+Photo files (ticket 093) live in `/data/photos/`, in the same volume, so the
+backup must copy that directory too:
+
+```bash
+docker compose -f ~/plants/deploy/docker-compose.yml cp api:/data/photos ./photos-backup
+```
+
 Do not copy `garden.db` by hand while the server runs: in WAL mode, recent
 writes may sit in `garden.db-wal`.
 

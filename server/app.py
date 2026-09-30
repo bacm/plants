@@ -19,9 +19,12 @@ from typing import Any
 
 import httpx
 from fastapi import Body, FastAPI, HTTPException, Query, Request
+from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
 
+from photo_files import MAX_PHOTO_BYTES, MEDIA_TYPES, PhotoFiles, detect_extension, valid_photo_id
 from sync_store import SyncStore
 from sync_validation import SyncValidationError, validate_push
 
@@ -393,6 +396,8 @@ def create_app():
                 app.state.sync_store = SyncStore(sync_db_path)
             return app.state.sync_store
 
+    photo_files = PhotoFiles(os.path.join(os.path.dirname(os.path.abspath(sync_db_path)), "photos"))
+
     allowed_origins = [
         origin.strip()
         for origin in os.environ.get("ALLOWED_ORIGINS", "").split(",")
@@ -402,7 +407,7 @@ def create_app():
         app.add_middleware(
             CORSMiddleware,
             allow_origins=allowed_origins,
-            allow_methods=["GET", "POST"],
+            allow_methods=["GET", "POST", "PUT"],
             allow_headers=["Content-Type", "Authorization"],
         )
 
@@ -469,7 +474,11 @@ def create_app():
             changes = validate_push(payload)
         except SyncValidationError as exc:
             raise HTTPException(status_code=exc.status_code, detail=exc.detail)
-        return get_sync_store().push(changes)
+        result = get_sync_store().push(changes)
+        for table, row_id in result["deleted"]:
+            if table in ("photos", "unsorted_photos"):
+                photo_files.delete(row_id)
+        return {"accepted": result["accepted"], "revision": result["revision"]}
 
     @app.get("/sync/pull")
     def sync_pull(
@@ -479,6 +488,58 @@ def create_app():
     ):
         require_token(request)
         return get_sync_store().pull(since, limit)
+
+    def check_photo_id(photo_id):
+        if not valid_photo_id(photo_id):
+            raise HTTPException(status_code=400, detail="Invalid photo id")
+
+    @app.put("/photos/{photo_id}")
+    async def put_photo(photo_id: str, request: Request):
+        require_token(request)
+        check_photo_id(photo_id)
+        state = await run_in_threadpool(get_sync_store().photo_row_state, photo_id)
+        if state is None:
+            raise HTTPException(status_code=404, detail="Unknown photo")
+        if state == "deleted":
+            raise HTTPException(status_code=410, detail="Photo deleted")
+        if photo_files.path_for(photo_id) is not None:
+            return {"stored": False}
+
+        declared = request.headers.get("Content-Length")
+        if declared is not None and declared.isdigit() and int(declared) > MAX_PHOTO_BYTES:
+            raise HTTPException(status_code=413, detail="Photo too large")
+        chunks = []
+        size = 0
+        async for chunk in request.stream():
+            size += len(chunk)
+            if size > MAX_PHOTO_BYTES:
+                raise HTTPException(status_code=413, detail="Photo too large")
+            chunks.append(chunk)
+        data = b"".join(chunks)
+        if not data:
+            raise HTTPException(status_code=400, detail="Empty body")
+
+        ext = detect_extension(data)
+        content_type = request.headers.get("Content-Type", "").split(";")[0].strip().lower()
+        if ext is None or content_type != MEDIA_TYPES[ext]:
+            raise HTTPException(status_code=415, detail="Unsupported image type")
+
+        await run_in_threadpool(photo_files.save, photo_id, data, ext)
+        return JSONResponse({"stored": True}, status_code=201)
+
+    @app.get("/photos/{photo_id}")
+    def get_photo(photo_id: str, request: Request):
+        require_token(request)
+        check_photo_id(photo_id)
+        path = photo_files.path_for(photo_id)
+        if path is None:
+            raise HTTPException(status_code=404, detail="No such photo")
+        media_type = MEDIA_TYPES[os.path.splitext(path)[1][1:]]
+        return FileResponse(
+            path,
+            media_type=media_type,
+            headers={"Cache-Control": "private, max-age=31536000, immutable"},
+        )
 
     return app
 

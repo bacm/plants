@@ -1,7 +1,7 @@
 ---
 id: 093
 title: Upload and serve photos from the server
-status: open
+status: done
 priority: P2
 type: feature
 ---
@@ -20,13 +20,15 @@ that shows a plant without its photos is not usable.
 
 ## Acceptance criteria
 
-- [ ] `PUT /photos/{id}` stores a JPEG (size capped, content type checked)
-      under the photo's UUID; uploading the same id twice is a no-op
-- [ ] `GET /photos/{id}` returns it, with long-lived cache headers
-- [ ] Both routes require a bearer token from `API_TOKENS`
-- [ ] A photo whose row is soft-deleted is removed from disk on the next pull
+- [x] `PUT /photos/{id}` stores the image (JPEG, PNG, HEIC or WebP, the
+      app's `SAFE_EXTENSIONS`; size capped, type checked against the bytes)
+      under the photo's UUID, only for a known, non-deleted photo row;
+      uploading the same id twice is a no-op
+- [x] `GET /photos/{id}` returns it, with long-lived cache headers
+- [x] Both routes require a bearer token from `API_TOKENS`
+- [x] A photo whose row is soft-deleted is removed from disk on the next pull
       or by a cleanup task
-- [ ] pytest covers upload, download, the size cap, the wrong type and a
+- [x] pytest covers upload, download, the size cap, the wrong type and a
       missing token
 
 ## Notes
