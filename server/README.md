@@ -48,6 +48,7 @@ python -m pytest -q
 | `SEARCH_DAILY_BUDGET_PER_ACCOUNT` | no       | Maximum `/search` calls per account (or for the legacy `API_TOKENS` bearer, as one key) per UTC day. Beyond it `/search` answers 429. Checked before the global budget, which a refused request does not spend. Positive integer; the server fails to start otherwise. Defaults to 100. In memory, like the global budget. |
 | `PHOTO_QUOTA_BYTES`               | no       | Photo storage allowed per account, in bytes. Beyond it `PUT /photos/{id}` answers 507. Positive integer; the server fails to start otherwise. Defaults to 5 GiB (5368709120).                                                                                                                                              |
 | `SEARCH_DAILY_BUDGET`             | no       | Maximum number of upstream OpenAI calls served per UTC calendar day, across all clients. Beyond it `/search` answers 503 without calling OpenAI. Must be a positive integer if set; the server fails to start otherwise. Defaults to 500.                                                                                  |
+| `SEARCH_REASONING_EFFORT`         | no       | Reasoning effort of the search model (`gpt-5.5`, used for every search): `low`, `medium` or `high`. The server fails to start otherwise. Defaults to `high`; drop to `medium` if searches get close to the 85 s upstream timeout.                                                                                          |
 
 ## Sync
 

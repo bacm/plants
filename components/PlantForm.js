@@ -86,7 +86,6 @@ export function PlantForm({
   const [searching, setSearching] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchError, setSearchError] = useState('');
-  const [lastSearchPrecise, setLastSearchPrecise] = useState(false);
 
   const setField = (key, value) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -107,16 +106,15 @@ export function PlantForm({
     setPreselectedZone(true);
   }, [preselectZoneId, zones, preselectedZone]);
 
-  const handleSearch = async ({ precise = false } = {}) => {
+  const handleSearch = async () => {
     if (form.name.trim().length < 2) return;
 
     setSearching(true);
     setShowSuggestions(true);
     setSearchError('');
     try {
-      const results = await searchPlants(form.name, { precise });
+      const results = await searchPlants(form.name);
       setSuggestions(results);
-      setLastSearchPrecise(precise);
     } catch (err) {
       setSuggestions([]);
       if (err instanceof PlantSearchError) {
@@ -208,6 +206,11 @@ export function PlantForm({
               )}
             </TouchableOpacity>
           </View>
+          {searching ? (
+            <Text style={styles.searchingHint}>
+              Recherche en cours, cela peut prendre jusqu’à une minute…
+            </Text>
+          ) : null}
           {searchError ? <Text style={styles.fieldError}>{searchError}</Text> : null}
 
           {showSuggestions && !searching && !searchError && (
@@ -225,17 +228,6 @@ export function PlantForm({
                   <Text style={styles.suggestionLatin}>{item.scientific_name}</Text>
                 </TouchableOpacity>
               ))}
-              {!lastSearchPrecise && (
-                <TouchableOpacity
-                  style={styles.deepSearchLink}
-                  onPress={() => handleSearch({ precise: true })}
-                  accessibilityRole="button"
-                  accessibilityLabel="Recherche approfondie">
-                  <Text style={styles.deepSearchText}>
-                    Pas la bonne plante ? Recherche approfondie
-                  </Text>
-                </TouchableOpacity>
-              )}
             </View>
           )}
         </View>
@@ -623,12 +615,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
-  deepSearchLink: { paddingVertical: 8, marginTop: 4 },
-  deepSearchText: {
-    ...typography.caption,
-    fontFamily: 'InstrumentSans_600SemiBold',
-    color: colors.accent,
-  },
+  searchingHint: { ...typography.caption, color: colors.textSecondary, marginTop: 6 },
   colorDot: { width: 22, height: 22, borderRadius: 11 },
   moreToggle: {
     minHeight: 56,

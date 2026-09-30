@@ -248,7 +248,7 @@ def search_client(monkeypatch, db_path):
     monkeypatch.setenv("SYNC_DB_PATH", str(db_path))
     calls = []
 
-    async def fake_call_openai(prompt, precise=False):
+    async def fake_call_openai(prompt, reasoning_effort="high"):
         calls.append(prompt)
         return "[]"
 

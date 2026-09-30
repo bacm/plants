@@ -24,16 +24,16 @@ def client(monkeypatch):
 
 
 def _set_call_openai(monkeypatch, result=None, exc=None):
-    precise_calls = []
+    effort_calls = []
 
-    async def fake_call_openai(prompt, precise=False):
-        precise_calls.append(precise)
+    async def fake_call_openai(prompt, reasoning_effort="high"):
+        effort_calls.append(reasoning_effort)
         if exc is not None:
             raise exc
         return result
 
     monkeypatch.setattr(app_module, "call_openai", fake_call_openai)
-    return precise_calls
+    return effort_calls
 
 
 @pytest.fixture(autouse=True)
@@ -322,7 +322,7 @@ def test_daily_budget_under_limit_passes(monkeypatch, client):
 def test_daily_budget_exceeded_returns_503_without_calling_openai(monkeypatch, client):
     calls = []
 
-    async def fake_call_openai(prompt, precise=False):
+    async def fake_call_openai(prompt, reasoning_effort="high"):
         calls.append(prompt)
         return "[]"
 
@@ -412,7 +412,7 @@ def test_invalid_search_daily_budget_fails_fast(monkeypatch):
 def test_missing_auth_header_rejected_without_calling_openai(client, monkeypatch):
     calls = []
 
-    async def fake_call_openai(prompt, precise=False):
+    async def fake_call_openai(prompt, reasoning_effort="high"):
         calls.append(prompt)
         return "[]"
 
@@ -495,18 +495,12 @@ def test_health_works_without_auth_header(client):
     assert res.status_code == 200
 
 
-def test_precise_flag_is_passed_to_call_openai(monkeypatch, client):
+@pytest.mark.parametrize("payload_extra", [{"precise": True}, {"precise": False}, {}])
+def test_precise_field_is_ignored(monkeypatch, client, payload_extra):
     seen = _set_call_openai(monkeypatch, result="[]")
-    res = client.post("/search", json={"query": "rosier", "precise": True}, headers=AUTH)
+    res = client.post("/search", json={"query": "rosier", **payload_extra}, headers=AUTH)
     assert res.status_code == 200
-    assert seen == [True]
-
-
-def test_precise_defaults_to_false(monkeypatch, client):
-    seen = _set_call_openai(monkeypatch, result="[]")
-    res = client.post("/search", json={"query": "rosier"}, headers=AUTH)
-    assert res.status_code == 200
-    assert seen == [False]
+    assert seen == ["high"]
 
 
 def test_non_boolean_precise_is_rejected(monkeypatch, client):
@@ -516,20 +510,36 @@ def test_non_boolean_precise_is_rejected(monkeypatch, client):
     assert seen == []
 
 
-def test_openai_request_body_default_is_unchanged():
-    assert app_module.openai_request_body("p", False) == {
-        "model": "gpt-4o-mini",
-        "messages": [{"role": "user", "content": "p"}],
-        "temperature": 0.3,
-        "max_tokens": 3000,
-    }
+def test_configured_reasoning_effort_reaches_openai(monkeypatch):
+    monkeypatch.setenv("SEARCH_REASONING_EFFORT", "medium")
+    seen = _set_call_openai(monkeypatch, result="[]")
+    res = TestClient(app_module.create_app()).post("/search", json={"query": "rosier"}, headers=AUTH)
+    assert res.status_code == 200
+    assert seen == ["medium"]
 
 
-def test_openai_request_body_precise_uses_reasoning_model():
-    body = app_module.openai_request_body("p", True)
+def test_invalid_reasoning_effort_fails_fast(monkeypatch):
+    monkeypatch.setenv("SEARCH_REASONING_EFFORT", "extreme")
+    with pytest.raises(RuntimeError):
+        app_module.create_app()
+
+
+def test_openai_timeout_returns_504_with_french_detail(monkeypatch, client):
+    _set_call_openai(monkeypatch, exc=httpx.ReadTimeout("slow"))
+    res = client.post("/search", json={"query": "rose"}, headers=AUTH)
+    assert res.status_code == 504
+    assert res.json() == {"detail": "La recherche a pris trop de temps, réessayez."}
+
+
+def test_openai_timeout_stays_under_cloudflare_limit():
+    assert app_module.OPENAI_TIMEOUT_SECONDS < 100
+
+
+def test_openai_request_body_always_uses_strongest_model():
+    body = app_module.openai_request_body("p", "high")
     assert body["model"] == "gpt-5.5"
     assert body["messages"] == [{"role": "user", "content": "p"}]
-    assert body["reasoning_effort"] == "low"
+    assert body["reasoning_effort"] == "high"
     assert body["max_completion_tokens"] == 16000
     assert "temperature" not in body
     assert "max_tokens" not in body

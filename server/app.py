@@ -37,9 +37,13 @@ from sync_validation import SyncValidationError, validate_push
 logger = logging.getLogger("plant_search")
 
 OPENAI_URL = "https://api.openai.com/v1/chat/completions"
-# The client only chooses between these two, never the model name.
-SEARCH_MODEL = "gpt-4o-mini"
+# Every search uses the strongest model; the client never chooses the model.
 PRECISE_SEARCH_MODEL = "gpt-5.5"
+SEARCH_REASONING_EFFORTS = ("low", "medium", "high")
+SEARCH_REASONING_EFFORT_DEFAULT = "high"
+# Cloudflare cuts proxied requests at 100 s, so stay under it.
+OPENAI_TIMEOUT_SECONDS = 85
+SEARCH_TIMEOUT_DETAIL = "La recherche a pris trop de temps, réessayez."
 
 RATE_LIMIT_MAX_REQUESTS = 20
 RATE_LIMIT_WINDOW_SECONDS = 60
@@ -104,6 +108,8 @@ def _valid_wikimedia_url(url):
 
 class SearchRequest(BaseModel):
     query: str
+    # Accepted but ignored: the installed app still sends it, and every search
+    # now uses the strongest model.
     precise: bool = False
 
     @field_validator("query")
@@ -259,36 +265,27 @@ RÈGLES:
 """
 
 
-def openai_request_body(prompt, precise):
-    messages = [{"role": "user", "content": prompt}]
-    if precise:
-        # Reasoning models reject temperature/max_tokens, and reasoning tokens
-        # count against max_completion_tokens, hence the larger cap.
-        return {
-            "model": PRECISE_SEARCH_MODEL,
-            "messages": messages,
-            "reasoning_effort": "low",
-            "max_completion_tokens": 16000,
-        }
+def openai_request_body(prompt, reasoning_effort=SEARCH_REASONING_EFFORT_DEFAULT):
+    # Reasoning models reject temperature/max_tokens, and reasoning tokens
+    # count against max_completion_tokens, hence the larger cap.
     return {
-        "model": SEARCH_MODEL,
-        "messages": messages,
-        "temperature": 0.3,
-        "max_tokens": 3000,
+        "model": PRECISE_SEARCH_MODEL,
+        "messages": [{"role": "user", "content": prompt}],
+        "reasoning_effort": reasoning_effort,
+        "max_completion_tokens": 16000,
     }
 
 
-async def call_openai(prompt, precise=False):
+async def call_openai(prompt, reasoning_effort=SEARCH_REASONING_EFFORT_DEFAULT):
     api_key = os.environ["OPENAI_API_KEY"]
-    timeout = 90 if precise else 30
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    async with httpx.AsyncClient(timeout=OPENAI_TIMEOUT_SECONDS) as client:
         response = await client.post(
             OPENAI_URL,
             headers={
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {api_key}",
             },
-            json=openai_request_body(prompt, precise),
+            json=openai_request_body(prompt, reasoning_effort),
         )
         response.raise_for_status()
         data = response.json()
@@ -460,6 +457,15 @@ def create_app():
         "SEARCH_DAILY_BUDGET_PER_ACCOUNT", SEARCH_DAILY_BUDGET_PER_ACCOUNT_DEFAULT
     )
     photo_quota_bytes = positive_int_env("PHOTO_QUOTA_BYTES", PHOTO_QUOTA_BYTES_DEFAULT)
+    reasoning_effort = (
+        os.environ.get("SEARCH_REASONING_EFFORT") or ""
+    ).strip() or SEARCH_REASONING_EFFORT_DEFAULT
+    if reasoning_effort not in SEARCH_REASONING_EFFORTS:
+        raise RuntimeError(
+            "SEARCH_REASONING_EFFORT environment variable must be one of: "
+            + ", ".join(SEARCH_REASONING_EFFORTS)
+            + "."
+        )
 
     app = FastAPI()
     app.state.api_tokens = api_tokens
@@ -743,7 +749,10 @@ def create_app():
 
         prompt = build_prompt(payload.query)
         try:
-            text = await call_openai(prompt, payload.precise)
+            text = await call_openai(prompt, reasoning_effort)
+        except httpx.TimeoutException as exc:
+            logger.warning("Upstream OpenAI request timed out: %s", type(exc).__name__)
+            raise HTTPException(status_code=504, detail=SEARCH_TIMEOUT_DETAIL)
         except httpx.HTTPStatusError as exc:
             logger.warning("Upstream OpenAI error: status=%s", exc.response.status_code)
             raise HTTPException(status_code=502, detail="Plant search is temporarily unavailable")
