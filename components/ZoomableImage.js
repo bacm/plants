@@ -4,12 +4,17 @@
 // tap toggles between the whole photo and DOUBLE_TAP_SCALE. Letting go below
 // 1× springs back to the whole photo.
 //
+// The one-finger pan only runs while zoomed, so at 1× a horizontal swipe is
+// left to a surrounding pager (components/PhotoPager.js), which
+// `onZoomChange` tells to stop paging while the photo is zoomed.
+//
 // It carries its own GestureHandlerRootView: on Android a <Modal> renders
 // outside the app's root view, where gestures would otherwise never fire.
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
 
 const MAX_SCALE = 5;
 const DOUBLE_TAP_SCALE = 2.5;
@@ -22,14 +27,20 @@ function clamp(value, s, size) {
   return Math.min(max, Math.max(-max, value));
 }
 
-export function ZoomableImage({ uri, style, accessibilityLabel }) {
+export function ZoomableImage({ uri, style, accessibilityLabel, onZoomChange }) {
   const [box, setBox] = useState({ width: 0, height: 0 });
+  const [zoomed, setZoomed] = useState(false);
   const scale = useSharedValue(1);
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const start = useSharedValue({ scale: 1, tx: 0, ty: 0, fx: 0, fy: 0 });
 
   const { width, height } = box;
+
+  const reportZoom = (next) => {
+    setZoomed(next);
+    onZoomChange?.(next);
+  };
 
   // Translations are relative to the box's centre; so are focal points once
   // shifted by half the box. Keeping the photo point under the fingers fixed:
@@ -58,19 +69,21 @@ export function ZoomableImage({ uri, style, accessibilityLabel }) {
         scale.value = withTiming(1);
         tx.value = withTiming(0);
         ty.value = withTiming(0);
+        scheduleOnRN(reportZoom, false);
         return;
       }
+      scheduleOnRN(reportZoom, true);
       tx.value = withTiming(clamp(tx.value, scale.value, width));
       ty.value = withTiming(clamp(ty.value, scale.value, height));
     });
 
   const pan = Gesture.Pan()
+    .enabled(zoomed)
     .maxPointers(1)
     .onStart(() => {
       start.value = { ...start.value, tx: tx.value, ty: ty.value };
     })
     .onUpdate((e) => {
-      if (scale.value <= 1) return;
       tx.value = clamp(start.value.tx + e.translationX, scale.value, width);
       ty.value = clamp(start.value.ty + e.translationY, scale.value, height);
     });
@@ -82,8 +95,10 @@ export function ZoomableImage({ uri, style, accessibilityLabel }) {
         scale.value = withTiming(1);
         tx.value = withTiming(0);
         ty.value = withTiming(0);
+        scheduleOnRN(reportZoom, false);
         return;
       }
+      scheduleOnRN(reportZoom, true);
       const fx = e.x - width / 2;
       const fy = e.y - height / 2;
       scale.value = withTiming(DOUBLE_TAP_SCALE);

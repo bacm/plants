@@ -17,7 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '../../components/Icon';
-import { ZoomableImage } from '../../components/ZoomableImage';
+import { PhotoPager } from '../../components/PhotoPager';
 import { PrimaryButton, Field } from '../../components/form';
 import { ZoneChips } from '../../components/PlantStrip';
 import { PlantPickList } from '../../components/PlantPickList';
@@ -111,7 +111,9 @@ export default function PlantDetailScreen() {
   const [pendingPhotoUri, setPendingPhotoUri] = useState(null);
   const [photoDate, setPhotoDate] = useState('');
   const [photoDateError, setPhotoDateError] = useState('');
-  const [selectedPhoto, setSelectedPhoto] = useState(null);
+  // Ticket 087: the lightbox pages through `photos`; the photo shown is
+  // tracked by id so it survives the re-sort that follows a date edit.
+  const [selectedPhotoId, setSelectedPhotoId] = useState(null);
   const [remoteImageError, setRemoteImageError] = useState(false);
   const [editingPhotoDate, setEditingPhotoDate] = useState(false);
   const [photoDateEdit, setPhotoDateEdit] = useState('');
@@ -121,6 +123,8 @@ export default function PlantDetailScreen() {
   const [moveZoneId, setMoveZoneId] = useState(null);
   const [moveZones, setMoveZones] = useState([]);
   const [movePlants, setMovePlants] = useState([]);
+  const selectedIndex = photos.findIndex((p) => p.id === selectedPhotoId);
+  const selectedPhoto = selectedIndex >= 0 ? photos[selectedIndex] : null;
 
   const load = useCallback(async () => {
     if (id === 'new') return;
@@ -277,7 +281,7 @@ export default function PlantDetailScreen() {
   };
 
   const closeLightbox = () => {
-    setSelectedPhoto(null);
+    setSelectedPhotoId(null);
     setMovingPhoto(false);
     setEditingPhotoDate(false);
     setPhotoDateEdit('');
@@ -308,7 +312,6 @@ export default function PlantDetailScreen() {
       showMessage('Erreur', `Impossible de modifier la date : ${e.message}`);
       return;
     }
-    setSelectedPhoto({ ...selectedPhoto, date: value });
     setEditingPhotoDate(false);
     setPhotoDateEdit('');
     setPhotoDateEditError('');
@@ -384,7 +387,7 @@ export default function PlantDetailScreen() {
             photos={photos}
             bloomDates={bloomDates}
             onAddPhoto={showAddPhotoOptions}
-            onSelectPhoto={setSelectedPhoto}
+            onSelectPhoto={(photo) => setSelectedPhotoId(photo.id)}
             onDeletePhoto={handleDeletePhoto}
           />
         );
@@ -572,14 +575,20 @@ export default function PlantDetailScreen() {
           </View>
           {selectedPhoto && (
             <View style={styles.lightboxImageContainer}>
-              <ZoomableImage uri={selectedPhoto.uri} />
+              <PhotoPager
+                photos={photos}
+                index={selectedIndex}
+                onIndexChange={(i) => setSelectedPhotoId(photos[i].id)}
+              />
             </View>
           )}
           {selectedPhoto && !editingPhotoDate && (
             <View style={[styles.lightboxInfo, { paddingBottom: insets.bottom + 36 }]}>
               <View>
                 <Text style={styles.lightboxPlantName}>{plant?.name}</Text>
-                <Text style={styles.lightboxDate}>{selectedPhoto.date}</Text>
+                <Text style={styles.lightboxDate}>
+                  {selectedPhoto.date} · {selectedIndex + 1} / {photos.length}
+                </Text>
               </View>
               <View style={styles.lightboxActions}>
                 <TouchableOpacity
