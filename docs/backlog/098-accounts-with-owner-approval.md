@@ -1,7 +1,7 @@
 ---
 id: 098
 title: Add user accounts that the owner must approve before first login
-status: in-progress
+status: done
 priority: P1
 type: security
 ---
@@ -21,26 +21,26 @@ in or to cut one off.
 
 ## Acceptance criteria
 
-- [ ] `POST /auth/signup` (email, password) creates a **pending** account; a
+- [x] `POST /auth/signup` (email, password) creates a **pending** account; a
       pending or refused account can never log in or reach any data
-- [ ] Passwords are hashed with `hashlib.scrypt` and a per-account salt (no
+- [x] Passwords are hashed with `hashlib.scrypt` and a per-account salt (no
       new dependency), minimum 12 characters; never logged or returned
-- [ ] `POST /auth/login` returns, for an approved account, either an
+- [x] `POST /auth/login` returns, for an approved account, either an
       HttpOnly + Secure + SameSite=Strict session cookie (web) or a device
       token (phone, stored in SecureStore); `POST /auth/logout` revokes it
-- [ ] Every data route (`/sync/*`, `/photos/*`, `/search`) resolves the
+- [x] Every data route (`/sync/*`, `/photos/*`, `/search`) resolves the
       account from the cookie or the device token; `API_TOKENS` is still
       accepted on `/search` only, until 101 ships login in the phone app
-- [ ] Anti-abuse: login limited per IP and per account (after 5 failures,
+- [x] Anti-abuse: login limited per IP and per account (after 5 failures,
       growing lockout); signup limited per IP with a honeypot field and a cap
       on pending accounts; the same error whether or not the email exists;
       every rejected attempt logged without the password
-- [ ] Cookie-authenticated requests that change data check the `Origin`
+- [x] Cookie-authenticated requests that change data check the `Origin`
       header against `ALLOWED_ORIGINS` (CSRF)
-- [ ] The first admin account is created with a command run on the server
+- [x] The first admin account is created with a command run on the server
       (`docker compose exec api python -m accounts create-admin`), not
       through signup
-- [ ] pytest covers signup, pending login refused, approval, login, logout,
+- [x] pytest covers signup, pending login refused, approval, login, logout,
       lockout, honeypot, CSRF and a revoked token
 
 ## Notes
