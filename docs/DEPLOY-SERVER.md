@@ -208,7 +208,15 @@ app to that network as `plants-api` and `plants-web`
 sites. The API's body limits are per route (sync and photo uploads are larger
 than a search), that Caddy needs the global `trusted_proxies` block from
 `deploy/Caddyfile` if the domains are behind Cloudflare, and the web site needs the security headers and CSP of
-`deploy/Caddyfile`:
+`deploy/Caddyfile`.
+
+If that Caddy mounts its `Caddyfile` as a single file (`-v
+/opt/caddy/Caddyfile:/etc/caddy/Caddyfile`), an editor that saves by writing a
+new file (vim, `sed -i`, `mv`) leaves the container on the old one: `caddy
+reload` then silently reloads the old config. Write the file in place (`cat
+new > Caddyfile`), or restart the container, and check with `docker exec
+<caddy> grep -c <your domain> /etc/caddy/Caddyfile`. Mounting the folder
+instead of the file avoids it.
 
 ```
 plants-api.example.com {
