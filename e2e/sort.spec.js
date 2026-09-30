@@ -78,6 +78,13 @@ test.describe('À trier (sort + import)', () => {
     await expect(visibleText(page, 'À trier')).toBeVisible({ timeout: 10000 });
     await expect(visibleText(page, '2 photos')).toBeVisible({ timeout: 10000 });
 
+    // --- Ticket 086: the photo opens full screen, and closes again ---
+    await page.getByRole('button', { name: 'Afficher la photo en plein écran' }).click();
+    const viewer = page.getByRole('dialog');
+    await expect(viewer.getByLabel('Photo 1 sur 2, plein écran')).toBeVisible();
+    await viewer.getByRole('button', { name: 'Retour', exact: true }).click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+
     // --- Assign the photo shown to the plant just created ---
     await visibleText(page, zoneName).click();
     await visibleText(page, plantName).click();

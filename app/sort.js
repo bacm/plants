@@ -2,12 +2,21 @@
 // (056) and photos imported from the device's photo library, one at a
 // time, into the garden's plants using the same strip as the camera.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Modal,
+} from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { ZoneChips } from '../components/PlantStrip';
 import { PlantPickList } from '../components/PlantPickList';
+import { ZoomableImage } from '../components/ZoomableImage';
 import { Field, PrimaryButton } from '../components/form';
 import Icon from '../components/Icon';
 import { colors, spacing, typography, radius } from '../lib/theme';
@@ -54,6 +63,8 @@ export default function SortScreen() {
   // Ticket 085: `{ plantId, date, existing }` while the "Photo déjà présente"
   // sheet is open for the photo being sorted.
   const [duplicate, setDuplicate] = useState(null);
+  // Ticket 086: the photo being sorted, shown whole and zoomable.
+  const [viewerOpen, setViewerOpen] = useState(false);
 
   const reload = useCallback(async () => {
     const rows = await getUnsortedPhotos();
@@ -112,6 +123,7 @@ export default function SortScreen() {
     setEditedDate(todayISO());
     setEditedDateError('');
     setDuplicate(null);
+    setViewerOpen(false);
   }, [current?.id]);
 
   // Files the photo being sorted into `plantId`. With `replaceId`, the plant's
@@ -324,11 +336,21 @@ export default function SortScreen() {
       {current && (
         <>
           <View style={styles.photoWrap}>
-            <Image
-              source={{ uri: current.uri }}
-              style={styles.photo}
-              accessibilityLabel={`Photo ${pos + 1} sur ${photos.length}`}
-            />
+            <TouchableOpacity
+              style={styles.photoTouch}
+              activeOpacity={0.9}
+              onPress={() => setViewerOpen(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Afficher la photo en plein écran">
+              <Image
+                source={{ uri: current.uri }}
+                style={styles.photo}
+                accessibilityLabel={`Photo ${pos + 1} sur ${photos.length}`}
+              />
+            </TouchableOpacity>
+            <View style={styles.expandBadge} pointerEvents="none">
+              <Icon name="arrow-expand" size={16} color={colors.background} />
+            </View>
             <View style={styles.photoBadge}>
               <Text style={styles.photoBadgeText}>
                 {pos + 1} / {photos.length}
@@ -399,6 +421,29 @@ export default function SortScreen() {
           </View>
         </>
       )}
+
+      <Modal
+        visible={!!current && viewerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setViewerOpen(false)}>
+        <View style={styles.viewer}>
+          {current && (
+            <ZoomableImage
+              uri={current.uri}
+              accessibilityLabel={`Photo ${pos + 1} sur ${photos.length}, plein écran`}
+            />
+          )}
+          <TouchableOpacity
+            style={[styles.viewerBackBtn, { top: insets.top + 12 }]}
+            onPress={() => setViewerOpen(false)}
+            accessibilityRole="button"
+            accessibilityLabel="Retour">
+            <Icon name="chevron-left" size={18} color="#fff" />
+            <Text style={styles.viewerBackText}>Retour</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
 
       {current && duplicate && (
         <View style={styles.sheetOverlay}>
@@ -508,6 +553,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.surface,
   },
+  photoTouch: { flex: 1 },
   photo: { width: '100%', height: '100%', resizeMode: 'cover' },
   photoBadge: {
     position: 'absolute',
@@ -520,6 +566,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  expandBadge: {
+    position: 'absolute',
+    left: 12,
+    top: 12,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.overlayDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewer: { flex: 1, backgroundColor: colors.lightbox },
+  viewerBackBtn: {
+    position: 'absolute',
+    left: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    paddingRight: spacing.lg,
+  },
+  viewerBackText: { ...typography.body, color: '#fff' },
   photoBadgeText: {
     fontFamily: 'InstrumentSans_600SemiBold',
     fontSize: 12,

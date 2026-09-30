@@ -10,14 +10,14 @@ import {
   Modal,
   TextInput,
   Dimensions,
-  Animated,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { GestureHandlerRootView, PinchGestureHandler, State } from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from '../../components/Icon';
+import { ZoomableImage } from '../../components/ZoomableImage';
 import { PrimaryButton, Field } from '../../components/form';
 import { ZoneChips } from '../../components/PlantStrip';
 import { PlantPickList } from '../../components/PlantPickList';
@@ -112,7 +112,6 @@ export default function PlantDetailScreen() {
   const [photoDate, setPhotoDate] = useState('');
   const [photoDateError, setPhotoDateError] = useState('');
   const [selectedPhoto, setSelectedPhoto] = useState(null);
-  const [zoomScale, setZoomScale] = useState(1);
   const [remoteImageError, setRemoteImageError] = useState(false);
   const [editingPhotoDate, setEditingPhotoDate] = useState(false);
   const [photoDateEdit, setPhotoDateEdit] = useState('');
@@ -572,26 +571,9 @@ export default function PlantDetailScreen() {
             </TouchableOpacity>
           </View>
           {selectedPhoto && (
-            <PinchGestureHandler
-              onGestureEvent={(e) => {
-                if (e.nativeEvent.scale > 1) {
-                  setZoomScale(e.nativeEvent.scale);
-                }
-              }}
-              onHandlerStateChange={(e) => {
-                if (e.nativeEvent.oldState === State.ACTIVE) {
-                  setZoomScale(1);
-                }
-              }}>
-              <Animated.View
-                style={[styles.lightboxImageContainer, { transform: [{ scale: zoomScale }] }]}>
-                <Image
-                  source={{ uri: selectedPhoto.uri }}
-                  style={styles.lightboxImage}
-                  resizeMode="contain"
-                />
-              </Animated.View>
-            </PinchGestureHandler>
+            <View style={styles.lightboxImageContainer}>
+              <ZoomableImage uri={selectedPhoto.uri} />
+            </View>
           )}
           {selectedPhoto && !editingPhotoDate && (
             <View style={[styles.lightboxInfo, { paddingBottom: insets.bottom + 36 }]}>
@@ -873,10 +855,7 @@ const styles = StyleSheet.create({
   lightboxImageContainer: {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height * 0.7,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  lightboxImage: { width: '100%', height: '100%' },
   // The shared modal's cancel label is dark (it sits on a light card); on the
   // lightbox's black it needs the light text colour.
   lightboxCancelText: { color: colors.background },
