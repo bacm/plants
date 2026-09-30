@@ -10,10 +10,15 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app.py .
+COPY app.py sync_store.py sync_validation.py sync_schema.json ./
 
-RUN useradd --create-home --shell /usr/sbin/nologin appuser
+RUN useradd --create-home --shell /usr/sbin/nologin appuser \
+    && mkdir /data && chown appuser /data
 USER appuser
+
+# The synced garden (ticket 092). Mounted as a named volume in deploy/, so it
+# survives image rebuilds.
+ENV SYNC_DB_PATH=/data/garden.db
 
 EXPOSE 8000
 

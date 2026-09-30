@@ -1,7 +1,7 @@
 ---
 id: 092
 title: Store the garden on the server with push and pull sync endpoints
-status: open
+status: done
 priority: P2
 type: feature
 ---
@@ -18,17 +18,17 @@ The server copy also becomes an off-phone backup.
 
 ## Acceptance criteria
 
-- [ ] The server keeps the garden in SQLite on a Docker volume (the path is
+- [x] The server keeps the garden in SQLite on a Docker volume (the path is
       documented in `docs/DEPLOY-SERVER.md`, backups included)
-- [ ] `POST /sync/push` accepts changed rows per table. Each row is kept only
+- [x] `POST /sync/push` accepts changed rows per table. Each row is kept only
       if its `updatedAt` is newer than the stored one (last write wins); each
       accepted row gets a server revision number
-- [ ] `GET /sync/pull?since=<revision>` returns every row changed after that
+- [x] `GET /sync/pull?since=<revision>` returns every row changed after that
       revision, deleted rows included, plus the latest revision
-- [ ] Table and column names come from a fixed allow-list; an unknown one is
+- [x] Table and column names come from a fixed allow-list; an unknown one is
       rejected with 400, never interpolated into SQL (CLAUDE.md rule 5)
-- [ ] Both endpoints require a bearer token from `API_TOKENS`, like `/search`
-- [ ] pytest covers push, pull, last-write-wins, soft delete, an unknown
+- [x] Both endpoints require a bearer token from `API_TOKENS`, like `/search`
+- [x] pytest covers push, pull, last-write-wins, soft delete, an unknown
       column and a missing token
 
 ## Notes

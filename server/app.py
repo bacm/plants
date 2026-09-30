@@ -10,15 +10,20 @@ import hmac
 import json
 import logging
 import os
+import threading
 import time
 import urllib.parse
 from collections import OrderedDict, deque
 from datetime import datetime, timezone
+from typing import Any
 
 import httpx
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Body, FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, field_validator
+
+from sync_store import SyncStore
+from sync_validation import SyncValidationError, validate_push
 
 logger = logging.getLogger("plant_search")
 
@@ -31,6 +36,8 @@ RATE_LIMIT_MAX_REQUESTS = 20
 RATE_LIMIT_WINDOW_SECONDS = 60
 
 SEARCH_DAILY_BUDGET_DEFAULT = 500
+
+SYNC_DB_PATH_DEFAULT = "data/garden.db"
 
 MIN_API_TOKEN_LENGTH = 32
 
@@ -375,6 +382,16 @@ def create_app():
 
     app = FastAPI()
     app.state.api_tokens = api_tokens
+    sync_db_path = os.environ.get("SYNC_DB_PATH") or SYNC_DB_PATH_DEFAULT
+    sync_store_lock = threading.Lock()
+
+    def get_sync_store():
+        # Opened on first use, so importing the module (which builds the
+        # module-level `app`) never creates a database file.
+        with sync_store_lock:
+            if getattr(app.state, "sync_store", None) is None:
+                app.state.sync_store = SyncStore(sync_db_path)
+            return app.state.sync_store
 
     allowed_origins = [
         origin.strip()
@@ -435,6 +452,33 @@ def create_app():
                 plant.setdefault("image_urls", [])
 
         return {"plants": plants}
+
+    def require_token(request):
+        if not _is_authorized(request.headers.get("Authorization"), app.state.api_tokens):
+            client_host = request.client.host if request.client else "unknown"
+            logger.warning("Rejected unauthorized %s request from %s", request.url.path, client_host)
+            raise HTTPException(
+                status_code=401, detail="Unauthorized", headers={"WWW-Authenticate": "Bearer"}
+            )
+
+    # Plain `def`: the sqlite calls block, so FastAPI runs them in its thread pool.
+    @app.post("/sync/push")
+    def sync_push(request: Request, payload: Any = Body(default=None)):
+        require_token(request)
+        try:
+            changes = validate_push(payload)
+        except SyncValidationError as exc:
+            raise HTTPException(status_code=exc.status_code, detail=exc.detail)
+        return get_sync_store().push(changes)
+
+    @app.get("/sync/pull")
+    def sync_pull(
+        request: Request,
+        since: int = Query(0, ge=0),
+        limit: int = Query(500, ge=1, le=1000),
+    ):
+        require_token(request)
+        return get_sync_store().pull(since, limit)
 
     return app
 

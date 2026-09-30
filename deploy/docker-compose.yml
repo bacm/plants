@@ -12,6 +12,9 @@ services:
     # network. `expose` documents the port without publishing it on the host.
     expose:
       - '8000'
+    # The synced garden (SQLite). A named volume, so redeploys keep it.
+    volumes:
+      - garden_data:/data
     # Inherits the Dockerfile's HEALTHCHECK.
 
   caddy:
@@ -31,5 +34,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  garden_data:
   caddy_data:
   caddy_config:

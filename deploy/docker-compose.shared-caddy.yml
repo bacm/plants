@@ -16,11 +16,17 @@ services:
     profiles: ['standalone-caddy']
 
   api:
+    # The synced garden (SQLite). A named volume, so redeploys keep it.
+    volumes:
+      - garden_data:/data
     networks:
       default: {}
       shared:
         aliases:
           - plants-api
+
+volumes:
+  garden_data:
 
 networks:
   shared:

@@ -247,6 +247,22 @@ the iOS Keychain, never in the app bundle.
 - **Logs:** on the VPS, `docker compose -f ~/plants/deploy/docker-compose.yml
 logs -f api`.
 
+## The garden data
+
+The synced garden (ticket 092) is a SQLite file, `/data/garden.db` in the `api`
+container, stored in the named volume `garden_data`. Redeploys keep it; only
+`docker compose down -v` deletes it. Back it up with SQLite's online backup
+(safe while the server runs), on the VPS as `deploy`:
+
+```bash
+docker compose -f ~/plants/deploy/docker-compose.yml exec -T api python -c \
+  "import sqlite3; s=sqlite3.connect('/data/garden.db'); d=sqlite3.connect('/data/backup.db'); s.backup(d)"
+docker compose -f ~/plants/deploy/docker-compose.yml cp api:/data/backup.db ./garden-$(date +%F).db
+```
+
+Do not copy `garden.db` by hand while the server runs: in WAL mode, recent
+writes may sit in `garden.db-wal`.
+
 ## How the deploy works, and why it is safe
 
 - The deploy job reads the secrets from the `production` environment only.

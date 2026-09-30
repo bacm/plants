@@ -1,0 +1,172 @@
+import os
+
+os.environ.setdefault("OPENAI_API_KEY", "test-key-not-real")
+TOKEN = "a" * 64
+os.environ.setdefault("API_TOKENS", TOKEN)
+
+import pytest
+from fastapi.testclient import TestClient
+
+import app as app_module
+from sync_store import SyncStore
+
+AUTH = {"Authorization": f"Bearer {os.environ['API_TOKENS'].split(',')[0].strip()}"}
+
+
+@pytest.fixture
+def db_path(tmp_path):
+    return tmp_path / "sub" / "garden.db"
+
+
+@pytest.fixture
+def client(monkeypatch, db_path):
+    monkeypatch.setenv("SYNC_DB_PATH", str(db_path))
+    return TestClient(app_module.create_app())
+
+
+def zone(id_, updated="2026-09-30T10:00:00.000Z", **extra):
+    return {"id": id_, "name": f"Zone {id_}", "updatedAt": updated, **extra}
+
+
+def push(client, changes, headers=AUTH):
+    return client.post("/sync/push", json={"changes": changes}, headers=headers)
+
+
+def pull(client, headers=AUTH, **params):
+    return client.get("/sync/pull", params=params, headers=headers)
+
+
+def test_round_trip(client):
+    response = push(
+        client,
+        {"zones": [zone("z1")], "plants": [{"id": "p1", "name": "Rose", "updatedAt": "2026-09-30T10:00:00Z"}]},
+    )
+    assert response.status_code == 200
+    assert response.json() == {"accepted": 2, "revision": 2}
+    body = pull(client).json()
+    assert body["more"] is False
+    assert body["revision"] == 2
+    assert body["changes"]["zones"] == [zone("z1")]
+    # timestamps are normalised to milliseconds
+    assert body["changes"]["plants"][0]["updatedAt"] == "2026-09-30T10:00:00.000Z"
+
+
+def test_pull_empty(client):
+    assert pull(client).json() == {"changes": {}, "revision": 0, "more": False}
+    assert pull(client, since=7).json()["revision"] == 7
+
+
+def test_pagination(client):
+    push(client, {"zones": [zone(f"z{i}") for i in range(5)]})
+    first = pull(client, limit=2).json()
+    assert [r["id"] for r in first["changes"]["zones"]] == ["z0", "z1"]
+    assert first["more"] is True
+    assert first["revision"] == 2
+    second = pull(client, since=first["revision"], limit=2).json()
+    assert [r["id"] for r in second["changes"]["zones"]] == ["z2", "z3"]
+    assert second["more"] is True
+    last = pull(client, since=second["revision"], limit=2).json()
+    assert [r["id"] for r in last["changes"]["zones"]] == ["z4"]
+    assert last["more"] is False
+    assert last["revision"] == 5
+
+
+def test_last_write_wins(client):
+    push(client, {"zones": [zone("z1", "2026-09-30T10:00:00.000Z", name="v1")]})
+    older = push(client, {"zones": [zone("z1", "2026-09-30T09:00:00.000Z", name="old")]}).json()
+    assert older["accepted"] == 0
+    equal = push(client, {"zones": [zone("z1", "2026-09-30T10:00:00.000Z", name="same")]}).json()
+    assert equal["accepted"] == 0
+    assert equal["revision"] == 1
+    newer = push(client, {"zones": [zone("z1", "2026-09-30T11:00:00.000Z", name="v2")]}).json()
+    assert newer["accepted"] == 1
+    rows = pull(client).json()["changes"]["zones"]
+    assert len(rows) == 1 and rows[0]["name"] == "v2"
+
+
+def test_soft_deleted_row_is_pulled(client):
+    push(client, {"zones": [zone("z1")]})
+    push(client, {"zones": [zone("z1", "2026-09-30T12:00:00.000Z", deletedAt="2026-09-30T12:00:00Z")]})
+    row = pull(client).json()["changes"]["zones"][0]
+    assert row["deletedAt"] == "2026-09-30T12:00:00.000Z"
+
+
+def test_revisions_strictly_increase(client):
+    revisions = [
+        push(client, {"zones": [zone("z1", f"2026-09-30T1{i}:00:00.000Z")]}).json()["revision"]
+        for i in range(3)
+    ]
+    assert revisions == [1, 2, 3]
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"nope": [zone("z1")]},
+        {"zones": [zone("z1", uri="file:///x")]},
+        {"zones": [zone("z1", name=["a"])]},
+        {"zones": [zone("z1", name={"a": 1})]},
+        {"zones": [zone("z1", "yesterday")]},
+        {"zones": [{"id": "z1", "name": "x"}]},
+        {"zones": [zone("z1", deletedAt="garbage")]},
+        {"zones": [{"name": "x", "updatedAt": "2026-09-30T10:00:00Z"}]},
+        {"zones": [zone("")]},
+        {"zones": ["not an object"]},
+        {"zones": [zone("z1"), zone("z1", "2026-10-01T10:00:00Z")]},
+        {"zones": [zone("z1")], "plants": "x"},
+    ],
+)
+def test_invalid_push_is_rejected_and_stores_nothing(client, changes):
+    response = push(client, changes)
+    assert response.status_code == 400
+    assert response.json()["detail"]
+    assert pull(client).json()["changes"] == {}
+
+
+def test_invalid_row_rejects_whole_push(client):
+    response = push(client, {"zones": [zone("good"), zone("bad", uri="x")]})
+    assert response.status_code == 400
+    assert pull(client).json()["changes"] == {}
+
+
+def test_too_many_rows(client):
+    rows = [zone(f"z{i}") for i in range(1001)]
+    assert push(client, {"zones": rows}).status_code == 413
+    assert pull(client).json()["changes"] == {}
+
+
+def test_bad_body_shape(client):
+    assert client.post("/sync/push", json=[1], headers=AUTH).status_code == 400
+    assert client.post("/sync/push", json={"x": 1}, headers=AUTH).status_code == 400
+
+
+@pytest.mark.parametrize("params", [{"since": -1}, {"limit": 0}, {"limit": 1001}, {"since": "x"}])
+def test_bad_pull_query(client, params):
+    assert pull(client, **params).status_code == 422
+
+
+@pytest.mark.parametrize("headers", [{}, {"Authorization": "Bearer " + "z" * 64}, {"Authorization": "Basic x"}])
+def test_auth_required(client, headers):
+    for response in (push(client, {"zones": [zone("z1")]}, headers=headers), pull(client, headers=headers)):
+        assert response.status_code == 401
+        assert response.headers["WWW-Authenticate"] == "Bearer"
+    assert pull(client).json()["changes"] == {}
+
+
+def test_store_persists_across_instances(db_path):
+    first = SyncStore(db_path)
+    first.push({"zones": [zone("z1")]})
+    second = SyncStore(db_path)
+    assert second.pull(0, 10)["changes"]["zones"][0]["id"] == "z1"
+    assert second.push({"zones": [zone("z2")]})["revision"] == 2
+
+
+def test_normalize_timestamp():
+    from sync_validation import normalize_timestamp
+
+    assert normalize_timestamp("2026-09-30T12:00:00+02:00") == "2026-09-30T10:00:00.000Z"
+    assert normalize_timestamp("2026-09-30T10:00:00.123456Z") == "2026-09-30T10:00:00.123Z"
+    assert normalize_timestamp("2026-09-30T10:00:00") == "2026-09-30T10:00:00.000Z"
+    assert normalize_timestamp("nope") is None
+    assert normalize_timestamp(5) is None
+    assert normalize_timestamp("") is None
