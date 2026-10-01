@@ -1177,11 +1177,12 @@ test.describe('snapping to other shapes (ticket 114)', () => {
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 500, 700));
     await expect(page.getByText('Aimantation', { exact: true })).toBeVisible();
-    await expect(page.getByText('priorité : sommet › côté › grille')).toBeVisible();
+    await expect(page.getByText('priorité : sommet › côté › angle › grille')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Grille · 50 cm' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Sommets' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Côtés' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Bord du jardin' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Angles 90° / plat' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Distance Moyenne' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Bord du jardin' })).toHaveCSS(
       'background-color',
@@ -1226,6 +1227,28 @@ test.describe('snapping to other shapes (ticket 114)', () => {
     expect(x).toBe(1013);
     expect(y).toBeGreaterThan(117);
     expect(y).toBeLessThan(1000);
+  });
+
+  test('a corner near a right angle lands on it rather than on the grid (ticket 121)', async ({
+    context,
+    page,
+  }) => {
+    const api = await seedSnapGarden(context);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    // At x = 645 the 50 cm grid alone would give 650; square with the side from
+    // (0, 0) to (600, 0), the corner keeps x = 600 and takes the grid along y.
+    await dragCornerTo(page, 645, 1195);
+    expect((await finishEdit(page, api))[2]).toEqual([600, 1200]);
+  });
+
+  test('the Angles toggle off: the same corner goes to the grid', async ({ context, page }) => {
+    const api = await seedSnapGarden(context);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    await page.getByRole('button', { name: 'Angles 90° / plat' }).click();
+    await dragCornerTo(page, 645, 1195);
+    expect((await finishEdit(page, api))[2]).toEqual([650, 1200]);
   });
 
   test('Sommets off: near a corner the point goes to the side instead', async ({

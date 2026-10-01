@@ -582,8 +582,8 @@ export function PlanCanvas({
         const snapper = buildSnapper();
         let last = null;
         const magnet = snapper
-          ? (point) => {
-              last = snapper(point);
+          ? (point, corner) => {
+              last = snapper(point, corner);
               return last;
             }
           : snap;

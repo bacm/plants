@@ -189,7 +189,7 @@ export function SnapBlock({ settings, onChange }) {
     <View style={styles.snapCard}>
       <View style={styles.nameRow}>
         <Text style={styles.snapTitle}>Aimantation</Text>
-        <Text style={styles.hint}>priorité : sommet › côté › grille</Text>
+        <Text style={styles.hint}>priorité : sommet › côté › angle › grille</Text>
       </View>
       <View style={styles.chipsTight}>
         <Chip
@@ -211,6 +211,11 @@ export function SnapBlock({ settings, onChange }) {
           label="Bord du jardin"
           selected={settings.border}
           onPress={() => onChange({ border: !settings.border })}
+        />
+        <Chip
+          label="Angles 90° / plat"
+          selected={settings.angles}
+          onPress={() => onChange({ angles: !settings.angles })}
         />
       </View>
       {settings.grid ? (
