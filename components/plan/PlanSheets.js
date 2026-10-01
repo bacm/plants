@@ -319,7 +319,17 @@ function DimensionsRow({ dims, onChange, onSubmit }) {
 }
 
 /** Editing a zone: its name and area, erase the outline, or finish. */
-export function EditSheet({ name, areaText, dims, onDims, onErase, onFinish, saving, onLayout }) {
+export function EditSheet({
+  name,
+  areaText,
+  dims,
+  onDims,
+  hint,
+  onErase,
+  onFinish,
+  saving,
+  onLayout,
+}) {
   return (
     <Sheet onLayout={onLayout} sheetStyle={styles.edit} scroll>
       <View style={styles.nameRow}>
@@ -329,7 +339,7 @@ export function EditSheet({ name, areaText, dims, onDims, onErase, onFinish, sav
         <Text style={styles.editArea}>{areaText}</Text>
       </View>
       <DimensionsRow dims={dims} onChange={onDims} onSubmit={onFinish} />
-      <Text style={styles.editHint}>Glissez un coin, ou saisissez les dimensions.</Text>
+      <Text style={styles.editHint}>{hint}</Text>
       <View style={styles.row}>
         <Button
           label="Effacer le tracé"

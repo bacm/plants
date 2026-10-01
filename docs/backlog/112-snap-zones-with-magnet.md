@@ -19,15 +19,15 @@ when the magnet is on, and free shapes only when it is off.
 
 ## Acceptance criteria
 
-- [ ] With the magnet on, every zone geometry snaps to 50 cm: corners tapped
+- [x] With the magnet on, every zone geometry snaps to 50 cm: corners tapped
       while tracing (the corner and its side lengths show the snapped spot),
       corners dragged in edit mode, the rectangle's position while dragging,
       and a typed resize; with the magnet off all of them stay free
-- [ ] The magnet button stays at the top of the button column in tracing,
+- [x] The magnet button stays at the top of the button column in tracing,
       rectangle and edit modes (zones and elements), as in the artboards
-- [ ] The tracing instruction and the zone edit hint mention the snapping
+- [x] The tracing instruction and the zone edit hint mention the snapping
       when the magnet is on
-- [ ] Matches the updated artboards; `npm run verify` and `npm run e2e:web`
+- [x] Matches the updated artboards; `npm run verify` and `npm run e2e:web`
       pass
 - [ ] Checked on the owner's iPhone
 

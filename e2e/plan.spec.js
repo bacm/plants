@@ -423,9 +423,9 @@ test.describe('drawing zones (ticket 107)', () => {
     await expect(page.getByRole('button', { name: 'Terminer la zone' })).toBeDisabled();
 
     await tapCorners(page, [
-      [800, 1000],
-      [1400, 1000],
-      [1400, 1700],
+      [600, 1000],
+      [1200, 1000],
+      [1200, 1700],
     ]);
     await expect(visibleText(page, 'Nouvelle zone · 3 coins')).toBeVisible();
     await expect(visibleText(page, '6 m')).toBeVisible();
@@ -436,7 +436,7 @@ test.describe('drawing zones (ticket 107)', () => {
     await expect(visibleText(page, 'Nouvelle zone · 4 coins')).toBeVisible();
     await page.getByRole('button', { name: 'Retirer le dernier coin' }).click();
     await expect(visibleText(page, 'Nouvelle zone · 3 coins')).toBeVisible();
-    await tapCorners(page, [[800, 1700]]);
+    await tapCorners(page, [[600, 1700]]);
     await expect(visibleText(page, 'Nouvelle zone · 4 coins')).toBeVisible();
 
     await page.getByRole('button', { name: 'Terminer la zone' }).click();
@@ -455,9 +455,9 @@ test.describe('drawing zones (ticket 107)', () => {
     await expect.poll(() => pushedPolygon(api, 'zone-d'), { timeout: 20000 }).not.toBeNull();
     const polygon = pushedPolygon(api, 'zone-d');
     expect(polygon).toHaveLength(4);
-    near(polygon[0][0], 800);
+    near(polygon[0][0], 600);
     near(polygon[0][1], 1000);
-    near(polygon[2][0], 1400);
+    near(polygon[2][0], 1200);
     near(polygon[2][1], 1700);
     // The rose sits in Massif sud and stays there.
     expect(serverPlant(api, 'plant-rose').zoneId).toBe('zone-a');
@@ -515,9 +515,9 @@ test.describe('drawing zones (ticket 107)', () => {
     await page.getByRole('button', { name: 'Ajouter' }).click();
     await page.getByRole('button', { name: 'Une zone de plantes' }).click();
     await tapCorners(page, [
-      [800, 1000],
-      [1400, 1000],
-      [1400, 1700],
+      [600, 1000],
+      [1200, 1000],
+      [1200, 1700],
     ]);
     await page.getByRole('button', { name: 'Terminer la zone' }).click();
     await page.getByRole('button', { name: '+ Nouvelle zone' }).click();
@@ -537,18 +537,116 @@ test.describe('drawing zones (ticket 107)', () => {
     expect(JSON.parse(created.polygon)).toHaveLength(3);
   });
 
-  test('typing the dimensions of a zone resizes it without snapping', async ({ context, page }) => {
+  test('typing the dimensions of a zone resizes it without snapping when the magnet is off', async ({
+    context,
+    page,
+  }) => {
     const api = await mockAuthApi(context);
     seedDrawGarden(api);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 500, 700));
     await expect(visibleText(page, 'Modifier la zone')).toBeVisible();
+    await expect(
+      visibleText(
+        page,
+        'Glissez un coin, ou saisissez les dimensions. Aimant actif : les coins se calent tous les 50 cm.'
+      )
+    ).toBeVisible();
+    // The magnet is reachable while editing; off, the hint loses its second sentence.
+    await page.getByRole('button', { name: 'Aimanter les plantes à la grille (activé)' }).click();
+    await expect(visibleText(page, 'Glissez un coin, ou saisissez les dimensions.')).toBeVisible();
     await page.getByTestId('plan-dim-width').fill('7,15');
     await page.getByTestId('plan-dim-length').fill('9');
     await page.getByRole('button', { name: 'Terminer', exact: true }).click();
     await expect.poll(() => pushedPolygon(api, 'zone-a')?.[2]?.[0], { timeout: 20000 }).toBe(715);
     expect(pushedPolygon(api, 'zone-a')[0]).toEqual([0, 0]);
     expect(pushedPolygon(api, 'zone-a')[2]).toEqual([715, 900]);
+  });
+
+  test('magnet on: a traced zone has only corners on the 50 cm grid', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedDrawGarden(api);
+    await page.goto('/plan');
+    await page.getByRole('button', { name: 'Ajouter' }).click();
+    await page.getByRole('button', { name: 'Une zone de plantes' }).click();
+    await expect(
+      page.getByText(
+        'Touchez chaque coin de la zone (calé tous les 50 cm, aimant actif). Au moins 3 coins ; « Terminer » referme la forme.'
+      )
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Aimanter les plantes à la grille (activé)' })
+    ).toBeVisible();
+    await tapCorners(page, [
+      [613, 1017],
+      [1182, 1031],
+      [1191, 1688],
+      [622, 1679],
+    ]);
+    await page.getByRole('button', { name: 'Terminer la zone' }).click();
+    await page.getByRole('button', { name: 'Potager' }).click();
+    await page.getByRole('button', { name: 'Enregistrer la zone' }).click();
+    await expect.poll(() => pushedPolygon(api, 'zone-d'), { timeout: 20000 }).not.toBeNull();
+    const polygon = pushedPolygon(api, 'zone-d');
+    expect(polygon).toHaveLength(4);
+    for (const [x, y] of polygon) {
+      expect(x % 50).toBe(0);
+      expect(y % 50).toBe(0);
+    }
+  });
+
+  test('magnet off: a traced corner is not snapped; the button toggles while tracing', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedDrawGarden(api);
+    await page.goto('/plan');
+    await page.getByRole('button', { name: 'Ajouter' }).click();
+    await page.getByRole('button', { name: 'Une zone de plantes' }).click();
+    await page.getByRole('button', { name: 'Aimanter les plantes à la grille (activé)' }).click();
+    await expect(
+      page.getByText(
+        'Touchez chaque coin de la zone. Au moins 3 coins ; « Terminer » referme la forme.'
+      )
+    ).toBeVisible();
+    await tapCorners(page, [
+      [613, 1017],
+      [1182, 1031],
+      [1191, 1688],
+    ]);
+    await page.getByRole('button', { name: 'Terminer la zone' }).click();
+    await page.getByRole('button', { name: 'Potager' }).click();
+    await page.getByRole('button', { name: 'Enregistrer la zone' }).click();
+    await expect.poll(() => pushedPolygon(api, 'zone-d'), { timeout: 20000 }).not.toBeNull();
+    expect(pushedPolygon(api, 'zone-d').some(([x, y]) => x % 50 !== 0 || y % 50 !== 0)).toBe(true);
+  });
+
+  test('magnet on: a dragged zone rectangle lands on the 50 cm grid', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedDrawGarden(api);
+    await page.goto('/plan');
+    await page.getByRole('button', { name: 'Ajouter' }).click();
+    await page.getByRole('button', { name: 'Une zone de plantes' }).click();
+    await page.getByRole('button', { name: 'Rectangle par cotes' }).click();
+    await page.getByLabel('Largeur (m)').fill('4');
+    await page.getByLabel('Longueur (m)').fill('1,5');
+    await page.getByRole('button', { name: 'Façade nord' }).click();
+    await page.getByRole('button', { name: 'Poser sur le plan' }).click();
+    const handle = page.getByLabel('Rectangle à déplacer');
+    const before = await handle.boundingBox();
+    await drag(
+      page,
+      { x: before.x + before.width / 2, y: before.y + before.height / 2 },
+      { x: before.x + before.width / 2 + 61, y: before.y + before.height / 2 - 143 }
+    );
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect.poll(() => pushedPolygon(api, 'zone-c'), { timeout: 20000 }).not.toBeNull();
+    const polygon = pushedPolygon(api, 'zone-c');
+    expect(polygon[0][0] % 50).toBe(0);
+    expect(polygon[0][1] % 50).toBe(0);
+    expect(polygon[0][0]).toBeGreaterThan(100);
+    expect(polygon[1][0] - polygon[0][0]).toBe(400);
   });
 
   test('a long press edits a zone: drag a corner, finish; then erase the outline', async ({
@@ -563,7 +661,7 @@ test.describe('drawing zones (ticket 107)', () => {
     const spot = await planPoint(page, 500, 700);
     await holdAt(page, spot);
     await expect(visibleText(page, 'Modifier la zone')).toBeVisible();
-    await expect(visibleText(page, 'Glissez un coin, ou saisissez les dimensions.')).toBeVisible();
+    await expect(page.getByText(/Glissez un coin, ou saisissez les dimensions\./)).toBeVisible();
     await expect(page.getByTestId('plan-dim-width')).toHaveValue('6');
     await expect(page.getByTestId('plan-dim-length')).toHaveValue('8');
     await expect(page.getByLabel('Coin 3')).toBeVisible();
@@ -576,6 +674,9 @@ test.describe('drawing zones (ticket 107)', () => {
     await expect
       .poll(() => pushedPolygon(api, 'zone-a')?.[2]?.[0], { timeout: 20000 })
       .toBeGreaterThan(700);
+    // The magnet is on: the dragged corner sits on the 50 cm grid.
+    expect(pushedPolygon(api, 'zone-a')[2][0] % 50).toBe(0);
+    expect(pushedPolygon(api, 'zone-a')[2][1] % 50).toBe(0);
     // Only the dragged corner moved.
     expect(pushedPolygon(api, 'zone-a')[1]).toEqual([600, 0]);
     expect(pushedPolygon(api, 'zone-a')[0]).toEqual([0, 0]);

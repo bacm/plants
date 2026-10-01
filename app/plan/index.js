@@ -259,10 +259,10 @@ export default function PlanScreen() {
     setDraft({ kind: 'trace', polygon: [], closed: false });
   }, [showBanner]);
   const cancelDraft = useCallback(() => setDraft(null), []);
-  const addDraftCorner = useCallback((point, plan) => {
+  const addDraftCorner = useCallback((point, plan, magnet) => {
     setDraft((d) =>
       d && d.kind === 'trace' && !d.closed
-        ? { ...d, polygon: addCorner(d.polygon, point, plan) }
+        ? { ...d, polygon: addCorner(d.polygon, point, plan, { magnet }) }
         : d
     );
   }, []);
@@ -534,7 +534,7 @@ export default function PlanScreen() {
       const l = parsePlanMetres(dims.length);
       if (w.error || l.error) return { ...d, dims: { ...dims, error: w.error || l.error } };
       const result = resizePolygon(d.base, { widthCm: w.cm, lengthCm: l.cm }, data.plan, {
-        magnet: d.kind === 'feature' && snapEnabled,
+        magnet: snapEnabled,
       });
       if (result.error) return { ...d, dims: { ...dims, error: result.error } };
       return { ...d, polygon: result.polygon, moved: true, dims: { ...dims, error: null } };
@@ -544,7 +544,10 @@ export default function PlanScreen() {
     setRectSize((r) => ({ ...r, tried: true }));
     if (!fits) return;
     const polygon = controller.current?.placeRectangle({ widthCm: width.cm, lengthCm: length.cm });
-    if (polygon) changeDraft(polygon);
+    if (polygon)
+      changeDraft(
+        snapEnabled ? dragFeatureShape(polygon, { dx: 0, dy: 0 }, data.plan, true) : polygon
+      );
   };
 
   let sheet = null;
@@ -637,6 +640,9 @@ export default function PlanScreen() {
         areaText={formatArea(polygonAreaM2(draft.polygon))}
         dims={draft.dims}
         onDims={setDimension}
+        hint={`Glissez un coin, ou saisissez les dimensions.${
+          snapEnabled ? ' Aimant actif : les coins se calent tous les 50 cm.' : ''
+        }`}
         saving={saving}
         onErase={eraseOutline}
         onFinish={() => finish(draft.zoneId, '')}

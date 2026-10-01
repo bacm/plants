@@ -54,12 +54,11 @@ import {
   nextPlanSize,
   parsePlanSizeInput,
 } from '../../lib/planView';
-import { hitCorner, moveCorner, translatePolygon, placeRectangle } from '../../lib/zoneDraw';
+import { hitCorner, placeRectangle } from '../../lib/zoneDraw';
 import {
   featureAt,
   featureLabel,
   featureLook,
-  isFeatureDraft,
   dragFeatureCorner,
   dragFeatureShape,
 } from '../../lib/planFeatures';
@@ -392,11 +391,11 @@ export function PlanCanvas({
   }, []);
   const backgroundTap = useCallback((x, y) => {
     Keyboard.dismiss();
-    const { draft: d, view: v, plan: p } = latest.current;
+    const { draft: d, view: v, plan: p, snapEnabled: snap } = latest.current;
     if (d) {
       // Drawing: a tap places a corner (not on top of one already there).
       if (d.kind === 'trace' && !d.closed && hitCorner(d.polygon, { x, y }, v, HIT_PX / 2) < 0) {
-        latest.current.onAddCorner(toPlan({ x, y }, v), p);
+        latest.current.onAddCorner(toPlan({ x, y }, v), p, snap);
       }
       return;
     }
@@ -435,26 +434,18 @@ export function PlanCanvas({
     () => ({
       onStart: (kind, index) => {
         const d = latest.current.draft;
-        if (d) draftDrag.current = { kind, index, start: d.polygon, feature: isFeatureDraft(d) };
+        if (d) draftDrag.current = { kind, index, start: d.polygon };
       },
       onMove: (tx, ty) => {
         const start = draftDrag.current;
         if (!start) return;
         const { view: v, plan: p, snapEnabled: snap } = latest.current;
         const delta = { dx: Math.round(tx / v.scale), dy: Math.round(ty / v.scale) };
-        let next;
-        if (start.feature) {
-          // Garden elements snap to the 50 cm grid with the magnet (ticket 110).
-          next =
-            start.kind === 'corner'
-              ? dragFeatureCorner(start.start, start.index, delta, p, snap)
-              : dragFeatureShape(start.start, delta, p, snap);
-        } else {
-          next =
-            start.kind === 'corner'
-              ? moveCorner(start.start, start.index, delta, p)
-              : translatePolygon(start.start, delta, p);
-        }
+        // Zones and elements share one path: snapped to 50 cm with the magnet (tickets 110, 112).
+        const next =
+          start.kind === 'corner'
+            ? dragFeatureCorner(start.start, start.index, delta, p, snap)
+            : dragFeatureShape(start.start, delta, p, snap);
         latest.current.onDraftChange(next);
       },
       onEnd: () => {
@@ -850,7 +841,7 @@ export function PlanCanvas({
       {draft?.kind === 'trace' && !draft.closed ? (
         <View style={styles.instruction} pointerEvents="none">
           <Text style={styles.instructionText}>
-            Touchez chaque coin de la zone. Au moins 3 coins ; « Terminer » referme la forme.
+            {`Touchez chaque coin de la zone${snapEnabled ? ' (calé tous les 50 cm, aimant actif)' : ''}. Au moins 3 coins ; « Terminer » referme la forme.`}
           </Text>
         </View>
       ) : null}
@@ -860,14 +851,12 @@ export function PlanCanvas({
           styles.zoomCol,
           { bottom: drawerHeight + 20 + (banner && !draft ? BANNER_LIFT : 0) },
         ]}>
-        {draft ? null : (
-          <RoundButton
-            label={`Aimanter les plantes à la grille (${snapEnabled ? 'activé' : 'désactivé'})`}
-            onPress={onToggleSnap}
-            pressed={snapEnabled}>
-            <Icon name="magnet" size={18} color={snapEnabled ? colors.background : colors.text} />
-          </RoundButton>
-        )}
+        <RoundButton
+          label={`Aimanter les plantes à la grille (${snapEnabled ? 'activé' : 'désactivé'})`}
+          onPress={onToggleSnap}
+          pressed={snapEnabled}>
+          <Icon name="magnet" size={18} color={snapEnabled ? colors.background : colors.text} />
+        </RoundButton>
         {draft ? null : (
           <RoundButton label="Dimensions du plan" onPress={onEditSize}>
             <Icon name="ruler-square" size={18} color={colors.text} />
