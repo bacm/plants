@@ -14,13 +14,14 @@
 // canvas; a plant, or a drawer item, has its own pan that only starts after a
 // long press (so a quick drag still pans the canvas) and then drags a "ghost"
 // dot at the finger. The drop is resolved in JS (toPlan, zoneAt).
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import Svg, { Polygon, Text as SvgText } from 'react-native-svg';
+import Svg, { G, Polygon, Text as SvgText } from 'react-native-svg';
 import { PlanGrid } from './PlanGrid';
+import { DraftLayer } from './DraftLayer';
 import { ScreenHeader } from '../ScreenHeader';
 import Icon from '../Icon';
 import { colors, spacing, radius, shadow, colorHex } from '../../lib/theme';
@@ -48,6 +49,7 @@ import {
   plantSubtitle,
   shortPlantName,
 } from '../../lib/planView';
+import { hitCorner, moveCorner, translatePolygon, placeRectangle } from '../../lib/zoneDraw';
 
 const HIT_PX = 44;
 const LONG_PRESS_MS = 450;
@@ -56,6 +58,8 @@ const ZOOM_MS = 220;
 // While the undo banner shows, the zoom buttons sit above it.
 const BANNER_LIFT = 90;
 const DEFAULT_DRAWER_H = 130;
+// Zones other than the one being drawn (the PlanTracer artboard).
+const DIM_OPACITY = 0.45;
 
 const FONT_BOLD = 'InstrumentSans_600SemiBold';
 const FONT_BODY = 'InstrumentSans_400Regular';
@@ -74,61 +78,66 @@ function dragGesture({ onStart, onMove, onEnd }) {
     });
 }
 
-function PlanDot({ plant, left, top, hit, dia, selected, hidden, ring, onSelect, drag }) {
+function PlanDot({ plant, left, top, hit, dia, selected, hidden, passive, ring, onSelect, drag }) {
   const tap = Gesture.Tap()
     .maxDuration(400)
     .onEnd((e, success) => {
       if (success) scheduleOnRN(onSelect, plant.id);
     });
   const gesture = Gesture.Race(dragGesture(drag), tap);
-  return (
-    <View style={[styles.dotHit, { left, top, width: hit, height: hit }]} pointerEvents="box-none">
-      <GestureDetector gesture={gesture}>
+  const body = (
+    <View
+      collapsable={false}
+      accessibilityRole="button"
+      accessibilityLabel={`Plante ${plant.name}`}
+      style={[styles.dotHit, { width: hit, height: hit, left: 0, top: 0 }]}>
+      {hidden ? (
         <View
-          collapsable={false}
-          accessibilityRole="button"
-          accessibilityLabel={`Plante ${plant.name}`}
-          style={[styles.dotHit, { width: hit, height: hit, left: 0, top: 0 }]}>
-          {hidden ? (
+          style={{
+            width: dia,
+            height: dia,
+            borderRadius: dia / 2,
+            borderWidth: ring.thin,
+            borderStyle: 'dashed',
+            borderColor: colors.planOutline,
+          }}
+        />
+      ) : (
+        <>
+          {selected ? (
             <View
               style={{
-                width: dia,
-                height: dia,
-                borderRadius: dia / 2,
-                borderWidth: ring.thin,
-                borderStyle: 'dashed',
-                borderColor: colors.planOutline,
+                position: 'absolute',
+                width: dia + 2 * 5 * ring.unit,
+                height: dia + 2 * 5 * ring.unit,
+                borderRadius: (dia + 10 * ring.unit) / 2,
+                borderWidth: 2.5 * ring.unit,
+                borderColor: colors.text,
               }}
             />
-          ) : (
-            <>
-              {selected ? (
-                <View
-                  style={{
-                    position: 'absolute',
-                    width: dia + 2 * 5 * ring.unit,
-                    height: dia + 2 * 5 * ring.unit,
-                    borderRadius: (dia + 10 * ring.unit) / 2,
-                    borderWidth: 2.5 * ring.unit,
-                    borderColor: colors.text,
-                  }}
-                />
-              ) : null}
-              <View
-                style={{
-                  width: dia,
-                  height: dia,
-                  borderRadius: dia / 2,
-                  backgroundColor: colorHex(plant.flowerColor),
-                  opacity: 0.85,
-                  borderWidth: 2 * ring.unit,
-                  borderColor: '#fff',
-                }}
-              />
-            </>
-          )}
-        </View>
-      </GestureDetector>
+          ) : null}
+          <View
+            style={{
+              width: dia,
+              height: dia,
+              borderRadius: dia / 2,
+              backgroundColor: colorHex(plant.flowerColor),
+              opacity: 0.85,
+              borderWidth: 2 * ring.unit,
+              borderColor: '#fff',
+            }}
+          />
+        </>
+      )}
+    </View>
+  );
+  // While a zone is drawn or edited the plants stay visible but do not react
+  // (a tap must place a corner, not select the plant under it).
+  return (
+    <View
+      style={[styles.dotHit, { left, top, width: hit, height: hit }]}
+      pointerEvents={passive ? 'none' : 'box-none'}>
+      {passive ? body : <GestureDetector gesture={gesture}>{body}</GestureDetector>}
     </View>
   );
 }
@@ -160,10 +169,23 @@ export function PlanCanvas({
   onDrop,
   onOpenPlant,
   onEditSize,
+  // Ticket 107: drawing and editing a zone. `draft` is null, or
+  // { kind: 'trace' | 'rect' | 'edit', polygon, closed, zoneId }; `sheet` is the
+  // bar or sheet shown under the plan while it lasts; `controller` receives
+  // { placeRectangle } so the screen can ask where a rectangle fits.
+  draft,
+  sheet,
+  controller,
+  onStartTrace,
+  onAddCorner,
+  onDraftChange,
+  onEditZone,
+  onBack,
 }) {
   const [viewport, setViewport] = useState(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
   const [drawerH, setDrawerH] = useState(DEFAULT_DRAWER_H);
+  const [sheetH, setSheetH] = useState(0);
   const [view, setView] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [drag, setDrag] = useState(null);
@@ -203,7 +225,21 @@ export function PlanCanvas({
     view,
     origin,
     drawerTop: viewport ? viewport.height - drawerH : 0,
+    plants,
+    draft,
+    sheetH,
+    viewport,
+    onAddCorner,
+    onDraftChange,
+    onEditZone,
   };
+
+  useImperativeHandle(controller, () => ({
+    placeRectangle: (size) => {
+      const { view: v, viewport: vp, plan: p, sheetH: h } = latest.current;
+      return placeRectangle(size, { view: v, viewport: vp, plan: p, bottomPx: h });
+    },
+  }));
 
   const parsedZones = useMemo(
     () =>
@@ -226,11 +262,62 @@ export function PlanCanvas({
     selectedAt.current = Date.now();
     setSelectedId(id);
   }, []);
-  const backgroundTap = useCallback(() => {
+  const backgroundTap = useCallback((x, y) => {
+    const { draft: d, view: v, plan: p } = latest.current;
+    if (d) {
+      // Drawing: a tap places a corner (not on top of one already there).
+      if (d.kind === 'trace' && !d.closed && hitCorner(d.polygon, { x, y }, v, HIT_PX / 2) < 0) {
+        latest.current.onAddCorner(toPlan({ x, y }, v), p);
+      }
+      return;
+    }
     // A tap on a plant reaches both its own tap and this one; the plant wins.
     if (Date.now() - selectedAt.current < 250) return;
     setSelectedId(null);
   }, []);
+
+  // A long press on a zone's empty area edits its outline. A plant keeps its
+  // own long press (moving it), so a press on a plant, or while one is being
+  // dragged, does nothing here.
+  const zoneLongPress = useCallback((x, y) => {
+    const { view: v, plants: all, onEditZone: edit } = latest.current;
+    if (dragRef.current) return;
+    for (const plant of all) {
+      if (plant.planX == null || plant.planY == null) continue;
+      const c = toScreen({ x: plant.planX, y: plant.planY }, v);
+      const r = Math.max(HIT_PX / 2, dotDiameterPx(plant.width, v.scale) / 2);
+      if (Math.hypot(c.x - x, c.y - y) <= r) return;
+    }
+    const zone = zoneAt(toPlan({ x, y }, v), zonesRef.current);
+    if (zone) edit(zone.id);
+  }, []);
+
+  // Moving a corner (edit) or the whole rectangle: the translation in screen px
+  // from the start of the drag becomes cm, applied to the polygon as it was.
+  const draftDrag = useRef(null);
+  const draftHandlers = useMemo(
+    () => ({
+      onStart: (kind, index) => {
+        const d = latest.current.draft;
+        if (d) draftDrag.current = { kind, index, start: d.polygon };
+      },
+      onMove: (tx, ty) => {
+        const start = draftDrag.current;
+        if (!start) return;
+        const { view: v, plan: p } = latest.current;
+        const delta = { dx: Math.round(tx / v.scale), dy: Math.round(ty / v.scale) };
+        latest.current.onDraftChange(
+          start.kind === 'corner'
+            ? moveCorner(start.start, start.index, delta, p)
+            : translatePolygon(start.start, delta, p)
+        );
+      },
+      onEnd: () => {
+        draftDrag.current = null;
+      },
+    }),
+    []
+  );
 
   const startDrag = useCallback((plant, source, absX, absY) => {
     const { origin: o, view: v } = latest.current;
@@ -347,8 +434,16 @@ export function PlanCanvas({
     });
 
   const backgroundTapGesture = Gesture.Tap().onEnd((e, success) => {
-    if (success) scheduleOnRN(backgroundTap);
+    if (success) scheduleOnRN(backgroundTap, e.x, e.y);
   });
+
+  const longPress = Gesture.LongPress()
+    .minDuration(600)
+    .maxDistance(10)
+    .enabled(!draft)
+    .onStart((e) => {
+      scheduleOnRN(zoneLongPress, e.x, e.y);
+    });
 
   const canvasStyle = useAnimatedStyle(() => ({
     transform: [
@@ -385,12 +480,18 @@ export function PlanCanvas({
     rootRef.current?.measureInWindow?.((x, y) => setOrigin({ x: x ?? 0, y: y ?? 0 }));
   };
 
-  const unplaced = plants.filter((p) => p.planX == null || p.planY == null);
+  const unplaced = draft ? [] : plants.filter((p) => p.planX == null || p.planY == null);
   const placed = plants.filter((p) => p.planX != null && p.planY != null);
   const unit = view ? drawScale / view.scale : 1; // one screen px in canvas px
-  const selected = placed.find((p) => p.id === selectedId) || null;
+  const selected = draft ? null : placed.find((p) => p.id === selectedId) || null;
+  // A zone being edited is drawn from its draft; the others are dimmed while a
+  // new one is traced.
+  const drawnZones = parsedZones.map((zone) =>
+    draft?.kind === 'edit' && zone.id === draft.zoneId ? { ...zone, polygon: draft.polygon } : zone
+  );
+  const dimOthers = !!draft && draft.kind !== 'edit';
   const highlightId = drag ? (zoneAt(toPlan(drag, view), parsedZones)?.id ?? null) : null;
-  const drawerHeight = unplaced.length ? drawerH : 0;
+  const drawerHeight = draft ? sheetH : unplaced.length ? drawerH : 0;
 
   const hitSize = HIT_PX * unit;
   const dotDia = (plant) => dotDiameterPx(plant.width, view.scale) * unit;
@@ -428,7 +529,8 @@ export function PlanCanvas({
   return (
     <View ref={rootRef} style={styles.root} onLayout={onRootLayout}>
       {view && viewport ? (
-        <GestureDetector gesture={Gesture.Simultaneous(pinch, pan, backgroundTapGesture)}>
+        <GestureDetector
+          gesture={Gesture.Simultaneous(pinch, pan, backgroundTapGesture, longPress)}>
           <Animated.View style={styles.fill} collapsable={false}>
             <Animated.View
               style={[
@@ -448,7 +550,7 @@ export function PlanCanvas({
                   pxPerCm={drawScale}
                   unit={unit}
                   accessibilityLabel={`Plan du jardin, ${plan.widthCm / 100} × ${plan.lengthCm / 100} m`}>
-                  {parsedZones.map((zone) => {
+                  {drawnZones.map((zone) => {
                     const points = zone.polygon
                       .map(([x, y]) => `${x * drawScale},${y * drawScale}`)
                       .join(' ');
@@ -458,7 +560,11 @@ export function PlanCanvas({
                         zone={zone}
                         points={points}
                         unit={unit}
-                        highlighted={zone.id === highlightId}
+                        dim={dimOthers}
+                        highlighted={
+                          zone.id === highlightId ||
+                          (draft?.kind === 'edit' && zone.id === draft.zoneId)
+                        }
                       />
                     );
                   })}
@@ -474,6 +580,7 @@ export function PlanCanvas({
                   dia={dotDia(plant)}
                   selected={plant.id === selectedId}
                   hidden={drag?.plant.id === plant.id}
+                  passive={!!draft}
                   ring={{ unit, thin: 1.5 * unit }}
                   onSelect={select}
                   drag={dragHandlers(plant, 'plan')}
@@ -484,12 +591,13 @@ export function PlanCanvas({
                   width={plan.widthCm * drawScale}
                   height={plan.lengthCm * drawScale}
                   pointerEvents="none">
-                  {parsedZones.map((zone) => {
+                  {drawnZones.map((zone) => {
                     const label = polygonLabelPoint(zone.polygon);
                     return (
                       <ZoneLabel
                         key={zone.id}
                         zone={zone}
+                        dim={dimOthers}
                         lx={label.x * drawScale}
                         ly={label.y * drawScale}
                         unit={unit}
@@ -498,6 +606,16 @@ export function PlanCanvas({
                   })}
                 </Svg>
               </View>
+              {draft ? (
+                <DraftLayer
+                  draft={draft}
+                  plan={plan}
+                  drawScale={drawScale}
+                  unit={unit}
+                  pad={PAD}
+                  drag={draftHandlers}
+                />
+              ) : null}
             </Animated.View>
           </Animated.View>
         </GestureDetector>
@@ -509,21 +627,42 @@ export function PlanCanvas({
           title="Plan du jardin"
           subtitle={summary}
           backFallback="/(tabs)/zones"
+          onBack={draft ? onBack : undefined}
           right={
-            <TouchableOpacity
-              style={styles.roundBtn}
-              onPress={onEditSize}
-              accessibilityRole="button"
-              accessibilityLabel="Dimensions du plan">
-              <Icon name="ruler-square" size={18} color={colors.text} />
-            </TouchableOpacity>
+            draft ? null : (
+              <TouchableOpacity
+                style={styles.pill}
+                onPress={onStartTrace}
+                accessibilityRole="button"
+                accessibilityLabel="Tracer une zone">
+                <Icon name="pencil-outline" size={16} color={colors.text} />
+                <Text style={styles.pillText}>Tracer une zone</Text>
+              </TouchableOpacity>
+            )
           }
         />
       </View>
 
       {bubble}
 
-      <View style={[styles.zoomCol, { bottom: drawerHeight + 20 + (banner ? BANNER_LIFT : 0) }]}>
+      {draft?.kind === 'trace' && !draft.closed ? (
+        <View style={styles.instruction} pointerEvents="none">
+          <Text style={styles.instructionText}>
+            Touchez chaque coin de la zone. Au moins 3 coins ; « Terminer » referme la forme.
+          </Text>
+        </View>
+      ) : null}
+
+      <View
+        style={[
+          styles.zoomCol,
+          { bottom: drawerHeight + 20 + (banner && !draft ? BANNER_LIFT : 0) },
+        ]}>
+        {draft ? null : (
+          <RoundButton label="Dimensions du plan" onPress={onEditSize}>
+            <Icon name="ruler-square" size={18} color={colors.text} />
+          </RoundButton>
+        )}
         <RoundButton label="Zoomer" onPress={() => zoomBy(ZOOM_STEP)}>
           <Text style={styles.zoomGlyph}>+</Text>
         </RoundButton>
@@ -535,7 +674,13 @@ export function PlanCanvas({
         </RoundButton>
       </View>
 
-      {banner ? (
+      {sheet ? (
+        <View style={styles.sheetWrap} onLayout={(e) => setSheetH(e.nativeEvent.layout.height)}>
+          {sheet}
+        </View>
+      ) : null}
+
+      {banner && !draft ? (
         <View style={[styles.bannerWrap, { bottom: drawerHeight + 36 }]}>{banner}</View>
       ) : null}
 
@@ -580,10 +725,11 @@ export function PlanCanvas({
   );
 }
 
-function Zone({ zone, points, unit, highlighted }) {
+function Zone({ zone, points, unit, highlighted, dim }) {
   return (
     <>
       <Polygon
+        opacity={dim ? DIM_OPACITY : 1}
         points={points}
         fill={zone.fill}
         stroke={highlighted ? colors.accent : colors.planOutline}
@@ -602,10 +748,10 @@ const HALO = (unit) => ({
   paintOrder: 'stroke',
 });
 
-function ZoneLabel({ zone, lx, ly, unit }) {
+function ZoneLabel({ zone, lx, ly, unit, dim }) {
   const area = formatArea(polygonAreaM2(zone.polygon));
   return (
-    <>
+    <G opacity={dim ? DIM_OPACITY : 1}>
       <SvgText
         x={lx}
         y={ly - 1 * unit}
@@ -626,7 +772,7 @@ function ZoneLabel({ zone, lx, ly, unit }) {
         {...HALO(unit)}>
         {area}
       </SvgText>
-    </>
+    </G>
   );
 }
 
@@ -656,16 +802,36 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     zIndex: 2,
   },
-  roundBtn: {
-    width: 40,
+  // The header's "Tracer une zone" button (Plan artboard).
+  pill: {
     height: 40,
+    paddingLeft: 8,
+    paddingRight: 12,
     borderRadius: radius.full,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: 4,
   },
+  pillText: { fontFamily: FONT_BOLD, fontSize: 13, color: colors.text },
+  instruction: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    top: 116,
+    zIndex: 4,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.track,
+    borderRadius: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    ...shadow.card,
+  },
+  instructionText: { fontFamily: FONT_BODY, fontSize: 14, lineHeight: 20, color: colors.planInk },
+  sheetWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 5 },
   dotHit: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   zoomCol: { position: 'absolute', right: 12, gap: 8, zIndex: 3 },
   roundBtnBig: {

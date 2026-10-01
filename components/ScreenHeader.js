@@ -66,7 +66,12 @@ export function ScreenHeader({
       {backBtn}
       <View style={styles.textCol}>
         {title ? (
-          <Text style={[styles.title, compact && styles.compactTitle]} accessibilityRole="header">
+          <Text
+            style={[styles.title, compact && styles.compactTitle]}
+            numberOfLines={compact ? 1 : undefined}
+            adjustsFontSizeToFit={compact}
+            minimumFontScale={0.8}
+            accessibilityRole="header">
             {title}
           </Text>
         ) : null}
@@ -109,6 +114,6 @@ const styles = StyleSheet.create({
   },
   subtitle: { ...typography.bodySmall, color: colors.textSecondary },
   // The plan screen's header (ticket 106): a 24 pt title over a 12 pt summary.
-  compactTitle: { fontSize: 24, lineHeight: 26 },
+  compactTitle: { fontSize: 22, lineHeight: 26 },
   compactSubtitle: { fontSize: 12 },
 });

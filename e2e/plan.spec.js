@@ -244,3 +244,227 @@ test.describe('garden plan (ticket 106)', () => {
     await expect(visibleText(page, '20 × 25 m · 2 zones · 1 plante placée')).toBeVisible();
   });
 });
+
+// Ticket 107: drawing a zone corner by corner or by its sides, editing a corner,
+// erasing an outline. Zones without an outline are the ones "Pour quelle zone ?"
+// offers; what the app writes is read back from the fake server.
+function seedDrawGarden(api) {
+  const { server } = api;
+  server.seed('garden_plan', {
+    id: 'main',
+    widthCm: 1500,
+    lengthCm: 2500,
+    updatedAt: STAMP,
+    deletedAt: null,
+  });
+  server.seed('zones', zone('zone-a', 'Massif sud', rect(0, 0, 600, 800), 0));
+  server.seed('zones', zone('zone-c', 'Façade nord', null, 1));
+  server.seed('zones', zone('zone-d', 'Potager', null, 2));
+  server.seed(
+    'plants',
+    plant('plant-rose', 'Rosier', { zoneId: 'zone-a', planX: 200, planY: 300, width: 150 })
+  );
+}
+
+const serverZone = (api, id) =>
+  api.server.rows.find((r) => r.table === 'zones' && r.row.id === id)?.row;
+const pushedPolygon = (api, id) => {
+  const polygon = serverZone(api, id)?.polygon;
+  return polygon ? JSON.parse(polygon) : polygon;
+};
+const near = (actual, expected, tolerance = 25) =>
+  expect(Math.abs(actual - expected)).toBeLessThan(tolerance);
+
+async function drag(page, from, to) {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 3, from.y + 3, { steps: 2 });
+  await page.mouse.move(to.x, to.y, { steps: 10 });
+  await page.mouse.up();
+}
+
+async function tapCorners(page, corners) {
+  for (const [x, y] of corners) {
+    const at = await planPoint(page, x, y);
+    await page.mouse.click(at.x, at.y);
+    await page.waitForTimeout(150);
+  }
+}
+
+// A press held still on the plan (no movement): the zone under it is edited.
+async function holdAt(page, point) {
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await page.waitForTimeout(900);
+  await page.mouse.up();
+}
+
+test.describe('drawing zones (ticket 107)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('tap four corners, undo one, finish, pick a zone without outline', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedDrawGarden(api);
+    await page.goto('/plan');
+    await expect(visibleText(page, '15 × 25 m · 3 zones · 1 plante placée')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Tracer une zone' }).click();
+    await expect(page.getByText(/Touchez chaque coin de la zone/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Terminer la zone' })).toBeDisabled();
+
+    await tapCorners(page, [
+      [800, 1000],
+      [1400, 1000],
+      [1400, 1700],
+    ]);
+    await expect(visibleText(page, 'Nouvelle zone · 3 coins')).toBeVisible();
+    await expect(visibleText(page, '6 m')).toBeVisible();
+    await expect(visibleText(page, '7 m')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Terminer la zone' })).toBeEnabled();
+
+    await tapCorners(page, [[300, 2000]]);
+    await expect(visibleText(page, 'Nouvelle zone · 4 coins')).toBeVisible();
+    await page.getByRole('button', { name: 'Retirer le dernier coin' }).click();
+    await expect(visibleText(page, 'Nouvelle zone · 3 coins')).toBeVisible();
+    await tapCorners(page, [[800, 1700]]);
+    await expect(visibleText(page, 'Nouvelle zone · 4 coins')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Terminer la zone' }).click();
+    await expect(visibleText(page, 'Pour quelle zone ?')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Façade nord' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Potager' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '+ Nouvelle zone' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Massif sud' })).toHaveCount(0);
+    await expect(visibleText(page, 'Seules les zones sans tracé sont proposées.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Potager' }).click();
+    await page.getByRole('button', { name: 'Enregistrer la zone' }).click();
+
+    await expect(page.getByText('Potager')).toBeVisible();
+    await expect(visibleText(page, '15 × 25 m · 3 zones · 1 plante placée')).toBeVisible();
+    await expect.poll(() => pushedPolygon(api, 'zone-d'), { timeout: 20000 }).not.toBeNull();
+    const polygon = pushedPolygon(api, 'zone-d');
+    expect(polygon).toHaveLength(4);
+    near(polygon[0][0], 800);
+    near(polygon[0][1], 1000);
+    near(polygon[2][0], 1400);
+    near(polygon[2][1], 1700);
+    // The rose sits in Massif sud and stays there.
+    expect(serverPlant(api, 'plant-rose').zoneId).toBe('zone-a');
+  });
+
+  test('a rectangle by its sides is placed, dragged, then saved', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedDrawGarden(api);
+    await page.goto('/plan');
+
+    await page.getByRole('button', { name: 'Tracer une zone' }).click();
+    await page.getByRole('button', { name: 'Rectangle par cotes' }).click();
+    await expect(visibleText(page, 'Zone en rectangle')).toBeVisible();
+    await expect(
+      visibleText(page, '6 m² · posé en bas du plan, glissez-le à sa place.')
+    ).toBeVisible();
+
+    await page.getByLabel('Largeur (m)').fill('abc');
+    await expect(visibleText(page, 'Valeur invalide, par exemple 12,5.')).toBeVisible();
+    await page.getByLabel('Largeur (m)').fill('4');
+    await page.getByLabel('Longueur (m)').fill('1,5');
+    await page.getByRole('button', { name: 'Façade nord' }).click();
+    await page.getByRole('button', { name: 'Poser sur le plan' }).click();
+
+    const handle = page.getByLabel('Rectangle à déplacer');
+    await expect(handle).toBeVisible();
+    const before = await handle.boundingBox();
+    await drag(
+      page,
+      { x: before.x + before.width / 2, y: before.y + before.height / 2 },
+      { x: before.x + before.width / 2 + 60, y: before.y + before.height / 2 - 150 }
+    );
+    const after = await handle.boundingBox();
+    expect(after.x - before.x).toBeGreaterThan(40);
+    expect(before.y - after.y).toBeGreaterThan(100);
+
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect.poll(() => pushedPolygon(api, 'zone-c'), { timeout: 20000 }).not.toBeNull();
+    const polygon = pushedPolygon(api, 'zone-c');
+    expect(polygon[1][0] - polygon[0][0]).toBe(400);
+    expect(polygon[2][1] - polygon[1][1]).toBe(150);
+    expect(polygon[0][0]).toBeGreaterThan(100);
+    await expect(page.getByText('6 m²')).toBeVisible();
+  });
+
+  test('a new zone asks for its name and is created with its outline', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedDrawGarden(api);
+    await page.goto('/plan');
+
+    await page.getByRole('button', { name: 'Tracer une zone' }).click();
+    await tapCorners(page, [
+      [800, 1000],
+      [1400, 1000],
+      [1400, 1700],
+    ]);
+    await page.getByRole('button', { name: 'Terminer la zone' }).click();
+    await page.getByRole('button', { name: '+ Nouvelle zone' }).click();
+    await page.getByRole('button', { name: 'Enregistrer la zone' }).click();
+    await expect(visibleText(page, 'Donnez un nom à la zone.')).toBeVisible();
+    await page.getByLabel('Nom de la nouvelle zone').fill('Rocaille');
+    await page.getByRole('button', { name: 'Enregistrer la zone' }).click();
+
+    await expect(page.getByText('Rocaille')).toBeVisible();
+    await expect(visibleText(page, '15 × 25 m · 4 zones · 1 plante placée')).toBeVisible();
+    await expect
+      .poll(() => api.server.rows.find((r) => r.table === 'zones' && r.row.name === 'Rocaille'), {
+        timeout: 20000,
+      })
+      .toBeTruthy();
+    const created = api.server.rows.find((r) => r.row.name === 'Rocaille').row;
+    expect(JSON.parse(created.polygon)).toHaveLength(3);
+  });
+
+  test('a long press edits a zone: drag a corner, finish; then erase the outline', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedDrawGarden(api);
+    await page.goto('/plan');
+    await expect(page.getByText('48 m²')).toBeVisible();
+
+    const spot = await planPoint(page, 500, 700);
+    await holdAt(page, spot);
+    await expect(visibleText(page, 'Modifier la zone')).toBeVisible();
+    await expect(visibleText(page, 'Glissez un coin pour le déplacer.')).toBeVisible();
+    await expect(page.getByLabel('Coin 3')).toBeVisible();
+
+    const corner = await planPoint(page, 600, 800);
+    await drag(page, corner, { x: corner.x + 40, y: corner.y });
+    await expect(page.getByText('48 m²')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+
+    await expect
+      .poll(() => pushedPolygon(api, 'zone-a')?.[2]?.[0], { timeout: 20000 })
+      .toBeGreaterThan(700);
+    // Only the dragged corner moved.
+    expect(pushedPolygon(api, 'zone-a')[1]).toEqual([600, 0]);
+    expect(pushedPolygon(api, 'zone-a')[0]).toEqual([0, 0]);
+    expect(serverPlant(api, 'plant-rose').zoneId).toBe('zone-a');
+
+    await holdAt(page, spot);
+    await expect(visibleText(page, 'Modifier la zone')).toBeVisible();
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Effacer le tracé' }).click();
+
+    await expect.poll(() => serverZone(api, 'zone-a')?.polygon, { timeout: 20000 }).toBeNull();
+    await expect(page.getByText('Massif sud')).toHaveCount(0);
+    expect(serverPlant(api, 'plant-rose').zoneId).toBe('zone-a');
+  });
+});

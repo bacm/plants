@@ -1,7 +1,7 @@
 ---
 id: 107
 title: Draw garden zones on the plan
-status: open
+status: in-progress
 priority: P2
 type: feature
 ---
@@ -18,16 +18,16 @@ where it is placed.
 
 ## Acceptance criteria
 
-- [ ] "Tracer une zone": tapping each corner places it, each side shows its
+- [x] "Tracer une zone": tapping each corner places it, each side shows its
       length in metres, "Retirer le dernier coin" undoes one, "Terminer la
       zone" closes the shape (at least 3 corners, not degenerate)
-- [ ] "Rectangle par cotes": width × length in metres gives a rectangle placed
+- [x] "Rectangle par cotes": width × length in metres gives a rectangle placed
       on the plan, then dragged into place
-- [ ] Before saving, "Pour quelle zone ?" offers the zones without an outline
+- [x] Before saving, "Pour quelle zone ?" offers the zones without an outline
       and "+ Nouvelle zone" (which creates it)
-- [ ] Editing a zone shows a handle on every corner to drag, its area, "Effacer
+- [x] Editing a zone shows a handle on every corner to drag, its area, "Effacer
       le tracé" and "Terminer"
-- [ ] Plants inside a new or changed outline are not moved; their zone is not
+- [x] Plants inside a new or changed outline are not moved; their zone is not
       changed silently (only moving a plant changes its zone, 106)
 - [ ] Synced phone ⇄ web; matches the artboards PlanTracer, PlanRectangle and
       PlanModifierZone; `npm run verify` and `npm run e2e:web` pass
