@@ -158,6 +158,28 @@ test.describe('garden plan (ticket 106)', () => {
     await expect(page).toHaveURL(/\/plant\/plant-rose/);
   });
 
+  test('a selected plant shows its distances to the zone sides (ticket 122)', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedGarden(api);
+    await page.goto('/plan');
+
+    await page.getByLabel('Plante Rosier ‘Pierre de Ronsard’').click();
+    // The rose stands at (200, 300) in the 600 x 800 cm 'Massif sud'.
+    await expect(visibleText(page, '2 m')).toBeVisible();
+    await expect(visibleText(page, '4 m')).toBeVisible();
+    await expect(visibleText(page, '3 m')).toBeVisible();
+    await expect(visibleText(page, '5 m')).toBeVisible();
+
+    await page.waitForTimeout(400);
+    const empty = await planPoint(page, 800, 2000);
+    await page.mouse.click(empty.x, empty.y);
+    await expect(visibleText(page, '5 m')).toHaveCount(0);
+    await expect(visibleText(page, '4 m')).toHaveCount(0);
+  });
+
   test('the bubble sizes the plant on the plan: + and -, typed metres, synced', async ({
     context,
     page,

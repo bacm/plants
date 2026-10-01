@@ -31,6 +31,9 @@ import {
   toScreen,
   toPlan,
   zoneAt,
+  edgeDistances,
+  formatDistance,
+  rectanglePolygon,
   dotDiameterPx,
   formatArea,
   formatLength,
@@ -798,6 +801,19 @@ export function PlanCanvas({
       ghostAt = toScreen(ghostPoint, view);
     }
   }
+  // Ticket 122: distances from the dragged ghost, else the selected plant, to
+  // the sides of the zone under that point (the garden border when in none).
+  const measured =
+    draft || !view
+      ? null
+      : ghostPoint || (selected ? { x: selected.planX, y: selected.planY } : null);
+  const distances = measured
+    ? edgeDistances(
+        measured,
+        zoneAt(measured, parsedZones)?.polygon ||
+          rectanglePolygon({ x: 0, y: 0, widthCm: plan.widthCm, lengthCm: plan.lengthCm })
+      )
+    : [];
   const highlightId = ghostPoint ? (zoneAt(ghostPoint, parsedZones)?.id ?? null) : null;
   const ghostRefused = !!ghostPoint && !!featureAt(ghostPoint, features);
   const drawerHeight = draft ? sheetH : unplaced.length ? drawerH : 0;
@@ -946,6 +962,15 @@ export function PlanCanvas({
                       />
                     );
                   })}
+                  {measured ? (
+                    <EdgeDistances
+                      point={measured}
+                      distances={distances}
+                      scale={drawScale}
+                      pxPerCm={view.scale}
+                      unit={unit}
+                    />
+                  ) : null}
                 </Svg>
               </View>
               {draft ? (
@@ -1201,6 +1226,52 @@ function FeatureLabel({ text, lx, ly, unit }) {
       {text}
     </SvgText>
   );
+}
+
+// Dashed dimension lines from a point to the zone sides (ticket 122).
+function EdgeDistances({ point, distances, scale, pxPerCm, unit }) {
+  return distances
+    .filter((d) => d.cm * pxPerCm >= 4)
+    .map(({ dir, cm, to }) => {
+      const x1 = point.x * scale;
+      const y1 = point.y * scale;
+      const x2 = to.x * scale;
+      const y2 = to.y * scale;
+      const horizontal = dir === 'left' || dir === 'right';
+      const tick = 3 * unit;
+      return (
+        <G key={dir}>
+          <Line
+            x1={x1}
+            y1={y1}
+            x2={x2}
+            y2={y2}
+            stroke={colors.planInk}
+            strokeWidth={1.25 * unit}
+            strokeDasharray={`${4 * unit} ${3 * unit}`}
+          />
+          <Line
+            x1={horizontal ? x2 : x2 - tick}
+            y1={horizontal ? y2 - tick : y2}
+            x2={horizontal ? x2 : x2 + tick}
+            y2={horizontal ? y2 + tick : y2}
+            stroke={colors.planInk}
+            strokeWidth={1.25 * unit}
+          />
+          <SvgText
+            testID={`plan-distance-${dir}`}
+            x={horizontal ? (x1 + x2) / 2 : x1 + 4 * unit}
+            y={horizontal ? y1 - 4 * unit : (y1 + y2) / 2 + 4 * unit}
+            textAnchor={horizontal ? 'middle' : 'start'}
+            fontSize={11 * unit}
+            fontFamily={FONT_BOLD}
+            fill={colors.planInk}
+            {...HALO(unit)}>
+            {formatDistance(cm)}
+          </SvgText>
+        </G>
+      );
+    });
 }
 
 function Zone({ zone, points, unit, highlighted, dim }) {
