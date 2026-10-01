@@ -54,7 +54,7 @@ import {
   nextPlanSize,
   parsePlanSizeInput,
 } from '../../lib/planView';
-import { hitCorner, placeRectangle } from '../../lib/zoneDraw';
+import { hitCorner, hitSide, placeRectangle } from '../../lib/zoneDraw';
 import {
   featureAt,
   featureLabel,
@@ -290,6 +290,10 @@ export function PlanCanvas({
   onDraftChange,
   onEditZone,
   onBack,
+  // Ticket 113: a tap on a side's length pill calls `onSidePress(index)`; the
+  // pill being typed into reports through `sideEdit` { onChange, onSubmit }.
+  onSidePress,
+  sideEdit,
   // Ticket 110: garden elements. `features` are { id, kind, label, polygon }
   // with the polygon parsed. A long press on one (where no zone covers it)
   // edits it; a plant dropped on one is refused through `onRefuse`.
@@ -354,6 +358,7 @@ export function PlanCanvas({
     onEditZone,
     onEditFeature,
     onRefuse,
+    onSidePress,
   };
 
   useImperativeHandle(controller, () => ({
@@ -390,9 +395,22 @@ export function PlanCanvas({
     setSelectedId(id);
   }, []);
   const backgroundTap = useCallback((x, y) => {
-    Keyboard.dismiss();
     const { draft: d, view: v, plan: p, snapEnabled: snap } = latest.current;
+    // Ticket 113: a length pill is tapped to type into it (while tracing, only the
+    // last side's); a tap on the one being typed into must not close its keyboard.
+    const sideIndex =
+      d && (d.kind === 'trace' || d.kind === 'edit' || d.kind === 'feature')
+        ? hitSide(d.polygon, d.kind !== 'trace', { x, y }, v)
+        : -1;
+    const tappable = d?.kind === 'trace' ? d.polygon.length - 2 : sideIndex;
+    if (sideIndex >= 0 && sideIndex === tappable && !(d.kind === 'trace' && d.closed)) {
+      if (d.side?.index !== sideIndex) latest.current.onSidePress?.(sideIndex);
+      return;
+    }
+    Keyboard.dismiss();
     if (d) {
+      // Typing a side's length: a tap elsewhere only closes the keyboard.
+      if (d.side) return;
       // Drawing: a tap places a corner (not on top of one already there).
       if (d.kind === 'trace' && !d.closed && hitCorner(d.polygon, { x, y }, v, HIT_PX / 2) < 0) {
         latest.current.onAddCorner(toPlan({ x, y }, v), p, snap);
@@ -807,6 +825,7 @@ export function PlanCanvas({
                   unit={unit}
                   pad={PAD}
                   drag={draftHandlers}
+                  sideEdit={sideEdit}
                 />
               ) : null}
             </Animated.View>

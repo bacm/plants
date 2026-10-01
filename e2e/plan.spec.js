@@ -545,7 +545,9 @@ test.describe('drawing zones (ticket 107)', () => {
     seedDrawGarden(api);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 500, 700));
-    await expect(visibleText(page, 'Modifier la zone')).toBeVisible();
+    await expect(
+      visibleText(page, 'Modifier la zone · touchez une longueur pour la saisir')
+    ).toBeVisible();
     await expect(
       visibleText(
         page,
@@ -660,7 +662,9 @@ test.describe('drawing zones (ticket 107)', () => {
 
     const spot = await planPoint(page, 500, 700);
     await holdAt(page, spot);
-    await expect(visibleText(page, 'Modifier la zone')).toBeVisible();
+    await expect(
+      visibleText(page, 'Modifier la zone · touchez une longueur pour la saisir')
+    ).toBeVisible();
     await expect(page.getByText(/Glissez un coin, ou saisissez les dimensions\./)).toBeVisible();
     await expect(page.getByTestId('plan-dim-width')).toHaveValue('6');
     await expect(page.getByTestId('plan-dim-length')).toHaveValue('8');
@@ -683,7 +687,9 @@ test.describe('drawing zones (ticket 107)', () => {
     expect(serverPlant(api, 'plant-rose').zoneId).toBe('zone-a');
 
     await holdAt(page, spot);
-    await expect(visibleText(page, 'Modifier la zone')).toBeVisible();
+    await expect(
+      visibleText(page, 'Modifier la zone · touchez une longueur pour la saisir')
+    ).toBeVisible();
     page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Effacer le tracé' }).click();
 
@@ -803,7 +809,9 @@ test.describe('garden elements (ticket 110)', () => {
     await expect(page.getByText('Terrasse sud')).toBeVisible();
 
     await holdAt(page, await planPoint(page, 600, 1300));
-    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+    await expect(
+      visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
+    ).toBeVisible();
     await expect(visibleText(page, '20 m²')).toBeVisible();
     await expect(
       visibleText(
@@ -840,7 +848,9 @@ test.describe('garden elements (ticket 110)', () => {
     seedFeatureGarden(api);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 600, 1300));
-    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+    await expect(
+      visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
+    ).toBeVisible();
 
     await page.getByTestId('plan-dim-width').fill('6,2');
     await page.getByTestId('plan-dim-length').fill('5,3');
@@ -870,7 +880,9 @@ test.describe('garden elements (ticket 110)', () => {
     seedFeatureGarden(api);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 600, 1300));
-    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+    await expect(
+      visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Type et nom' }).click();
     await page.getByRole('button', { name: 'Bassin', exact: true }).click();
     await page.getByLabel('Nom (facultatif)').fill('');
@@ -928,11 +940,15 @@ test.describe('garden elements (ticket 110)', () => {
     await expect(page.getByText('Terrasse sud')).toBeVisible();
 
     await holdAt(page, await planPoint(page, 600, 1300));
-    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+    await expect(
+      visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
+    ).toBeVisible();
     // Dismissing the confirmation keeps the element.
     page.once('dialog', (dialog) => dialog.dismiss());
     await page.getByRole('button', { name: 'Supprimer' }).click();
-    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+    await expect(
+      visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
+    ).toBeVisible();
 
     page.once('dialog', (dialog) => dialog.accept());
     await page.getByRole('button', { name: 'Supprimer' }).click();
@@ -940,5 +956,186 @@ test.describe('garden elements (ticket 110)', () => {
     await expect
       .poll(() => serverFeature(api, 'feature-terrace').deletedAt, { timeout: 20000 })
       .not.toBeNull();
+  });
+});
+
+// Ticket 113: typing a side's length. The pills are drawn without a hit target of
+// their own (the canvas finds the one under a tap), so they are clicked at the
+// spot where they sit: 16 px outside the side's middle.
+function seedSideGarden(api) {
+  const { server } = api;
+  server.seed('garden_plan', {
+    id: 'main',
+    widthCm: 1500,
+    lengthCm: 2500,
+    updatedAt: STAMP,
+    deletedAt: null,
+  });
+  server.seed('zones', zone('zone-p', 'Potager', rect(300, 1000, 700, 600), 0));
+  server.seed('zones', zone('zone-c', 'Façade nord', null, 1));
+  server.seed('plan_features', {
+    id: 'feature-terrace',
+    kind: 'terrace',
+    label: 'Terrasse sud',
+    polygon: rect(500, 1800, 500, 400),
+    updatedAt: STAMP,
+    deletedAt: null,
+  });
+}
+
+async function clickTopPill(page, midXCm, topYCm) {
+  const at = await planPoint(page, midXCm, topYCm);
+  await page.mouse.click(at.x, at.y - 16);
+}
+
+const SIDE_TEXT =
+  'Longueur du côté du haut : la forme s’étire de ce côté, les côtés parallèles le restent.';
+const EDIT_ZONE = 'Modifier la zone · touchez une longueur pour la saisir';
+
+test.describe('typing a side length (ticket 113)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('a zone: the top side 7 -> 8,5 m shows 42 -> 51 m2, then Valider and Terminer', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedSideGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 650, 1300));
+    await expect(visibleText(page, EDIT_ZONE)).toBeVisible();
+
+    await clickTopPill(page, 650, 1000);
+    const input = page.getByLabel('Longueur du côté du haut, en mètres');
+    await expect(input).toHaveValue('7');
+    await expect(visibleText(page, SIDE_TEXT)).toBeVisible();
+    await expect(visibleText(page, '42 m² → 42 m²')).toBeVisible();
+    await input.fill('8,5');
+    await expect(visibleText(page, '42 m² → 51 m²')).toBeVisible();
+    await shot(page, 'cote');
+
+    // Annuler keeps the shape.
+    await page.getByRole('button', { name: 'Annuler' }).click();
+    await expect(page.getByLabel('Longueur du côté du haut, en mètres')).toHaveCount(0);
+    await expect(visibleText(page, '42 m²').first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Terminer', exact: true })).toBeVisible();
+
+    await clickTopPill(page, 650, 1000);
+    await page.getByLabel('Longueur du côté du haut, en mètres').fill('8,5');
+    await page.getByRole('button', { name: 'Valider' }).click();
+    await expect(visibleText(page, '51 m²').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+
+    await expect.poll(() => pushedPolygon(api, 'zone-p')?.[1]?.[0], { timeout: 20000 }).toBe(1150);
+    expect(pushedPolygon(api, 'zone-p')).toEqual([
+      [300, 1000],
+      [1150, 1000],
+      [1150, 1600],
+      [300, 1600],
+    ]);
+  });
+
+  test('zero and out-of-plan lengths are refused in French; Valider stays disabled', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedSideGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 650, 1300));
+    await clickTopPill(page, 650, 1000);
+    const input = page.getByLabel('Longueur du côté du haut, en mètres');
+    await input.fill('0');
+    await expect(page.getByText('Doit être supérieur à 0.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Valider' })).toBeDisabled();
+    await input.fill('abc');
+    await expect(page.getByText('Valeur invalide, par exemple 12,5.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Valider' })).toBeDisabled();
+    await input.fill('20');
+    await expect(page.getByText('Trop grand pour le plan.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Valider' })).toBeDisabled();
+    await input.fill('5');
+    await expect(page.getByRole('button', { name: 'Valider' })).toBeEnabled();
+  });
+
+  test('an element: the top side 5 -> 6 m stretches the terrace', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedSideGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 750, 2000));
+    await expect(
+      visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
+    ).toBeVisible();
+    await clickTopPill(page, 750, 1800);
+    await page.getByLabel('Longueur du côté du haut, en mètres').fill('6');
+    await expect(visibleText(page, '20 m² → 24 m²')).toBeVisible();
+    await page.getByRole('button', { name: 'Valider' }).click();
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect
+      .poll(() => JSON.parse(serverFeature(api, 'feature-terrace').polygon)[1][0], {
+        timeout: 20000,
+      })
+      .toBe(1100);
+    expect(JSON.parse(serverFeature(api, 'feature-terrace').polygon)).toEqual([
+      [500, 1800],
+      [1100, 1800],
+      [1100, 2200],
+      [500, 2200],
+    ]);
+  });
+
+  test('tracing: the last side can be set to 3 m', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedSideGarden(api);
+    await page.goto('/plan');
+    await page.getByRole('button', { name: 'Ajouter' }).click();
+    await page.getByRole('button', { name: 'Une zone de plantes' }).click();
+    await tapCorners(page, [
+      [400, 300],
+      [800, 300],
+    ]);
+    await clickTopPill(page, 600, 300);
+    await page.getByLabel(/^Longueur du côté .*, en mètres$/).fill('3');
+    await page.getByRole('button', { name: 'Valider' }).click();
+    await expect(visibleText(page, '3 m')).toBeVisible();
+    await tapCorners(page, [
+      [700, 900],
+      [400, 900],
+    ]);
+    await page.getByRole('button', { name: 'Terminer la zone' }).click();
+    await page.getByRole('button', { name: 'Façade nord' }).click();
+    await page.getByRole('button', { name: 'Enregistrer la zone' }).click();
+    await expect.poll(() => pushedPolygon(api, 'zone-c'), { timeout: 20000 }).not.toBeNull();
+    const polygon = pushedPolygon(api, 'zone-c');
+    expect(polygon).toHaveLength(4);
+    expect(polygon[1][0] - polygon[0][0]).toBe(300);
+    expect(polygon[1][1]).toBe(polygon[0][1]);
+  });
+
+  test('magnet off: a traced corner placed at about 86 degrees ends exactly square', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedSideGarden(api);
+    await page.goto('/plan');
+    await page.getByRole('button', { name: 'Ajouter' }).click();
+    await page.getByRole('button', { name: 'Une zone de plantes' }).click();
+    await page.getByRole('button', { name: 'Aimanter les plantes à la grille (activé)' }).click();
+    await tapCorners(page, [
+      [413, 317],
+      [1013, 317],
+      [1083, 1117],
+    ]);
+    await page.getByRole('button', { name: 'Terminer la zone' }).click();
+    await page.getByRole('button', { name: 'Façade nord' }).click();
+    await page.getByRole('button', { name: 'Enregistrer la zone' }).click();
+    await expect.poll(() => pushedPolygon(api, 'zone-c'), { timeout: 20000 }).not.toBeNull();
+    const [a, b, c] = pushedPolygon(api, 'zone-c');
+    expect((b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1])).toBe(0);
+    // Not grid snapped: the magnet is off.
+    expect(a[0] % 50 !== 0 || a[1] % 50 !== 0).toBe(true);
   });
 });

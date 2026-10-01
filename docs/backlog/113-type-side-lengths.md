@@ -19,19 +19,19 @@ fastest way to get an accurate plan.
 
 ## Acceptance criteria
 
-- [ ] While tracing a zone and while editing a zone or an element, tapping a
+- [x] While tracing a zone and while editing a zone or an element, tapping a
       side's length pill turns it into a field (metres, French decimals);
       "Valider" applies it, "Annuler" restores the shape
-- [ ] The shape stretches: the corners lying past the side's midpoint, along
+- [x] The shape stretches: the corners lying past the side's midpoint, along
       the side's direction, move by the difference; the others stay, so a
       rectangle stays a rectangle and parallel sides stay parallel; the sheet
       shows the area before and after ("42 m² → 51 m²")
-- [ ] While tracing, the last drawn side can be set the same way (its end
+- [x] While tracing, the last drawn side can be set the same way (its end
       corner moves along the side's direction)
-- [ ] With the magnet off, a new or dragged side within 8° of perpendicular
+- [x] With the magnet off, a new or dragged side within 8° of perpendicular
       to its neighbour snaps to 90°; with the magnet on, grid snapping applies
       instead
-- [ ] Invalid, zero or out-of-plan lengths are refused in French; works for
+- [x] Invalid, zero or out-of-plan lengths are refused in French; works for
       zones and elements, on the phone and the web; matches the PlanCote
       artboard; `npm run verify` and `npm run e2e:web` pass
 - [ ] Checked on the owner's iPhone

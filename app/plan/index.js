@@ -20,6 +20,7 @@ import {
   AddSheet,
   ElementSheet,
   FeatureEditSheet,
+  SideSheet,
   NEW_ZONE,
 } from '../../components/plan/PlanSheets';
 import Icon from '../../components/Icon';
@@ -43,7 +44,13 @@ import {
   setSetting,
 } from '../../lib/db';
 import { DEFAULT_ZONE_ICON } from '../../lib/enums';
-import { parsePolygon, isValidPolygon, polygonAreaM2, formatArea } from '../../lib/gardenPlan';
+import {
+  parsePolygon,
+  isValidPolygon,
+  polygonAreaM2,
+  formatArea,
+  formatLength,
+} from '../../lib/gardenPlan';
 import {
   addCorner,
   removeLastCorner,
@@ -54,6 +61,8 @@ import {
   polygonProblem,
   polygonBounds,
   resizePolygon,
+  typedSide,
+  sideLabel,
 } from '../../lib/zoneDraw';
 import {
   planSummary,
@@ -276,12 +285,41 @@ export default function PlanScreen() {
               ...d,
               polygon,
               moved: true,
+              side: null,
               ...(d.dims ? { base: polygon, dims: dimsOf(polygon) } : {}),
             }
           : d
       ),
     []
   );
+  // Ticket 113: tapping a side's pill opens its length for typing; Valider
+  // applies it (the shape then waits for the mode's own save, like a dragged
+  // corner or typed dimensions), Annuler keeps the shape as it was.
+  const pressSide = useCallback((index) => {
+    setDraft((d) => {
+      if (!d || d.kind === 'rect' || d.kind === 'element') return d;
+      const open = d.kind === 'trace';
+      if (open && (d.closed || index !== d.polygon.length - 2)) return d;
+      const [from, to] = [d.polygon[index], d.polygon[(index + 1) % d.polygon.length]];
+      if (!from || !to) return d;
+      const cm = Math.hypot(to[0] - from[0], to[1] - from[1]);
+      return {
+        ...d,
+        side: {
+          index,
+          open,
+          text: metresText(cm),
+          lengthCm: cm,
+          name: open ? 'tracé' : sideLabel(d.polygon, index),
+        },
+      };
+    });
+  }, []);
+  const changeSideText = useCallback(
+    (text) => setDraft((d) => (d?.side ? { ...d, side: { ...d.side, text } } : d)),
+    []
+  );
+  const cancelSide = useCallback(() => setDraft((d) => (d ? { ...d, side: null } : d)), []);
   const patchDraft = useCallback((patch) => setDraft((d) => (d ? { ...d, ...patch } : d)), []);
   const startElement = useCallback(() => {
     setAdding(false);
@@ -550,6 +588,17 @@ export default function PlanScreen() {
       );
   };
 
+  // Ticket 113: the stretched shape for the length typed in a pill, if any.
+  const sideResult = draft?.side
+    ? typedSide(draft.polygon, draft.side.index, draft.side.text, data.plan, {
+        open: draft.side.open,
+      })
+    : null;
+  const submitSide = () => {
+    if (sideResult?.polygon) changeDraft(sideResult.polygon);
+  };
+  const canvasDraft = draft?.side ? { ...draft, sidePreview: sideResult?.polygon ?? null } : draft;
+
   let sheet = null;
   let subtitle = planSummary(data.plan, data.zones.length, placed);
   if (draft?.kind === 'trace') {
@@ -611,7 +660,7 @@ export default function PlanScreen() {
       />
     );
   } else if (draft?.kind === 'feature') {
-    subtitle = 'Modifier l’élément';
+    subtitle = 'Modifier l’élément · touchez une longueur pour la saisir';
     sheet = (
       <FeatureEditSheet
         title={featureLabel({ kind: draft.featureKind, label: draft.label })}
@@ -633,7 +682,7 @@ export default function PlanScreen() {
       />
     );
   } else if (draft?.kind === 'edit') {
-    subtitle = 'Modifier la zone';
+    subtitle = 'Modifier la zone · touchez une longueur pour la saisir';
     sheet = (
       <EditSheet
         name={data.zones.find((z) => z.id === draft.zoneId)?.name ?? ''}
@@ -646,6 +695,43 @@ export default function PlanScreen() {
         saving={saving}
         onErase={eraseOutline}
         onFinish={() => finish(draft.zoneId, '')}
+      />
+    );
+  }
+
+  if (draft?.side) {
+    const { side } = draft;
+    const edited =
+      draft.kind === 'feature'
+        ? featureLabel({ kind: draft.featureKind, label: draft.label })
+        : null;
+    const name =
+      draft.kind === 'trace'
+        ? 'Nouvelle zone'
+        : (edited ?? data.zones.find((z) => z.id === draft.zoneId)?.name ?? '');
+    const after = sideResult?.polygon;
+    const changeText = side.open
+      ? `${formatLength(side.lengthCm)} → ${
+          after
+            ? formatLength(
+                Math.hypot(...after[side.index + 1].map((v, i) => v - after[side.index][i]))
+              )
+            : '—'
+        }`
+      : `${formatArea(polygonAreaM2(draft.polygon))} → ${after ? formatArea(polygonAreaM2(after)) : '—'}`;
+    sheet = (
+      <SideSheet
+        name={name}
+        changeText={changeText}
+        explanation={
+          side.open
+            ? 'Longueur du dernier côté : le dernier coin se déplace le long de ce côté.'
+            : `Longueur du côté ${side.name} : la forme s’étire de ce côté, les côtés parallèles le restent.`
+        }
+        error={sideResult?.error ?? null}
+        canSubmit={!!after}
+        onCancel={cancelSide}
+        onSubmit={submitSide}
       />
     );
   }
@@ -663,8 +749,10 @@ export default function PlanScreen() {
         features={data.features}
         plants={data.plants}
         summary={subtitle}
-        draft={draft}
+        draft={canvasDraft}
         sheet={sheet}
+        onSidePress={pressSide}
+        sideEdit={{ onChange: changeSideText, onSubmit: submitSide }}
         controller={controller}
         onAdd={() => setAdding(true)}
         scrim={adding && !draft}

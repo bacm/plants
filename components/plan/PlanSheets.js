@@ -359,6 +359,51 @@ export function EditSheet({
   );
 }
 
+/**
+ * A side's length being typed (ticket 113, PlanCote artboard): the name, what
+ * the typed length does (area before -> after, or the length while tracing),
+ * the explanation, an inline error, then Annuler / Valider.
+ */
+export function SideSheet({
+  name,
+  changeText,
+  explanation,
+  error,
+  canSubmit,
+  onCancel,
+  onSubmit,
+  onLayout,
+}) {
+  return (
+    <Sheet onLayout={onLayout} sheetStyle={styles.edit} scroll>
+      <View style={styles.nameRow}>
+        <Text style={styles.editName} numberOfLines={1}>
+          {name}
+        </Text>
+        <Text style={styles.editArea} testID="plan-side-change">
+          {changeText}
+        </Text>
+      </View>
+      <Text style={styles.editHint}>{explanation}</Text>
+      {error ? (
+        <Text style={styles.dimError} accessibilityRole="alert">
+          {error}
+        </Text>
+      ) : null}
+      <View style={styles.row}>
+        <Button label="Annuler" onPress={onCancel} style={[styles.flex, styles.mid]} />
+        <Button
+          label="Valider"
+          kind="primary"
+          onPress={onSubmit}
+          disabled={!canSubmit}
+          style={[styles.flex, styles.mid]}
+        />
+      </View>
+    </Sheet>
+  );
+}
+
 /** The kinds of garden element, a single choice. */
 function KindChips({ value, onChange }) {
   return (
