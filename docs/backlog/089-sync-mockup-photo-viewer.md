@@ -1,7 +1,7 @@
 ---
 id: 089
 title: Bring the mock-up up to date with tickets 086 to 090
-status: open
+status: done
 priority: P2
 type: chore
 ---
@@ -33,10 +33,14 @@ reference for the next screens.
       overlayDark, small highlight `star`, top-left)
 - [x] Plant form bloom section gets an "Abondance" chip row (Insignifiante · Modérée ·
       Abondante), and bloom lists show insignificant blooms last and dimmed
-- [ ] Artboards compared against the app's web build at 390×844
+- [x] Artboards compared against the app's web build at 390×844
 
 ## Notes
 
 Needs a session with the Artifact tool (read `project/<Name>.dc.html`).
 The code is the reference: `app/sort.js`, `app/plant/[id].js` (lightbox
 header), `components/plant/PhotosTab.js` (`coverBadge`).
+
+Compared on 2026-10-01 (web build, 390×844): sort expand badge and full
+screen, cover badge, Abondance chips and dimmed insignificant blooms match.
+The viewer's ISO date and bare header buttons did not; fixed in 119.
