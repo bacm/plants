@@ -1,7 +1,7 @@
 ---
 id: 110
 title: Draw garden features that exist only on the plan
-status: in-progress
+status: done
 priority: P2
 type: feature
 ---
@@ -38,7 +38,7 @@ garden is hard to recognise.
       returns to its previous spot (or stays in "À placer") and a red banner
       says "Impossible de poser une plante sur <Élément>"
 - [x] Elements never appear in the Zones list and never change a plant's zone
-- [ ] Matches the artboards PlanAjouter, PlanElement, PlanElementModifier and
+- [x] Matches the artboards PlanAjouter, PlanElement, PlanElementModifier and
       PlanElements; `npm run verify`, server pytest and `npm run e2e:web` pass;
       the server deploy accepts the new table
 
