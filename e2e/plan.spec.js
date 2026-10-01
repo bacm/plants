@@ -6,6 +6,8 @@
 const { test, expect } = require('@playwright/test');
 const { mockAuthApi, visibleText, tabButton } = require('./helpers');
 
+const CORNER_HINT =
+  'Glissez un coin pour le déplacer, ou un « + » au milieu d’un côté pour y ajouter un sommet. Appui long sur un coin pour le supprimer.';
 const STAMP = '2026-05-01T10:00:00.000Z';
 // Ticket 110 review screenshots: only taken when SHOTS_DIR names a folder.
 async function shot(page, name) {
@@ -549,14 +551,11 @@ test.describe('drawing zones (ticket 107)', () => {
       visibleText(page, 'Modifier la zone · touchez une longueur pour la saisir')
     ).toBeVisible();
     await expect(
-      visibleText(
-        page,
-        'Glissez un coin, ou saisissez les dimensions. Aimant actif : les coins se calent (voir Aimantation).'
-      )
+      visibleText(page, `${CORNER_HINT} Aimant actif : les coins se calent (voir Aimantation).`)
     ).toBeVisible();
     // The magnet is reachable while editing; off, the hint loses its second sentence.
     await page.getByRole('button', { name: 'Aimanter les plantes à la grille (activé)' }).click();
-    await expect(visibleText(page, 'Glissez un coin, ou saisissez les dimensions.')).toBeVisible();
+    await expect(visibleText(page, CORNER_HINT)).toBeVisible();
     await page.getByTestId('plan-dim-width').fill('7,15');
     await page.getByTestId('plan-dim-length').fill('9');
     await page.getByRole('button', { name: 'Terminer', exact: true }).click();
@@ -665,7 +664,7 @@ test.describe('drawing zones (ticket 107)', () => {
     await expect(
       visibleText(page, 'Modifier la zone · touchez une longueur pour la saisir')
     ).toBeVisible();
-    await expect(page.getByText(/Glissez un coin, ou saisissez les dimensions\./)).toBeVisible();
+    await expect(page.getByText(CORNER_HINT)).toBeVisible();
     await expect(page.getByTestId('plan-dim-width')).toHaveValue('6');
     await expect(page.getByTestId('plan-dim-length')).toHaveValue('8');
     await expect(page.getByLabel('Coin 3')).toBeVisible();
@@ -804,7 +803,7 @@ test.describe('garden elements (ticket 110)', () => {
     page,
   }) => {
     // Ticket 114: the Aimantation block makes the edit sheet taller; a taller screen keeps the lower plan in view.
-    await page.setViewportSize({ width: 390, height: 1100 });
+    await page.setViewportSize({ width: 390, height: 1200 });
     const api = await mockAuthApi(context);
     seedFeatureGarden(api);
     await page.goto('/plan');
@@ -816,10 +815,7 @@ test.describe('garden elements (ticket 110)', () => {
     ).toBeVisible();
     await expect(visibleText(page, '20 m²')).toBeVisible();
     await expect(
-      visibleText(
-        page,
-        'Glissez un coin, ou saisissez les dimensions. Aimant actif : les coins se calent (voir Aimantation).'
-      )
+      visibleText(page, `${CORNER_HINT} Aimant actif : les coins se calent (voir Aimantation).`)
     ).toBeVisible();
     await expect(page.getByTestId('plan-dim-width')).toHaveValue('5');
     await expect(page.getByTestId('plan-dim-length')).toHaveValue('4');
@@ -963,7 +959,8 @@ test.describe('garden elements (ticket 110)', () => {
 
 // Ticket 113: typing a side's length. The pills are drawn without a hit target of
 // their own (the canvas finds the one under a tap), so they are clicked at the
-// spot where they sit: 16 px outside the side's middle.
+// spot where they sit: 26 px outside the side's middle (ticket 117 moved them out
+// from 16 px so that they stay clear of the "+" handle at the middle).
 function seedSideGarden(api) {
   const { server } = api;
   server.seed('garden_plan', {
@@ -988,7 +985,7 @@ function seedSideGarden(api) {
 
 async function clickTopPill(page, midXCm, topYCm) {
   const at = await planPoint(page, midXCm, topYCm);
-  await page.mouse.click(at.x, at.y - 16);
+  await page.mouse.click(at.x, at.y - 26);
 }
 
 const SIDE_TEXT =
@@ -997,7 +994,8 @@ const EDIT_ZONE = 'Modifier la zone · touchez une longueur pour la saisir';
 
 test.describe('typing a side length (ticket 113)', () => {
   test.beforeEach(async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
+    // Ticket 117: the edit sheet's hint is a line longer; a taller screen keeps the zone above it.
+    await page.setViewportSize({ width: 390, height: 1000 });
   });
 
   test('a zone: the top side 7 -> 8,5 m shows 42 -> 51 m2, then Valider and Terminer', async ({
@@ -1277,5 +1275,146 @@ test.describe('snapping to other shapes (ticket 114)', () => {
     const polygon = await finishEdit(page, api);
     expect(polygon[2]).not.toEqual([1013, 117]);
     expect(polygon[2][0] % 50 === 0 && polygon[2][1] % 50 === 0).toBe(false);
+  });
+});
+
+// Ticket 117: a "+" at the middle of each side adds a corner (tap, or drag to
+// place it); a long press on a corner offers "Supprimer ce sommet".
+// The edit sheet is tall at this size: the zone sits in the upper plan, clear of it.
+function seedCornerGarden(api) {
+  const { server } = api;
+  server.seed('garden_plan', {
+    id: 'main',
+    widthCm: 1500,
+    lengthCm: 2500,
+    updatedAt: STAMP,
+    deletedAt: null,
+  });
+  server.seed('zones', zone('zone-p', 'Potager', rect(100, 250, 500, 400), 0));
+  server.seed('plan_features', {
+    id: 'feature-terrace',
+    kind: 'terrace',
+    label: 'Terrasse sud',
+    polygon: rect(900, 250, 400, 300),
+    updatedAt: STAMP,
+    deletedAt: null,
+  });
+}
+
+test.describe('adding and removing corners (ticket 117)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  const corners = (page) => page.getByLabel(/^Coin \d+$/);
+  const pluses = (page) => page.getByLabel(/^Ajouter un sommet/);
+
+  async function longPress(page, point) {
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    await page.waitForTimeout(700);
+    await page.mouse.up();
+  }
+
+  test('a zone: tap a "+", drag a "+", long press to delete, disabled on a triangle', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedCornerGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 350, 450));
+    await expect(visibleText(page, EDIT_ZONE)).toBeVisible();
+    await expect(corners(page)).toHaveCount(4);
+    await expect(pluses(page)).toHaveCount(4);
+    await shot(page, 'plus-handles');
+
+    // A tap on the top side's "+" adds a corner at its middle.
+    const top = await planPoint(page, 350, 250);
+    await page.mouse.click(top.x, top.y);
+    await expect(corners(page)).toHaveCount(5);
+    await expect(pluses(page)).toHaveCount(5);
+
+    // Long press on that corner: the popover, then it is removed.
+    await longPress(page, top);
+    await shot(page, 'delete-popover');
+    await page.getByRole('button', { name: 'Supprimer ce sommet' }).click();
+    await expect(corners(page)).toHaveCount(4);
+    await expect(page.getByRole('button', { name: 'Supprimer ce sommet' })).toHaveCount(0);
+
+    // Dragging the right side's "+" outward: the area reads "before -> after".
+    const from = await planPoint(page, 600, 450);
+    const to = await planPoint(page, 800, 450);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.mouse.move(from.x + 3, from.y, { steps: 2 });
+    await page.mouse.move(to.x, to.y, { steps: 10 });
+    await expect(visibleText(page, '20 m² → 24 m²')).toBeVisible();
+    await shot(page, 'drag-new-corner');
+    await page.mouse.up();
+    await expect(corners(page)).toHaveCount(5);
+    await expect(visibleText(page, '20 m² → 24 m²')).toHaveCount(0);
+    await expect(visibleText(page, '24 m²').first()).toBeVisible();
+
+    // The length pills stay tappable (clear of the "+").
+    // Let the drag's commit settle; a finger never taps within the same frame.
+    await page.waitForTimeout(250);
+    await page.mouse.click(top.x, top.y - 26);
+    await expect(page.getByLabel('Longueur du côté du haut, en mètres')).toBeVisible();
+    await page.getByRole('button', { name: 'Annuler' }).click();
+
+    // Down to a triangle: the item is disabled there.
+    await longPress(page, to);
+    await page.getByRole('button', { name: 'Supprimer ce sommet' }).click();
+    await expect(corners(page)).toHaveCount(4);
+    await longPress(page, await planPoint(page, 100, 250));
+    await page.getByRole('button', { name: 'Supprimer ce sommet' }).click();
+    await expect(corners(page)).toHaveCount(3);
+    await longPress(page, await planPoint(page, 100, 650));
+    await expect(page.getByRole('button', { name: 'Supprimer ce sommet' })).toBeDisabled();
+    // A tap elsewhere closes it (not within the first moments, which are the long press's release).
+    await page.waitForTimeout(600);
+    const away = await planPoint(page, 1200, 700);
+    await page.mouse.click(away.x, away.y);
+    await expect(page.getByRole('button', { name: 'Supprimer ce sommet' })).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect.poll(() => pushedPolygon(api, 'zone-p')?.length, { timeout: 20000 }).toBe(3);
+  });
+
+  test('a zone: the dragged "+" corner is saved where it was dropped', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedCornerGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 350, 450));
+    await drag(page, await planPoint(page, 600, 450), await planPoint(page, 800, 450));
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect.poll(() => pushedPolygon(api, 'zone-p')?.length, { timeout: 20000 }).toBe(5);
+    const polygon = pushedPolygon(api, 'zone-p');
+    near(polygon[2][0], 800);
+    near(polygon[2][1], 450);
+  });
+
+  test('an element: tap a "+" adds a corner and it is saved', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedSideGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 1050, 400));
+    await expect(
+      visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
+    ).toBeVisible();
+    await expect(corners(page)).toHaveCount(4);
+    await page.mouse.click(...Object.values(await planPoint(page, 1300, 400)));
+    await expect(corners(page)).toHaveCount(5);
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect
+      .poll(() => JSON.parse(serverFeature(api, 'feature-terrace').polygon).length, {
+        timeout: 20000,
+      })
+      .toBe(5);
+    expect(JSON.parse(serverFeature(api, 'feature-terrace').polygon)[2]).toEqual([1300, 400]);
   });
 });

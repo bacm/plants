@@ -18,17 +18,17 @@ place is how the plan gets accurate.
 
 ## Acceptance criteria
 
-- [ ] While editing a zone or an element, each side shows a small dashed "+"
+- [x] While editing a zone or an element, each side shows a small dashed "+"
       at its midpoint; tapping it adds a corner there, dragging it adds the
       corner where it is released (with the magnet and object snapping of
       112/114, or the right-angle help of 113 with the magnet off)
-- [ ] During a corner drag the sheet shows the area before and after
+- [x] During a corner drag the sheet shows the area before and after
       ("42 m² → 49 m²"); the length pills stay tappable and never cover a "+"
-- [ ] A long press on a corner opens "Supprimer ce sommet"; it removes the
+- [x] A long press on a corner opens "Supprimer ce sommet"; it removes the
       corner, and is disabled when the shape has 3 corners
-- [ ] The new outline is saved and synced like any edited outline; works on
+- [x] The new outline is saved and synced like any edited outline; works on
       the phone and the web
-- [ ] Pure, Jest-tested helpers (insert at a side, remove, midpoints and
+- [x] Pure, Jest-tested helpers (insert at a side, remove, midpoints and
       their hit test); matches the PlanSommet and PlanSommetSupprimer
       artboards; `npm run verify` and `npm run e2e:web` pass
 - [ ] Checked on the owner's iPhone

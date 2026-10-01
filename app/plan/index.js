@@ -86,6 +86,16 @@ function dimsOf(polygon) {
   return { width: metresText(box.widthCm), length: metresText(box.lengthCm), error: null };
 }
 
+// Ticket 117: the hint under an edited zone or element.
+const CORNER_HINT =
+  'Glissez un coin pour le déplacer, ou un « + » au milieu d’un côté pour y ajouter un sommet. Appui long sur un coin pour le supprimer.';
+
+// The area shown in an edit sheet: "42 m² → 49 m²" while a corner is dragged.
+function areaText(draft) {
+  const now = formatArea(polygonAreaM2(draft.polygon));
+  return draft.dragFrom ? `${formatArea(polygonAreaM2(draft.dragFrom))} → ${now}` : now;
+}
+
 const UNDO_MS = 6000;
 // The red refusal banner (ticket 110) hides by itself a little sooner.
 const REFUSAL_MS = 5000;
@@ -298,12 +308,14 @@ export default function PlanScreen() {
   const changeDraft = useCallback(
     // A drag of an edited shape also refreshes its Dimensions fields and the
     // shape typed sizes are scaled from.
-    (polygon) =>
+    (polygon, dragFrom = null) =>
       setDraft((d) =>
         d
           ? {
               ...d,
               polygon,
+              // Ticket 117: while a corner is dragged, the outline it started from.
+              dragFrom,
               moved: true,
               side: null,
               ...(d.dims ? { base: polygon, dims: dimsOf(polygon) } : {}),
@@ -687,10 +699,10 @@ export default function PlanScreen() {
     sheet = (
       <FeatureEditSheet
         title={featureLabel({ kind: draft.featureKind, label: draft.label })}
-        areaText={formatArea(polygonAreaM2(draft.polygon))}
+        areaText={areaText(draft)}
         dims={draft.dims}
         onDims={setDimension}
-        hint={`Glissez un coin, ou saisissez les dimensions.${
+        hint={`${CORNER_HINT}${
           snapEnabled ? ' Aimant actif : les coins se calent (voir Aimantation).' : ''
         }`}
         kind={draft.featureKind}
@@ -711,10 +723,10 @@ export default function PlanScreen() {
     sheet = (
       <EditSheet
         name={data.zones.find((z) => z.id === draft.zoneId)?.name ?? ''}
-        areaText={formatArea(polygonAreaM2(draft.polygon))}
+        areaText={areaText(draft)}
         dims={draft.dims}
         onDims={setDimension}
-        hint={`Glissez un coin, ou saisissez les dimensions.${
+        hint={`${CORNER_HINT}${
           snapEnabled ? ' Aimant actif : les coins se calent (voir Aimantation).' : ''
         }`}
         snap={snapSettings}
@@ -789,6 +801,7 @@ export default function PlanScreen() {
         onRefuse={onRefuse}
         onAddCorner={addDraftCorner}
         onDraftChange={changeDraft}
+        onDraftPatch={patchDraft}
         onEditZone={editZone}
         onBack={cancelDraft}
         onDrop={onDrop}

@@ -10,14 +10,19 @@
 import { View, Text, TextInput, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
-import Svg, { Polygon, Polyline, Line } from 'react-native-svg';
+import Svg, { Polygon, Polyline, Line, Circle, Text as SvgText } from 'react-native-svg';
 import { colors } from '../../lib/theme';
-import { sideLengths, PILL_OFFSET_PX } from '../../lib/zoneDraw';
+import { sideLengths, PILL_OFFSET_PX, PILL_OFFSET_EDIT_PX } from '../../lib/zoneDraw';
 import { featureLook } from '../../lib/planFeatures';
 import { SNAP_KIND_LABELS } from '../../lib/planSnap';
 
 const HIT_PX = 44;
 const PILL_W = 64;
+// Ticket 117: a long press this long on a corner opens "Supprimer ce sommet".
+export const CORNER_LONG_PRESS_MS = 600;
+const PLUS_R = 8;
+// A side shorter than this on screen has no "+" (it would sit under its corners).
+const PLUS_MIN_SIDE_PX = 40;
 
 function panGesture(kind, index, drag) {
   return Gesture.Pan()
@@ -33,11 +38,23 @@ function panGesture(kind, index, drag) {
     });
 }
 
-function Handle({ cx, cy, unit, drag, index, color }) {
+function Handle({ cx, cy, unit, drag, index, color, onLongPress }) {
   const hit = HIT_PX * unit;
   const dia = 18 * unit;
+  const pan = panGesture('corner', index, drag);
+  const gesture = onLongPress
+    ? Gesture.Simultaneous(
+        pan,
+        Gesture.LongPress()
+          .minDuration(CORNER_LONG_PRESS_MS)
+          .maxDistance(10)
+          .onStart(() => {
+            scheduleOnRN(onLongPress, index);
+          })
+      )
+    : pan;
   return (
-    <GestureDetector gesture={panGesture('corner', index, drag)}>
+    <GestureDetector gesture={gesture}>
       <View
         collapsable={false}
         accessibilityRole="button"
@@ -48,6 +65,49 @@ function Handle({ cx, cy, unit, drag, index, color }) {
           { left: cx - hit / 2, top: cy - hit / 2, width: hit, height: hit },
         ]}>
         <View style={dot(dia, unit, 2.5, color)} />
+      </View>
+    </GestureDetector>
+  );
+}
+
+// The "+" at a side's midpoint (ticket 117): a tap adds a corner there (the
+// canvas handles the tap), a drag adds one and moves it.
+function PlusHandle({ cx, cy, unit, drag, index }) {
+  const hit = 2 * 16 * unit;
+  return (
+    <GestureDetector gesture={panGesture('midpoint', index, drag)}>
+      <View
+        collapsable={false}
+        accessibilityRole="button"
+        accessibilityLabel={`Ajouter un sommet, côté ${index + 1}`}
+        style={[
+          styles.abs,
+          styles.center,
+          { left: cx - hit / 2, top: cy - hit / 2, width: hit, height: hit },
+        ]}>
+        <Svg
+          width={2 * PLUS_R * unit + 4 * unit}
+          height={2 * PLUS_R * unit + 4 * unit}
+          viewBox="-10 -10 20 20"
+          pointerEvents="none">
+          <Circle
+            r={PLUS_R}
+            fill={colors.surface}
+            fillOpacity={0.85}
+            stroke={colors.accent}
+            strokeWidth={1.5}
+            strokeDasharray="2 2"
+          />
+          <SvgText
+            x={0}
+            y={4}
+            textAnchor="middle"
+            fontSize={12}
+            fontWeight="700"
+            fill={colors.accent}>
+            +
+          </SvgText>
+        </Svg>
       </View>
     </GestureDetector>
   );
@@ -208,7 +268,19 @@ function SnapMarker({ cx, cy, kind, unit }) {
   );
 }
 
-export function DraftLayer({ draft, plan, drawScale, unit, pad, drag, sideEdit, marker = null }) {
+export function DraftLayer({
+  draft,
+  plan,
+  drawScale,
+  unit,
+  pad,
+  drag,
+  sideEdit,
+  marker = null,
+  scalePxPerCm = 1,
+  ringIndex = null,
+  onCornerLongPress,
+}) {
   const { kind, polygon, closed } = draft;
   // A rectangle only exists once "Poser sur le plan" was pressed. A garden
   // element (ticket 110) is a rectangle too while new, then has corner handles.
@@ -224,6 +296,8 @@ export function DraftLayer({ draft, plan, drawScale, unit, pad, drag, sideEdit, 
   const filled = isRect || closed;
   const look = featureLook(draft.featureKind);
   const strokeW = 2 * unit;
+  // Ticket 117: pills of an edited shape sit clear of the "+" at each midpoint.
+  const pillOffset = (hasHandles ? PILL_OFFSET_EDIT_PX : PILL_OFFSET_PX) * unit;
 
   let bounds = null;
   if (isRect) {
@@ -344,8 +418,8 @@ export function DraftLayer({ draft, plan, drawScale, unit, pad, drag, sideEdit, 
           return (
             <EditPill
               key={side.index}
-              cx={at.x + side.normal.x * PILL_OFFSET_PX * unit}
-              cy={at.y + side.normal.y * PILL_OFFSET_PX * unit}
+              cx={at.x + side.normal.x * pillOffset}
+              cy={at.y + side.normal.y * pillOffset}
               text={editing.text}
               unit={unit}
               onChange={sideEdit?.onChange}
@@ -357,13 +431,31 @@ export function DraftLayer({ draft, plan, drawScale, unit, pad, drag, sideEdit, 
         return (
           <Pill
             key={side.index}
-            cx={at.x + side.normal.x * PILL_OFFSET_PX * unit}
-            cy={at.y + side.normal.y * PILL_OFFSET_PX * unit}
+            cx={at.x + side.normal.x * pillOffset}
+            cy={at.y + side.normal.y * pillOffset}
             text={side.text}
             unit={unit}
           />
         );
       })}
+
+      {hasHandles && !draft.side
+        ? sides
+            .filter((side) => side.lengthCm * scalePxPerCm >= PLUS_MIN_SIDE_PX)
+            .map((side) => {
+              const at = px([side.mid.x, side.mid.y]);
+              return (
+                <PlusHandle
+                  key={`plus-${side.index}`}
+                  cx={at.x}
+                  cy={at.y}
+                  index={side.index}
+                  unit={unit}
+                  drag={drag}
+                />
+              );
+            })
+        : null}
 
       {hasHandles
         ? polygon.map((corner, i) => {
@@ -376,11 +468,31 @@ export function DraftLayer({ draft, plan, drawScale, unit, pad, drag, sideEdit, 
                 index={i}
                 unit={unit}
                 drag={drag}
+                onLongPress={onCornerLongPress}
                 color={kind === 'feature' ? colors.text : colors.accent}
               />
             );
           })
         : null}
+
+      {hasHandles && ringIndex != null && polygon[ringIndex] ? (
+        <View
+          pointerEvents="none"
+          testID="plan-corner-ring"
+          style={[
+            styles.abs,
+            {
+              left: px(polygon[ringIndex]).x - 16 * unit,
+              top: px(polygon[ringIndex]).y - 16 * unit,
+              width: 32 * unit,
+              height: 32 * unit,
+              borderRadius: 16 * unit,
+              borderWidth: 2 * unit,
+              borderColor: colors.danger,
+            },
+          ]}
+        />
+      ) : null}
 
       {marker ? (
         <SnapMarker

@@ -53,7 +53,17 @@ import {
   nextPlanSize,
   parsePlanSizeInput,
 } from '../../lib/planView';
-import { hitCorner, hitSide, placeRectangle } from '../../lib/zoneDraw';
+import {
+  hitCorner,
+  hitSide,
+  hitMidpoint,
+  insertCorner,
+  removeCorner,
+  sideMidpoints,
+  placeRectangle,
+  PILL_OFFSET_PX,
+  PILL_OFFSET_EDIT_PX,
+} from '../../lib/zoneDraw';
 import { effectivePlanSize, planSizeOf, planSizeSourceText } from '../../lib/planSize';
 import { formatShortDate } from '../../lib/journal';
 import { DEFAULT_SNAP_SETTINGS, makeSnapper, snapShapes } from '../../lib/planSnap';
@@ -74,6 +84,17 @@ const BANNER_LIFT = 90;
 const DEFAULT_DRAWER_H = 130;
 // Zones other than the one being drawn (the PlanTracer artboard).
 const DIM_OPACITY = 0.45;
+const CORNER_MENU_W = 184;
+const CORNER_MENU_H = 46;
+// Ticket 117: the "+" of a side, shown only when the side is long enough on screen.
+const PLUS_HIT_PX = 16;
+const PLUS_MIN_SIDE_PX = 40;
+
+function sideScreenLength(polygon, index, view) {
+  const [x1, y1] = polygon[index];
+  const [x2, y2] = polygon[(index + 1) % polygon.length];
+  return Math.hypot(x2 - x1, y2 - y1) * view.scale;
+}
 
 const FONT_BOLD = 'InstrumentSans_600SemiBold';
 const FONT_BODY = 'InstrumentSans_400Regular';
@@ -300,6 +321,7 @@ export function PlanCanvas({
   onAdd,
   onAddCorner,
   onDraftChange,
+  onDraftPatch,
   onEditZone,
   onBack,
   // Ticket 113: a tap on a side's length pill calls `onSidePress(index)`; the
@@ -368,6 +390,7 @@ export function PlanCanvas({
     features,
     onAddCorner,
     onDraftChange,
+    onDraftPatch,
     onEditZone,
     onEditFeature,
     onRefuse,
@@ -393,6 +416,18 @@ export function PlanCanvas({
       excludeId,
     });
   }, []);
+  // Ticket 117: the corner whose "Supprimer ce sommet" popover is open.
+  const [cornerMenu, setCornerMenu] = useState(null);
+  const cornerMenuAt = useRef(0);
+  const openCornerMenu = useCallback((index) => {
+    cornerMenuAt.current = Date.now();
+    setCornerMenu(index);
+  }, []);
+  // The popover belongs to one outline: it closes when the draft changes or ends.
+  const draftPolygon = draft?.polygon;
+  useEffect(() => {
+    setCornerMenu(null);
+  }, [draftPolygon, draft?.kind]);
   // The marker on the chosen target (a vertex, side or border), shown while a
   // corner is dragged and briefly after a tracing tap.
   const [snapMarker, setSnapMarker] = useState(null);
@@ -444,9 +479,30 @@ export function PlanCanvas({
       const { draft: d, view: v, plan: p, snapEnabled: snap } = latest.current;
       // Ticket 113: a length pill is tapped to type into it (while tracing, only the
       // last side's); a tap on the one being typed into must not close its keyboard.
+      const withHandles = d?.kind === 'edit' || d?.kind === 'feature';
+      // Ticket 117: while editing, a corner comes first, then a side's "+", then a pill.
+      if (withHandles) {
+        if (Date.now() - cornerMenuAt.current < 400) return;
+        setCornerMenu(null);
+        if (!d.side && hitCorner(d.polygon, { x, y }, v, PLUS_HIT_PX) < 0) {
+          const mid = hitMidpoint(d.polygon, { x, y }, v, PLUS_HIT_PX);
+          if (mid >= 0 && sideScreenLength(d.polygon, mid, v) >= PLUS_MIN_SIDE_PX) {
+            Keyboard.dismiss();
+            const at = sideMidpoints(d.polygon)[mid];
+            latest.current.onDraftChange(insertCorner(d.polygon, mid, at, p));
+            return;
+          }
+        }
+      }
       const sideIndex =
         d && (d.kind === 'trace' || d.kind === 'edit' || d.kind === 'feature')
-          ? hitSide(d.polygon, d.kind !== 'trace', { x, y }, v)
+          ? hitSide(
+              d.polygon,
+              d.kind !== 'trace',
+              { x, y },
+              v,
+              withHandles ? PILL_OFFSET_EDIT_PX : PILL_OFFSET_PX
+            )
           : -1;
       const tappable = d?.kind === 'trace' ? d.polygon.length - 2 : sideIndex;
       if (sideIndex >= 0 && sideIndex === tappable && !(d.kind === 'trace' && d.closed)) {
@@ -502,8 +558,20 @@ export function PlanCanvas({
   const draftHandlers = useMemo(
     () => ({
       onStart: (kind, index) => {
-        const d = latest.current.draft;
-        if (d) draftDrag.current = { kind, index, start: d.polygon };
+        const { draft: d, plan: p } = latest.current;
+        setCornerMenu(null);
+        if (!d) return;
+        if (kind === 'midpoint') {
+          // Ticket 117: dragging a "+" adds the corner at the midpoint, then
+          // drags it like any corner.
+          const mid = sideMidpoints(d.polygon)[index];
+          if (!mid) return;
+          const inserted = insertCorner(d.polygon, index, mid, p);
+          draftDrag.current = { kind: 'corner', index: index + 1, start: inserted };
+          latest.current.onDraftChange(inserted, inserted);
+          return;
+        }
+        draftDrag.current = { kind, index, start: d.polygon };
       },
       onMove: (tx, ty) => {
         const start = draftDrag.current;
@@ -524,11 +592,13 @@ export function PlanCanvas({
             ? dragFeatureCorner(start.start, start.index, delta, p, magnet)
             : dragFeatureShape(start.start, delta, p, magnet);
         showMarker(last, 0);
-        latest.current.onDraftChange(next);
+        // A corner drag also reports the outline it started from (the sheet's "before → after").
+        latest.current.onDraftChange(next, start.kind === 'corner' ? start.start : null);
       },
       onEnd: () => {
         draftDrag.current = null;
         showMarker(null, 0);
+        latest.current.onDraftPatch?.({ dragFrom: null });
       },
     }),
     [buildSnapper, showMarker]
@@ -888,6 +958,9 @@ export function PlanCanvas({
                   drag={draftHandlers}
                   marker={snapMarker}
                   sideEdit={sideEdit}
+                  scalePxPerCm={view.scale}
+                  ringIndex={cornerMenu}
+                  onCornerLongPress={openCornerMenu}
                 />
               ) : null}
             </Animated.View>
@@ -975,6 +1048,49 @@ export function PlanCanvas({
           {sheet}
         </View>
       ) : null}
+
+      {cornerMenu != null && (draft?.kind === 'edit' || draft?.kind === 'feature') && view
+        ? (() => {
+            const corner = draft.polygon[cornerMenu];
+            if (!corner) return null;
+            const c = toScreen({ x: corner[0], y: corner[1] }, view);
+            const enabled = draft.polygon.length > 3;
+            return (
+              <View
+                style={[
+                  styles.cornerMenu,
+                  {
+                    left: clampNumber(
+                      c.x - CORNER_MENU_W / 2,
+                      8,
+                      Math.max(8, viewport.width - CORNER_MENU_W - 8)
+                    ),
+                    top: Math.max(8, c.y - 16 - 8 - CORNER_MENU_H),
+                  },
+                ]}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  disabled={!enabled}
+                  accessibilityRole="button"
+                  accessibilityLabel="Supprimer ce sommet"
+                  accessibilityState={{ disabled: !enabled }}
+                  onPress={() => {
+                    setCornerMenu(null);
+                    latest.current.onDraftChange(removeCorner(draft.polygon, cornerMenu));
+                  }}
+                  style={styles.cornerMenuItem}>
+                  <Text
+                    style={[
+                      styles.cornerMenuText,
+                      { color: enabled ? colors.danger : colors.textSecondary },
+                    ]}>
+                    Supprimer ce sommet
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })()
+        : null}
 
       {banner && !draft ? (
         <View style={[styles.bannerWrap, { bottom: drawerHeight + 36 }]}>{banner}</View>
@@ -1313,6 +1429,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.planInk,
   },
+  cornerMenu: {
+    position: 'absolute',
+    width: CORNER_MENU_W,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    overflow: 'visible',
+    zIndex: 5,
+    ...shadow.card,
+  },
+  cornerMenuItem: {
+    height: CORNER_MENU_H,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cornerMenuText: { fontFamily: FONT_BOLD, fontSize: 15 },
   ghost: {
     position: 'absolute',
     zIndex: 6,
