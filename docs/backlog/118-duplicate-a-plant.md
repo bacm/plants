@@ -1,7 +1,7 @@
 ---
 id: 118
 title: Duplicate a plant to add another of the same species
-status: in-progress
+status: done
 priority: P2
 type: feature
 ---
