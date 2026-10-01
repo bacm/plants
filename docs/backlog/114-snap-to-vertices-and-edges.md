@@ -1,7 +1,7 @@
 ---
 id: 114
 title: Snap shape corners to other shapes, with snapping settings
-status: open
+status: in-progress
 priority: P2
 type: feature
 ---
