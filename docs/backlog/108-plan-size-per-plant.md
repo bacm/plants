@@ -1,7 +1,7 @@
 ---
 id: 108
 title: Give each plant its own size on the garden plan
-status: in-progress
+status: done
 priority: P2
 type: feature
 ---
@@ -27,7 +27,7 @@ their neighbours and make the plan misleading.
 - [x] The plant's bubble on the plan has a "Taille sur le plan" row: "−" and
       "+" change it in sensible steps, and tapping the value lets the owner
       type it in metres; changes are saved and synced
-- [ ] Matches the updated PlanBulle artboard; `npm run verify`, server pytest
+- [x] Matches the updated PlanBulle artboard; `npm run verify`, server pytest
       and `npm run e2e:web` pass; the server deploy accepts the new column
 
 ## Notes
