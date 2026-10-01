@@ -37,6 +37,7 @@
     "winterCare",
     "planX",
     "planY",
+    "planSizeCm",
     "updatedAt",
     "deletedAt"
   ],

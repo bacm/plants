@@ -136,7 +136,8 @@ test.describe('garden plan (ticket 106)', () => {
     await dot.click();
     const bubble = page.getByRole('button', { name: /Ouvrir la fiche/ });
     await expect(bubble).toContainText('Rosier ‘Pierre de Ronsard’');
-    await expect(bubble).toContainText('Massif sud · 1,5 m de large');
+    await expect(bubble).toContainText('Massif sud');
+    await expect(bubble).not.toContainText('de large');
 
     // A tap elsewhere closes it (a tap right after the selection is the same
     // tap reaching the canvas, and is ignored).
@@ -147,6 +148,61 @@ test.describe('garden plan (ticket 106)', () => {
 
     await dot.click();
     await bubble.click();
+    await expect(page).toHaveURL(/\/plant\/plant-rose/);
+  });
+
+  test('the bubble sizes the plant on the plan: + and -, typed metres, synced', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedGarden(api);
+    await page.goto('/plan');
+    const dia = async () => (await page.getByTestId('plan-dot-plant-rose').boundingBox()).width;
+
+    await page.getByLabel('Plante Rosier ‘Pierre de Ronsard’').click();
+    const bubble = page.getByTestId('plan-bubble');
+    await expect(bubble).toContainText('Taille sur le plan');
+    // Unset: the fixed fallback size, not the sheet's 1.5 m width.
+    await expect(bubble).toContainText('0,5 m');
+    const before = await dia();
+
+    await page.getByRole('button', { name: 'Augmenter la taille sur le plan' }).click();
+    await expect(bubble).toContainText('0,6 m');
+    await expect(bubble).toBeVisible();
+    await expect
+      .poll(() => serverPlant(api, 'plant-rose')?.planSizeCm, { timeout: 20000 })
+      .toBe(60);
+
+    await page.getByRole('button', { name: 'Saisir la taille sur le plan' }).click();
+    const input = page.getByLabel('Taille sur le plan (m)');
+    await input.fill('abc');
+    await input.press('Enter');
+    await expect(bubble).toContainText('Valeur invalide');
+    await input.fill('3');
+    await input.press('Enter');
+    await expect(bubble).toContainText('3 m');
+    await expect.poll(dia).toBeGreaterThan(before * 2);
+    const large = await dia();
+
+    await page.getByRole('button', { name: 'Saisir la taille sur le plan' }).click();
+    await page.getByLabel('Taille sur le plan (m)').fill('0,3');
+    await page.getByLabel('Taille sur le plan (m)').press('Enter');
+    await expect(bubble).toContainText('0,3 m');
+    await expect.poll(dia).toBeLessThan(large * 0.3);
+    await expect
+      .poll(() => serverPlant(api, 'plant-rose')?.planSizeCm, { timeout: 20000 })
+      .toBe(30);
+
+    // Cancel leaves the size alone.
+    await page.getByRole('button', { name: 'Saisir la taille sur le plan' }).click();
+    await page.getByLabel('Taille sur le plan (m)').fill('4');
+    await page.getByRole('button', { name: 'Annuler la saisie' }).click();
+    await expect(bubble).toContainText('0,3 m');
+
+    // The controls neither closed the bubble nor opened the sheet; the top row does.
+    await expect(page).toHaveURL(/\/plan/);
+    await page.getByRole('button', { name: /Ouvrir la fiche/ }).click();
     await expect(page).toHaveURL(/\/plant\/plant-rose/);
   });
 

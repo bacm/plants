@@ -15,7 +15,7 @@
 // long press (so a quick drag still pans the canvas) and then drags a "ghost"
 // dot at the finger. The drop is resolved in JS (toPlan, zoneAt).
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -34,6 +34,7 @@ import {
   formatArea,
   formatLength,
   polygonAreaM2,
+  DEFAULT_PLAN_SIZE_CM,
 } from '../../lib/gardenPlan';
 import {
   PLAN_INSETS,
@@ -48,6 +49,8 @@ import {
   polygonLabelPoint,
   plantSubtitle,
   shortPlantName,
+  nextPlanSize,
+  parsePlanSizeInput,
 } from '../../lib/planView';
 import { hitCorner, moveCorner, translatePolygon, placeRectangle } from '../../lib/zoneDraw';
 
@@ -117,6 +120,7 @@ function PlanDot({ plant, left, top, hit, dia, selected, hidden, passive, ring, 
             />
           ) : null}
           <View
+            testID={`plan-dot-${plant.id}`}
             style={{
               width: dia,
               height: dia,
@@ -138,6 +142,96 @@ function PlanDot({ plant, left, top, hit, dia, selected, hidden, passive, ring, 
       style={[styles.dotHit, { left, top, width: hit, height: hit }]}
       pointerEvents={passive ? 'none' : 'box-none'}>
       {passive ? body : <GestureDetector gesture={gesture}>{body}</GestureDetector>}
+    </View>
+  );
+}
+
+// The "Taille sur le plan" row of the bubble (PlanBulle artboard): "−" and "+"
+// step the size, the value opens an inline input in metres. `onChange(cm)`
+// saves and resolves to true on success.
+function BubbleSize({ planSizeCm, onChange }) {
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState('');
+  const [error, setError] = useState(null);
+  const current = planSizeCm ?? DEFAULT_PLAN_SIZE_CM;
+
+  const step = (direction) => onChange(nextPlanSize(planSizeCm, direction));
+  const open = () => {
+    setText(String(current / 100).replace('.', ','));
+    setError(null);
+    setEditing(true);
+  };
+  const submit = async () => {
+    const parsed = parsePlanSizeInput(text);
+    if (parsed.error) {
+      setError(parsed.error);
+      return;
+    }
+    if (await onChange(parsed.cm)) setEditing(false);
+  };
+
+  if (editing) {
+    return (
+      <View style={styles.sizeBlock}>
+        <View style={styles.sizeRow}>
+          <TextInput
+            testID="plan-size-input"
+            accessibilityLabel="Taille sur le plan (m)"
+            value={text}
+            onChangeText={(value) => {
+              setText(value);
+              setError(null);
+            }}
+            onSubmitEditing={submit}
+            keyboardType="decimal-pad"
+            autoFocus
+            selectTextOnFocus
+            style={styles.sizeInput}
+          />
+          <Text style={styles.sizeLabel}>m</Text>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Annuler la saisie"
+            onPress={() => setEditing(false)}
+            style={styles.sizeButton}>
+            <Icon name="close" size={18} color={colors.text} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Valider la taille"
+            onPress={submit}
+            style={styles.sizeButton}>
+            <Icon name="check" size={18} color={colors.text} />
+          </TouchableOpacity>
+        </View>
+        {error ? <Text style={styles.sizeError}>{error}</Text> : null}
+      </View>
+    );
+  }
+  return (
+    <View style={styles.sizeRow}>
+      <Text style={[styles.sizeLabel, styles.sizeTitle]}>Taille sur le plan</Text>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Réduire la taille sur le plan"
+        onPress={() => step(-1)}
+        style={styles.sizeButton}>
+        <Text style={styles.sizeGlyph}>−</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Saisir la taille sur le plan"
+        onPress={open}
+        style={[styles.sizeButton, styles.sizeValue]}>
+        <Text style={styles.sizeValueText}>{formatLength(current)}</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Augmenter la taille sur le plan"
+        onPress={() => step(1)}
+        style={styles.sizeButton}>
+        <Text style={styles.sizeGlyph}>+</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -169,6 +263,7 @@ export function PlanCanvas({
   onDrop,
   onOpenPlant,
   onEditSize,
+  onChangePlanSize,
   // Ticket 107: drawing and editing a zone. `draft` is null, or
   // { kind: 'trace' | 'rect' | 'edit', polygon, closed, zoneId }; `sheet` is the
   // bar or sheet shown under the plan while it lasts; `controller` receives
@@ -285,7 +380,7 @@ export function PlanCanvas({
     for (const plant of all) {
       if (plant.planX == null || plant.planY == null) continue;
       const c = toScreen({ x: plant.planX, y: plant.planY }, v);
-      const r = Math.max(HIT_PX / 2, dotDiameterPx(plant.width, v.scale) / 2);
+      const r = Math.max(HIT_PX / 2, dotDiameterPx(plant.planSizeCm, v.scale) / 2);
       if (Math.hypot(c.x - x, c.y - y) <= r) return;
     }
     const zone = zoneAt(toPlan({ x, y }, v), zonesRef.current);
@@ -494,35 +589,45 @@ export function PlanCanvas({
   const drawerHeight = draft ? sheetH : unplaced.length ? drawerH : 0;
 
   const hitSize = HIT_PX * unit;
-  const dotDia = (plant) => dotDiameterPx(plant.width, view.scale) * unit;
+  const dotDia = (plant) => dotDiameterPx(plant.planSizeCm, view.scale) * unit;
 
   let bubble = null;
   if (selected && view && viewport) {
     const c = toScreen({ x: selected.planX, y: selected.planY }, view);
-    const r = dotDiameterPx(selected.width, view.scale) / 2 + 5;
+    const r = dotDiameterPx(selected.planSizeCm, view.scale) / 2 + 5;
     const left = clampNumber(c.x - 20, 12, Math.max(12, viewport.width - 312));
     const below = c.y + r + 3 < viewport.height - drawerHeight - 90;
     bubble = (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => onOpenPlant(selected.id)}
-        accessibilityRole="button"
-        accessibilityLabel={`Ouvrir la fiche : ${selected.name}`}
+      <View
+        testID="plan-bubble"
         style={[
           styles.bubble,
           { left },
           below ? { top: c.y + r + 3 } : { bottom: viewport.height - (c.y - r - 3) },
         ]}>
-        <View style={styles.bubbleText}>
-          <Text style={styles.bubbleName} numberOfLines={1}>
-            {selected.name}
-          </Text>
-          <Text style={styles.bubbleSub} numberOfLines={1}>
-            {plantSubtitle(selected.zoneName, selected.width, formatLength)}
-          </Text>
-        </View>
-        <Icon name="chevron-right" size={18} color={colors.planOutline} />
-      </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={() => onOpenPlant(selected.id)}
+          accessibilityRole="button"
+          accessibilityLabel={`Ouvrir la fiche : ${selected.name}`}
+          style={styles.bubbleLink}>
+          <View style={styles.bubbleText}>
+            <Text style={styles.bubbleName} numberOfLines={1}>
+              {selected.name}
+            </Text>
+            <Text style={styles.bubbleSub} numberOfLines={1}>
+              {plantSubtitle(selected.zoneName)}
+            </Text>
+          </View>
+          <Icon name="chevron-right" size={18} color={colors.planOutline} />
+        </TouchableOpacity>
+        <View style={styles.bubbleRule} />
+        <BubbleSize
+          key={selected.id}
+          planSizeCm={selected.planSizeCm}
+          onChange={(cm) => onChangePlanSize(selected.id, cm)}
+        />
+      </View>
     );
   }
 
@@ -708,7 +813,7 @@ export function PlanCanvas({
             styles.ghost,
             shadow.card,
             (() => {
-              const d = Math.max(32, dotDiameterPx(drag.plant.width, view.scale));
+              const d = Math.max(32, dotDiameterPx(drag.plant.planSizeCm, view.scale));
               return {
                 left: drag.x - d / 2,
                 top: drag.y - d / 2,
@@ -849,16 +954,60 @@ const styles = StyleSheet.create({
   bubble: {
     position: 'absolute',
     zIndex: 4,
-    maxWidth: 300,
+    width: 290,
+    gap: 6,
+    backgroundColor: colors.surface,
+    borderRadius: 18,
+    paddingTop: 6,
+    paddingBottom: 10,
+    paddingHorizontal: 8,
+    ...shadow.card,
+  },
+  bubbleLink: {
+    minHeight: 44,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    ...shadow.card,
   },
+  bubbleRule: { height: 1, backgroundColor: colors.divider, marginHorizontal: 6 },
+  sizeBlock: { paddingHorizontal: 6, gap: 4 },
+  sizeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 6 },
+  sizeLabel: { fontFamily: FONT_BODY, fontSize: 13, color: colors.planInk },
+  sizeTitle: { flexGrow: 1, flexShrink: 1 },
+  sizeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sizeValue: {
+    width: undefined,
+    minWidth: 64,
+    paddingHorizontal: 10,
+    backgroundColor: colors.background,
+  },
+  sizeValueText: { fontFamily: FONT_BOLD, fontSize: 14, color: colors.text },
+  sizeGlyph: { fontFamily: FONT_BODY, fontSize: 18, lineHeight: 22, color: colors.text },
+  sizeInput: {
+    flexGrow: 1,
+    flexShrink: 1,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    paddingHorizontal: 12,
+    fontFamily: FONT_BOLD,
+    fontSize: 14,
+    color: colors.text,
+  },
+  sizeError: { fontFamily: FONT_BODY, fontSize: 12, color: colors.danger },
   bubbleText: { flexShrink: 1, gap: 1 },
   bubbleName: { fontFamily: FONT_BOLD, fontSize: 15, color: colors.text },
   bubbleSub: { fontFamily: FONT_BODY, fontSize: 12, color: colors.textSecondary },

@@ -19,12 +19,12 @@ their neighbours and make the plan misleading.
 
 ## Acceptance criteria
 
-- [ ] Plants gain `planSizeCm` (integer cm, null = not set), kept out of the
+- [x] Plants gain `planSizeCm` (integer cm, null = not set), kept out of the
       plant form like `planX`/`planY`, synced, in backups (optional column for
       older backups) and in `server/sync_schema.json`
-- [ ] A dot's size on the plan comes from `planSizeCm`; without it, a fixed
+- [x] A dot's size on the plan comes from `planSizeCm`; without it, a fixed
       size; the adult `width` is no longer used for the dot
-- [ ] The plant's bubble on the plan has a "Taille sur le plan" row: "−" and
+- [x] The plant's bubble on the plan has a "Taille sur le plan" row: "−" and
       "+" change it in sensible steps, and tapping the value lets the owner
       type it in metres; changes are saved and synced
 - [ ] Matches the updated PlanBulle artboard; `npm run verify`, server pytest

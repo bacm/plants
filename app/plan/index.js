@@ -28,6 +28,7 @@ import {
   getZones,
   getPlants,
   setPlantPosition,
+  setPlantPlanSize,
   setZonePolygon,
   createZone,
 } from '../../lib/db';
@@ -104,6 +105,20 @@ export default function PlanScreen() {
         setPlantPosition(plantId, position);
       } catch (error) {
         showMessage('Erreur', error?.message || "Impossible d'enregistrer la position.");
+        return false;
+      }
+      await load();
+      return true;
+    },
+    [load]
+  );
+
+  const changePlanSize = useCallback(
+    async (plantId, cm) => {
+      try {
+        setPlantPlanSize(plantId, cm);
+      } catch (error) {
+        showMessage('Erreur', error?.message || "Impossible d'enregistrer la taille.");
         return false;
       }
       await load();
@@ -359,6 +374,7 @@ export default function PlanScreen() {
         onEditZone={editZone}
         onBack={cancelDraft}
         onDrop={onDrop}
+        onChangePlanSize={changePlanSize}
         onOpenPlant={(id) => router.push(`/plant/${id}`)}
         onEditSize={() => setEditing(true)}
         banner={
