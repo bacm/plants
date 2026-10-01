@@ -260,6 +260,49 @@ test.describe('garden plan (ticket 106)', () => {
     expect(serverPlant(api, 'plant-lavande').zoneId).toBeNull();
   });
 
+  test('plants snap to a 50 cm grid; the magnet turns it off and is remembered', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedGarden(api);
+    await page.goto('/plan');
+    await expect(visibleText(page, 'À placer · 1')).toBeVisible();
+    const magnet = (state) =>
+      page.getByRole('button', { name: `Aimanter les plantes à la grille (${state})` });
+    await expect(magnet('activé')).toBeVisible();
+
+    const item = await page.getByLabel('À placer : Lavande').boundingBox();
+    await longPressDrag(
+      page,
+      { x: item.x + item.width / 2, y: item.y + 20 },
+      await planPoint(page, 1213, 817)
+    );
+    await expect
+      .poll(() => serverPlant(api, 'plant-lavande')?.zoneId, { timeout: 20000 })
+      .toBe('zone-b');
+    const snapped = serverPlant(api, 'plant-lavande');
+    expect(snapped.planX % 50).toBe(0);
+    expect(snapped.planY % 50).toBe(0);
+
+    await magnet('activé').click();
+    await expect(magnet('désactivé')).toBeVisible();
+    await page.reload();
+    await expect(magnet('désactivé')).toBeVisible();
+
+    // Drop the placed plant at a point that is not on the grid.
+    await longPressDrag(
+      page,
+      await planPoint(page, snapped.planX, snapped.planY),
+      await planPoint(page, 1213, 817)
+    );
+    await expect
+      .poll(() => serverPlant(api, 'plant-lavande')?.planX, { timeout: 20000 })
+      .not.toBe(snapped.planX);
+    const free = serverPlant(api, 'plant-lavande');
+    expect(free.planX % 50 !== 0 || free.planY % 50 !== 0).toBe(true);
+  });
+
   test('dragging a placed plant out of every zone clears its zone; Annuler restores both', async ({
     context,
     page,

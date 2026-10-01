@@ -45,6 +45,7 @@ import {
   zoomAround,
   clampNumber,
   clampToPlan,
+  snapToGrid,
   isInsidePlan,
   polygonLabelPoint,
   plantSubtitle,
@@ -264,6 +265,9 @@ export function PlanCanvas({
   onOpenPlant,
   onEditSize,
   onChangePlanSize,
+  // Ticket 109: the magnet. When on, a plant's ghost and drop snap to the grid.
+  snapEnabled = true,
+  onToggleSnap,
   // Ticket 107: drawing and editing a zone. `draft` is null, or
   // { kind: 'trace' | 'rect' | 'edit', polygon, closed, zoneId }; `sheet` is the
   // bar or sheet shown under the plan while it lasts; `controller` receives
@@ -324,6 +328,7 @@ export function PlanCanvas({
     draft,
     sheetH,
     viewport,
+    snapEnabled,
     onAddCorner,
     onDraftChange,
     onEditZone,
@@ -443,12 +448,12 @@ export function PlanCanvas({
       dragRef.current = null;
       setDrag(null);
       if (!d || !success) return;
-      const { plan: p, view: v, drawerTop } = latest.current;
+      const { plan: p, view: v, drawerTop, snapEnabled: snap } = latest.current;
       const x = d.startX + dx;
       const y = d.startY + dy;
       const point = toPlan({ x, y }, v);
       if (d.source === 'drawer' && (y >= drawerTop || !isInsidePlan(point, p))) return;
-      const at = clampToPlan(point, p);
+      const at = snap ? snapToGrid(point, p) : clampToPlan(point, p);
       onDrop({
         plant: d.plant,
         x: at.x,
@@ -585,7 +590,17 @@ export function PlanCanvas({
     draft?.kind === 'edit' && zone.id === draft.zoneId ? { ...zone, polygon: draft.polygon } : zone
   );
   const dimOthers = !!draft && draft.kind !== 'edit';
-  const highlightId = drag ? (zoneAt(toPlan(drag, view), parsedZones)?.id ?? null) : null;
+  // The spot a drag would land on: snapped when the magnet is on (ticket 109).
+  let ghostAt = drag ? { x: drag.x, y: drag.y } : null;
+  let ghostPoint = null;
+  if (drag && view) {
+    ghostPoint = toPlan(drag, view);
+    if (snapEnabled && plan) {
+      ghostPoint = snapToGrid(ghostPoint, plan);
+      ghostAt = toScreen(ghostPoint, view);
+    }
+  }
+  const highlightId = ghostPoint ? (zoneAt(ghostPoint, parsedZones)?.id ?? null) : null;
   const drawerHeight = draft ? sheetH : unplaced.length ? drawerH : 0;
 
   const hitSize = HIT_PX * unit;
@@ -764,6 +779,14 @@ export function PlanCanvas({
           { bottom: drawerHeight + 20 + (banner && !draft ? BANNER_LIFT : 0) },
         ]}>
         {draft ? null : (
+          <RoundButton
+            label={`Aimanter les plantes à la grille (${snapEnabled ? 'activé' : 'désactivé'})`}
+            onPress={onToggleSnap}
+            pressed={snapEnabled}>
+            <Icon name="magnet" size={18} color={snapEnabled ? colors.background : colors.text} />
+          </RoundButton>
+        )}
+        {draft ? null : (
           <RoundButton label="Dimensions du plan" onPress={onEditSize}>
             <Icon name="ruler-square" size={18} color={colors.text} />
           </RoundButton>
@@ -815,8 +838,8 @@ export function PlanCanvas({
             (() => {
               const d = Math.max(32, dotDiameterPx(drag.plant.planSizeCm, view.scale));
               return {
-                left: drag.x - d / 2,
-                top: drag.y - d / 2,
+                left: ghostAt.x - d / 2,
+                top: ghostAt.y - d / 2,
                 width: d,
                 height: d,
                 borderRadius: d / 2,
@@ -881,12 +904,13 @@ function ZoneLabel({ zone, lx, ly, unit, dim }) {
   );
 }
 
-function RoundButton({ label, onPress, children }) {
+function RoundButton({ label, onPress, pressed, children }) {
   return (
     <TouchableOpacity
-      style={styles.roundBtnBig}
+      style={[styles.roundBtnBig, pressed ? styles.roundBtnPressed : null]}
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityState={pressed === undefined ? undefined : { pressed }}
       accessibilityLabel={label}>
       {children}
     </TouchableOpacity>
@@ -950,6 +974,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     ...shadow.soft,
   },
+  roundBtnPressed: { backgroundColor: colors.text, borderColor: colors.text },
   zoomGlyph: { fontSize: 22, color: colors.text, lineHeight: 26 },
   bubble: {
     position: 'absolute',

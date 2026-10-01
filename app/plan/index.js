@@ -31,6 +31,8 @@ import {
   setPlantPlanSize,
   setZonePolygon,
   createZone,
+  getSetting,
+  setSetting,
 } from '../../lib/db';
 import { DEFAULT_ZONE_ICON } from '../../lib/enums';
 import { parsePolygon, isValidPolygon, polygonAreaM2, formatArea } from '../../lib/gardenPlan';
@@ -46,6 +48,8 @@ import {
 import { planSummary, moveMessage, checkPlanResize, parsePlanMetres } from '../../lib/planView';
 
 const UNDO_MS = 6000;
+// Device-local (ticket 109): absent means on.
+const SNAP_SETTING_KEY = 'plan.snapToGrid';
 
 export default function PlanScreen() {
   const router = useRouter();
@@ -61,6 +65,28 @@ export default function PlanScreen() {
   const [choice, setChoice] = useState({ zoneId: null, newName: '', nameError: null });
   const [rectSize, setRectSize] = useState({ width: '4', length: '1,5', tried: false });
   const [saving, setSaving] = useState(false);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const stored = await getSetting(SNAP_SETTING_KEY);
+      if (alive && stored != null) setSnapEnabled(stored !== '0');
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  const toggleSnap = useCallback(() => {
+    const next = !snapEnabled;
+    setSnapEnabled(next);
+    try {
+      setSetting(SNAP_SETTING_KEY, next ? '1' : '0');
+    } catch (error) {
+      showMessage('Erreur', error?.message || 'Impossible de mémoriser ce réglage.');
+    }
+  }, [snapEnabled]);
 
   const load = useCallback(async () => {
     const [plan, zones, plants] = await Promise.all([getGardenPlan(), getZones(), getPlants()]);
@@ -374,6 +400,8 @@ export default function PlanScreen() {
         onEditZone={editZone}
         onBack={cancelDraft}
         onDrop={onDrop}
+        snapEnabled={snapEnabled}
+        onToggleSnap={toggleSnap}
         onChangePlanSize={changePlanSize}
         onOpenPlant={(id) => router.push(`/plant/${id}`)}
         onEditSize={() => setEditing(true)}
