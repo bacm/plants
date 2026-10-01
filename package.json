@@ -61,7 +61,7 @@
   "private": true,
   "devDependencies": {
     "@playwright/test": "1.63.0",
-    "babel-preset-expo": "~55.0.0",
+    "babel-preset-expo": "~57.0.13",
     "eslint": "^9.39.5",
     "eslint-config-expo": "^55.0.1",
     "jest": "^29.7.0",
