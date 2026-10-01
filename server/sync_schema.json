@@ -1,5 +1,6 @@
 {
-  "zones": ["id", "name", "description", "icon", "orderIndex", "updatedAt", "deletedAt"],
+  "zones": ["id", "name", "description", "icon", "orderIndex", "polygon", "updatedAt", "deletedAt"],
+  "garden_plan": ["id", "widthCm", "lengthCm", "updatedAt", "deletedAt"],
   "plants": [
     "id",
     "name",
@@ -34,6 +35,8 @@
     "harvestMonthEnd",
     "origin",
     "winterCare",
+    "planX",
+    "planY",
     "updatedAt",
     "deletedAt"
   ],

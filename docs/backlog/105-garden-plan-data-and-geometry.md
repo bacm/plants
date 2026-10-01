@@ -1,7 +1,7 @@
 ---
 id: 105
 title: Store and sync the garden plan, with its geometry helpers
-status: open
+status: in-progress
 priority: P2
 type: feature
 ---

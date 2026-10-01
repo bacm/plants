@@ -20,7 +20,6 @@
 | P2 | feature | [058 — Turn the dashboard into "Aujourd'hui au jardin](058-home-today-in-the-garden.md) |
 | P2 | feature | [059 — Guide the first launch to a first zone, plant and photo](059-first-launch-onboarding.md) |
 | P2 | chore | [089 — Bring the mock-up up to date with tickets 086 to 090](089-sync-mockup-photo-viewer.md) |
-| P2 | feature | [105 — Store and sync the garden plan, with its geometry helpers](105-garden-plan-data-and-geometry.md) |
 | P2 | feature | [106 — Show the garden plan and place and move plants on it](106-garden-plan-view-place-move.md) |
 | P2 | feature | [107 — Draw garden zones on the plan](107-garden-plan-draw-zones.md) |
 | P3 | feature | [025 — Warn before a frost that is colder than a plant tolerates](025-frost-alerts.md) |
@@ -46,6 +45,7 @@
 | P2 | feature | [095 — Make the web app read and edit the server's garden](095-web-app-reads-and-writes-server.md) |
 | P2 | feature | [096 — Upload the phone's existing garden to the server the first time](096-first-upload-of-existing-garden.md) |
 | P2 | feature | [101 — Sign up and log in from the app, on the phone and the web](101-login-screens-in-the-app.md) |
+| P2 | feature | [105 — Store and sync the garden plan, with its geometry helpers](105-garden-plan-data-and-geometry.md) |
 
 ## blocked
 
