@@ -48,6 +48,7 @@ import {
 import { pickCoverPhoto } from '../../lib/coverPhoto';
 import { PLANT_TYPES, isUnknown, labelFor, iconFor } from '../../lib/enums';
 import { parseISODate } from '../../lib/validation';
+import { isoDateLabel } from '../../lib/months';
 import { parseImageUrls } from '../../lib/plantFields';
 
 const HERO_HEIGHT = 310;
@@ -634,7 +635,7 @@ export default function PlantDetailScreen() {
               <View>
                 <Text style={styles.lightboxPlantName}>{plant?.name}</Text>
                 <Text style={styles.lightboxDate}>
-                  {selectedPhoto.date} · {selectedIndex + 1} / {photos.length}
+                  {isoDateLabel(selectedPhoto.date)} · {selectedIndex + 1} / {photos.length}
                 </Text>
               </View>
               <View style={styles.lightboxActions}>
@@ -925,20 +926,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  // Round pills on the dark viewer, as in the PhotoVisionneuse artboard (ticket 119).
   lightboxCoverBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingVertical: spacing.sm,
-    paddingLeft: spacing.lg,
+    height: 44,
+    paddingLeft: 12,
+    paddingRight: 16,
+    borderRadius: 22,
+    backgroundColor: colors.onDarkChipBg,
   },
   lightboxBackBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
-    paddingRight: spacing.lg,
+    gap: 4,
+    height: 44,
+    paddingLeft: 10,
+    paddingRight: 16,
+    borderRadius: 22,
+    backgroundColor: colors.onDarkChipBg,
   },
-  lightboxBackText: { ...typography.body, color: '#fff' },
+  lightboxBackText: { ...typography.body, color: '#fff', fontWeight: '600' },
   lightboxImageContainer: {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height * 0.7,

@@ -48,7 +48,7 @@ test('swipe from one photo of a plant to the next in the lightbox', async ({ pag
   // Newest first: the May photo opens as 1 / 2.
   await page.getByLabel('Photo du 2026-05-01').click();
   const lightbox = page.getByRole('dialog');
-  await expect(lightbox.getByText('2026-05-01 · 1 / 2')).toBeVisible();
+  await expect(lightbox.getByText('1 mai 2026 · 1 / 2')).toBeVisible();
 
   await lightbox.evaluate((root) => {
     const pager = [...root.querySelectorAll('div')].find(
@@ -56,7 +56,7 @@ test('swipe from one photo of a plant to the next in the lightbox', async ({ pag
     );
     pager.scrollLeft = pager.clientWidth;
   });
-  await expect(lightbox.getByText('2026-04-01 · 2 / 2')).toBeVisible();
+  await expect(lightbox.getByText('1 avril 2026 · 2 / 2')).toBeVisible();
 
   expect(pageErrors, `page errors: ${JSON.stringify(pageErrors)}`).toEqual([]);
 });
