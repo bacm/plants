@@ -109,13 +109,24 @@ export default function ZonesScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />
         }>
-        <View style={styles.headerTextWrap}>
-          <Text style={styles.eyebrow}>
-            Votre jardin · {zones.length} {plural(zones.length, 'zone', 'zones')}
-          </Text>
-          <Text style={styles.title} accessibilityRole="header">
-            Zones
-          </Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerTextWrap}>
+            <Text style={styles.eyebrow}>
+              Votre jardin · {zones.length} {plural(zones.length, 'zone', 'zones')}
+            </Text>
+            <Text style={styles.title} accessibilityRole="header">
+              Zones
+            </Text>
+          </View>
+          <TouchableOpacity
+            testID="zones-plan-button"
+            style={styles.planButton}
+            onPress={() => router.push('/plan')}
+            accessibilityRole="button"
+            accessibilityLabel="Plan">
+            <Icon name="map-outline" size={18} color={colors.text} />
+            <Text style={styles.planButtonText}>Plan</Text>
+          </TouchableOpacity>
         </View>
 
         {zones.length === 0 ? (
@@ -215,7 +226,22 @@ const styles = StyleSheet.create({
     paddingBottom: 140,
     gap: 20,
   },
-  headerTextWrap: { gap: 6 },
+  headerRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  headerTextWrap: { gap: 6, flexShrink: 1 },
+  // The "Plan" button next to the title (ticket 106).
+  planButton: {
+    height: 44,
+    paddingLeft: 12,
+    paddingRight: 16,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  planButtonText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14, color: colors.text },
   eyebrow: {
     fontFamily: 'InstrumentSans_500Medium',
     fontSize: 13,

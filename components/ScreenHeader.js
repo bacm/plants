@@ -14,10 +14,25 @@ import { colors, spacing, typography, radius } from '../lib/theme';
 // `large` (ticket 071, app/settings.js): stacks the back button above a 40pt
 // title instead of the usual side-by-side row, matching the mock-up's
 // Réglages layout.
-export function ScreenHeader({ title, subtitle, right, large, backFallback = '/(tabs)' }) {
+// `compact` (ticket 106): the smaller title of the plan screen's header.
+// `onBack` (ticket 106): replaces the navigation, e.g. to leave an inline form
+// that is not a route of its own.
+export function ScreenHeader({
+  title,
+  subtitle,
+  right,
+  large,
+  backFallback = '/(tabs)',
+  onBack,
+  compact,
+}) {
   const router = useRouter();
 
   const goBack = () => {
+    if (onBack) {
+      onBack();
+      return;
+    }
     if (router.canGoBack()) router.back();
     else router.replace(backFallback);
   };
@@ -51,11 +66,15 @@ export function ScreenHeader({ title, subtitle, right, large, backFallback = '/(
       {backBtn}
       <View style={styles.textCol}>
         {title ? (
-          <Text style={styles.title} accessibilityRole="header">
+          <Text style={[styles.title, compact && styles.compactTitle]} accessibilityRole="header">
             {title}
           </Text>
         ) : null}
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+        {subtitle ? (
+          <Text style={[styles.subtitle, compact && styles.compactSubtitle]} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       {right ? <View>{right}</View> : null}
     </View>
@@ -89,4 +108,7 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   subtitle: { ...typography.bodySmall, color: colors.textSecondary },
+  // The plan screen's header (ticket 106): a 24 pt title over a 12 pt summary.
+  compactTitle: { fontSize: 24, lineHeight: 26 },
+  compactSubtitle: { fontSize: 12 },
 });
