@@ -1,7 +1,7 @@
 ---
 id: 113
 title: Type the length of a shape's side and stretch the shape
-status: open
+status: in-progress
 priority: P2
 type: feature
 ---
