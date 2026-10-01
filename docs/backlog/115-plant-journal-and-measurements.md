@@ -37,7 +37,7 @@ shows how each plant grows.
       size was set by hand in the bubble; a new measurement with a width
       clears that manual size; the bubble says where the size comes from
       ("mesurée le 12 sept." or "réglée sur le plan")
-- [ ] Matches the artboards Soin, JournalMesure, PlanteActions and PlanBulle;
+- [x] Matches the artboards Soin, JournalMesure, PlanteActions and PlanBulle;
       `npm run verify`, server pytest and `npm run e2e:web` pass; the server
       deploy accepts the new columns
 - [ ] Checked on the owner's iPhone
