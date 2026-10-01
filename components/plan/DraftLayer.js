@@ -1,6 +1,7 @@
 // The outline being drawn or edited on the plan (ticket 107): its edges, the
 // length pill of each side, the corners, and the touch areas that move a corner
-// (edit mode) or the whole shape (rectangle mode). Drawn in the canvas's own
+// (edit mode) or the whole shape (rectangle mode, or a long press inside the
+// edited shape). Drawn in the canvas's own
 // coordinates, above the plants. `unit` is one screen pixel in canvas px, so
 // strokes, pills and handles keep their size while the canvas is scaled.
 //
@@ -14,12 +15,15 @@ import Svg, { Polygon, Polyline, Line, Circle, Text as SvgText } from 'react-nat
 import { colors } from '../../lib/theme';
 import { sideLengths, PILL_OFFSET_PX, PILL_OFFSET_EDIT_PX } from '../../lib/zoneDraw';
 import { featureLook } from '../../lib/planFeatures';
+import { pointInPolygon } from '../../lib/gardenPlan';
 import { SNAP_KIND_LABELS } from '../../lib/planSnap';
 
 const HIT_PX = 44;
 const PILL_W = 64;
 // Ticket 117: a long press this long on a corner opens "Supprimer ce sommet".
 export const CORNER_LONG_PRESS_MS = 600;
+// An edited shape moves as a whole after a long press inside it (as a plant does).
+const SHAPE_LONG_PRESS_MS = 450;
 const PLUS_R = 8;
 // A side shorter than this on screen has no "+" (it would sit under its corners).
 const PLUS_MIN_SIDE_PX = 40;
@@ -36,6 +40,35 @@ function panGesture(kind, index, drag) {
     .onEnd(() => {
       scheduleOnRN(drag.onEnd);
     });
+}
+
+// The whole edited shape, dragged after a long press. The touch area is the
+// shape's bounding box; a press outside the outline itself (a concave corner)
+// starts nothing.
+function ShapeArea({ bounds, contains, drag }) {
+  const start = (x, y) => {
+    if (contains(bounds.left + x, bounds.top + y)) drag.onStart('shape', 0);
+  };
+  const gesture = Gesture.Pan()
+    .activateAfterLongPress(SHAPE_LONG_PRESS_MS)
+    .onStart((e) => {
+      scheduleOnRN(start, e.x, e.y);
+    })
+    .onUpdate((e) => {
+      scheduleOnRN(drag.onMove, e.translationX, e.translationY);
+    })
+    .onEnd(() => {
+      scheduleOnRN(drag.onEnd);
+    });
+  return (
+    <GestureDetector gesture={gesture}>
+      <View
+        collapsable={false}
+        accessibilityLabel="Forme à déplacer (appui long)"
+        style={[styles.abs, bounds]}
+      />
+    </GestureDetector>
+  );
 }
 
 function Handle({ cx, cy, unit, drag, index, color, onLongPress }) {
@@ -300,7 +333,7 @@ export function DraftLayer({
   const pillOffset = (hasHandles ? PILL_OFFSET_EDIT_PX : PILL_OFFSET_PX) * unit;
 
   let bounds = null;
-  if (isRect) {
+  if (isRect || hasHandles) {
     const xs = polygon.map((p) => p[0]);
     const ys = polygon.map((p) => p[1]);
     bounds = {
@@ -383,7 +416,17 @@ export function DraftLayer({
         </View>
       ) : null}
 
-      {bounds ? (
+      {bounds && hasHandles ? (
+        <ShapeArea
+          bounds={bounds}
+          drag={drag}
+          contains={(x, y) =>
+            pointInPolygon([(x - pad) / drawScale, (y - pad) / drawScale], polygon)
+          }
+        />
+      ) : null}
+
+      {bounds && isRect ? (
         <GestureDetector gesture={panGesture('shape', 0, drag)}>
           <View
             collapsable={false}

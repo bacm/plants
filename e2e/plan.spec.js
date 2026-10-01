@@ -1417,4 +1417,27 @@ test.describe('adding and removing corners (ticket 117)', () => {
       .toBe(5);
     expect(JSON.parse(serverFeature(api, 'feature-terrace').polygon)[2]).toEqual([1300, 400]);
   });
+
+  test('an element: a long press inside moves the whole shape, and it is saved', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedSideGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 1050, 400));
+    await expect(corners(page)).toHaveCount(4);
+    const from = await planPoint(page, 1100, 400);
+    const to = await planPoint(page, 1300, 500);
+    await page.mouse.move(from.x, from.y);
+    await page.mouse.down();
+    await page.waitForTimeout(700);
+    await page.mouse.move(to.x, to.y, { steps: 10 });
+    await page.mouse.up();
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect
+      .poll(() => JSON.parse(serverFeature(api, 'feature-terrace').polygon)[0], { timeout: 20000 })
+      .toEqual([1000, 300]);
+    expect(JSON.parse(serverFeature(api, 'feature-terrace').polygon)).toHaveLength(4);
+  });
 });
