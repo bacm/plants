@@ -68,6 +68,7 @@ export function PlantForm({
   initialShowMore = false,
   preselectZoneId,
   autoFocusName,
+  notice,
   onSubmit,
   onDelete,
 }) {
@@ -180,6 +181,15 @@ export function PlantForm({
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12 }]}
         keyboardShouldPersistTaps="handled">
         <ScreenHeader title={title} />
+
+        {notice ? (
+          <View style={styles.notice}>
+            <Icon name="content-copy" size={18} color={colors.accent} style={styles.noticeIcon} />
+            <Text style={styles.noticeText}>
+              <Text style={styles.noticeTitle}>{notice.title}</Text> {notice.text}
+            </Text>
+          </View>
+        ) : null}
 
         <View style={styles.nameBlock}>
           <View style={styles.nameRow}>
@@ -567,6 +577,18 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
     gap: spacing.md,
   },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: radius.md,
+    backgroundColor: colors.softGreen,
+  },
+  noticeIcon: { marginTop: 1 },
+  noticeText: { ...typography.bodySmall, flex: 1, lineHeight: 18, color: colors.accent },
+  noticeTitle: { fontFamily: 'InstrumentSans_600SemiBold' },
   nameBlock: { zIndex: 10, gap: spacing.xs },
   nameRow: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
   nameField: { flex: 1 },

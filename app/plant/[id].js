@@ -534,7 +534,17 @@ export default function PlantDetailScreen() {
       </ScrollView>
 
       <View style={[styles.stickyButtonWrap, { bottom: insets.bottom + spacing.md }]}>
-        <PrimaryButton label="Ajouter au journal" onPress={goToLog} />
+        <TouchableOpacity
+          style={styles.duplicateButton}
+          onPress={() => router.push(`/plant/new?copyOf=${id}`)}
+          accessibilityRole="button"
+          accessibilityLabel="Dupliquer">
+          <Icon name="content-copy" size={18} color={colors.text} />
+          <Text style={styles.duplicateLabel}>Dupliquer</Text>
+        </TouchableOpacity>
+        <View style={styles.journalButton}>
+          <PrimaryButton label="Ajouter au journal" onPress={goToLog} />
+        </View>
       </View>
 
       <Modal visible={showDatePicker} transparent animationType="fade">
@@ -814,7 +824,28 @@ const styles = StyleSheet.create({
   tabContent: {},
 
   // Sticky bottom button
-  stickyButtonWrap: { position: 'absolute', left: 20, right: 20 },
+  stickyButtonWrap: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    flexDirection: 'row',
+    gap: 10,
+  },
+  duplicateButton: {
+    height: 56,
+    paddingHorizontal: 18,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    borderColor: colors.borderStrong,
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    flexShrink: 0,
+  },
+  duplicateLabel: { ...typography.title, fontSize: 15, color: colors.text },
+  journalButton: { flex: 1 },
 
   // Modals
   modalOverlay: {

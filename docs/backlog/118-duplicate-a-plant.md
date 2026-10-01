@@ -18,14 +18,14 @@ them a few seconds' work and keeps their data consistent.
 
 ## Acceptance criteria
 
-- [ ] The plant sheet's bottom bar has a "Dupliquer" button left of "Ajouter
+- [x] The plant sheet's bottom bar has a "Dupliquer" button left of "Ajouter
       au journal"
-- [ ] It opens "Nouvelle plante" prefilled with the species sheet and the
+- [x] It opens "Nouvelle plante" prefilled with the species sheet and the
       zone; the name gets " 2" (or the next number when it already ends in
       one); a banner says what is not copied: photos, journal, reminders,
       plan position, planting date and notes
-- [ ] Nothing is created until "Enregistrer"; the original is unchanged
-- [ ] The copy rule is a pure, Jest-tested function in `lib/plantFields.js`
+- [x] Nothing is created until "Enregistrer"; the original is unchanged
+- [x] The copy rule is a pure, Jest-tested function in `lib/plantFields.js`
       (no field names in the screen); matches the PlanteActions and
       PlanteDupliquer artboards; `npm run verify` and `npm run e2e:web` pass
 
