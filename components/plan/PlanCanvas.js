@@ -71,6 +71,13 @@ import { effectivePlanSize, planSizeOf, planSizeSourceText } from '../../lib/pla
 import { formatShortDate } from '../../lib/journal';
 import { DEFAULT_SNAP_SETTINGS, makeSnapper, snapShapes } from '../../lib/planSnap';
 import {
+  DEFAULT_NUDGE_STEP,
+  NUDGE_DIRS,
+  nextNudgeStep,
+  nudgeLabel,
+  nudgeTarget,
+} from '../../lib/planNudge';
+import {
   featureAt,
   featureLabel,
   featureLook,
@@ -280,6 +287,47 @@ function BubbleSize({ size, onChange }) {
   );
 }
 
+// The "Déplacer" row of the bubble (ticket 123): a pill showing the step (a
+// press cycles 1 -> 5 -> 10 cm) and four arrows. `targets` maps each direction
+// to what nudgeTarget answered: null disables the arrow.
+const NUDGE_ICONS = {
+  left: 'arrow-left',
+  up: 'arrow-up',
+  down: 'arrow-down',
+  right: 'arrow-right',
+};
+
+function BubbleNudge({ step, targets, onStep, onPress }) {
+  return (
+    <View style={styles.nudgeRow}>
+      <Text style={[styles.sizeLabel, styles.nudgeLabel]}>Déplacer</Text>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel={`Pas de déplacement : ${step} cm`}
+        onPress={() => onStep(nextNudgeStep(step))}
+        style={styles.nudgePill}>
+        <Text style={styles.sizeValueText}>{step} cm</Text>
+      </TouchableOpacity>
+      {NUDGE_DIRS.map((dir) => {
+        const disabled = !targets[dir];
+        return (
+          <TouchableOpacity
+            key={dir}
+            accessibilityRole="button"
+            accessibilityLabel={nudgeLabel(dir, step)}
+            accessibilityState={{ disabled }}
+            disabled={disabled}
+            hitSlop={{ top: 5, bottom: 5, left: 2, right: 2 }}
+            onPress={() => onPress(targets[dir])}
+            style={[styles.nudgeButton, disabled && styles.nudgeDisabled]}>
+            <Icon name={NUDGE_ICONS[dir]} size={16} color={colors.text} />
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 function DrawerItem({ plant, drag }) {
   const gesture = dragGesture(drag);
   return (
@@ -336,6 +384,11 @@ export function PlanCanvas({
   // edits it; a plant dropped on one is refused through `onRefuse`.
   onEditFeature,
   onRefuse,
+  // Ticket 123: the bubble's arrows. `onNudge({ plant, x, y })` moves the plant
+  // inside its zone; the step (cm) is a device setting kept by the screen.
+  nudgeStep = DEFAULT_NUDGE_STEP,
+  onChangeNudgeStep,
+  onNudge,
   onSheetHeight,
   // The veil behind the "Ajouter" sheet; a tap on it calls `onScrimPress`.
   scrim = false,
@@ -826,7 +879,16 @@ export function PlanCanvas({
     const c = toScreen({ x: selected.planX, y: selected.planY }, view);
     const r = dotDiameterPx(planSizeOf(selected), view.scale) / 2 + 5;
     const left = clampNumber(c.x - 20, 12, Math.max(12, viewport.width - 312));
-    const below = c.y + r + 3 < viewport.height - keyboardHeight - drawerHeight - 90;
+    const below = c.y + r + 3 < viewport.height - keyboardHeight - drawerHeight - 136;
+    const nudgeContext = { zones: parsedZones, features, plan };
+    const here = { x: selected.planX, y: selected.planY };
+    const targets = {};
+    for (const dir of NUDGE_DIRS) targets[dir] = nudgeTarget(here, dir, nudgeStep, nudgeContext);
+    const pressNudge = (result) => {
+      if (!result) return;
+      if (result.refused) onRefuse?.({ plant: selected, feature: result.refused });
+      else onNudge?.({ plant: selected, x: result.point.x, y: result.point.y });
+    };
     bubble = (
       <View
         testID="plan-bubble"
@@ -858,6 +920,13 @@ export function PlanCanvas({
           key={selected.id}
           size={effectivePlanSize(selected)}
           onChange={(cm) => onChangePlanSize(selected.id, cm)}
+        />
+        <View style={styles.bubbleRule} />
+        <BubbleNudge
+          step={nudgeStep}
+          targets={targets}
+          onStep={(next) => onChangeNudgeStep?.(next)}
+          onPress={pressNudge}
         />
       </View>
     );
@@ -1441,6 +1510,31 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   sizeValueText: { fontFamily: FONT_BOLD, fontSize: 14, color: colors.text },
+  nudgeRow: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 },
+  nudgeLabel: { flexGrow: 1, marginRight: 2 },
+  nudgePill: {
+    minWidth: 46,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    paddingHorizontal: 8,
+    marginRight: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nudgeButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nudgeDisabled: { opacity: 0.35 },
   sizeGlyph: { fontFamily: FONT_BODY, fontSize: 18, lineHeight: 22, color: colors.text },
   sizeInput: {
     flexGrow: 1,

@@ -65,6 +65,7 @@ import {
   sideLabel,
 } from '../../lib/zoneDraw';
 import { DEFAULT_SNAP_SETTINGS, parseSnapSettings, snapSummary } from '../../lib/planSnap';
+import { DEFAULT_NUDGE_STEP, parseNudgeStep } from '../../lib/planNudge';
 import {
   planSummary,
   moveMessage,
@@ -105,6 +106,8 @@ const SNAP_SETTING_KEY = 'plan.snapToGrid';
 const SNAP_SETTINGS_KEY = 'plan.snapSettings';
 // Ticket 116: the edit sheets folded ('1', the default) or unfolded ('0').
 const EDIT_FOLDED_KEY = 'plan.editFolded';
+// Ticket 123: the arrow buttons' step in cm (1, 5 or 10).
+const NUDGE_STEP_KEY = 'plan.nudgeStepCm';
 
 /** The folded edit sheet's line: area · size · active snapping. */
 function foldedSummary(draft, snapSettings, snapEnabled) {
@@ -140,6 +143,7 @@ export default function PlanScreen() {
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [snapSettings, setSnapSettings] = useState(DEFAULT_SNAP_SETTINGS);
   const [editFolded, setEditFolded] = useState(true);
+  const [nudgeStep, setNudgeStep] = useState(DEFAULT_NUDGE_STEP);
 
   useEffect(() => {
     let alive = true;
@@ -150,6 +154,8 @@ export default function PlanScreen() {
       if (alive && settings != null) setSnapSettings(parseSnapSettings(settings));
       const folded = await getSetting(EDIT_FOLDED_KEY);
       if (alive && folded != null) setEditFolded(folded !== '0');
+      const step = await getSetting(NUDGE_STEP_KEY);
+      if (alive && step != null) setNudgeStep(parseNudgeStep(step));
     })();
     return () => {
       alive = false;
@@ -165,6 +171,15 @@ export default function PlanScreen() {
       showMessage('Erreur', error?.message || 'Impossible de mémoriser ce réglage.');
     }
   }, [snapEnabled]);
+
+  const changeNudgeStep = useCallback((next) => {
+    setNudgeStep(next);
+    try {
+      setSetting(NUDGE_STEP_KEY, String(next));
+    } catch (error) {
+      showMessage('Erreur', error?.message || 'Impossible de mémoriser ce réglage.');
+    }
+  }, []);
 
   const setFolded = useCallback((next) => {
     setEditFolded(next);
@@ -289,6 +304,21 @@ export default function PlanScreen() {
       });
     },
     [data.zones, write, showBanner]
+  );
+
+  // Ticket 123: an arrow press. The plant moves at once on screen (so a quick
+  // second press starts from the new place); no zoneId key, so the zone is
+  // left as it is, and no undo banner for a few centimetres.
+  const onNudge = useCallback(
+    async ({ plant, x, y }) => {
+      setData((prev) => ({
+        ...prev,
+        plants: prev.plants.map((p) => (p.id === plant.id ? { ...p, planX: x, planY: y } : p)),
+      }));
+      // A failed write has shown its error: put the plant back where it is saved.
+      if (!(await write(plant.id, { x, y }))) await load();
+    },
+    [write, load]
   );
 
   const onSubmitSize = useCallback(
@@ -831,6 +861,9 @@ export default function PlanScreen() {
         onSheetHeight={setSheetH}
         onEditFeature={editFeature}
         onRefuse={onRefuse}
+        nudgeStep={nudgeStep}
+        onChangeNudgeStep={changeNudgeStep}
+        onNudge={onNudge}
         onAddCorner={addDraftCorner}
         onDraftChange={changeDraft}
         onDraftPatch={patchDraft}

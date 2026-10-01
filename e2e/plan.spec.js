@@ -180,6 +180,77 @@ test.describe('garden plan (ticket 106)', () => {
     await expect(visibleText(page, '4 m')).toHaveCount(0);
   });
 
+  test('the arrows nudge the plant by the step, saved and synced (ticket 123)', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedGarden(api);
+    await page.goto('/plan');
+
+    await page.getByLabel('Plante Rosier ‘Pierre de Ronsard’').click();
+    await expect(visibleText(page, '2 m')).toBeVisible();
+    const right = page.getByRole('button', { name: 'Déplacer de 5 cm vers la droite' });
+    for (let i = 0; i < 3; i++) await right.click();
+
+    // 15 cm to the right: the bubble stays open and the distances follow.
+    await expect(page.getByTestId('plan-bubble')).toBeVisible();
+    await expect(visibleText(page, '2,15 m')).toBeVisible();
+    await expect(visibleText(page, '3,85 m')).toBeVisible();
+    await expect.poll(() => serverPlant(api, 'plant-rose')?.planX, { timeout: 20000 }).toBe(215);
+    expect(serverPlant(api, 'plant-rose').planY).toBe(300);
+    expect(serverPlant(api, 'plant-rose').zoneId).toBe('zone-a');
+
+    await page.reload();
+    await page.getByLabel('Plante Rosier ‘Pierre de Ronsard’').click();
+    await expect(visibleText(page, '2,15 m')).toBeVisible();
+    await expect(visibleText(page, '3,85 m')).toBeVisible();
+  });
+
+  test('the nudge step cycles 1, 5, 10 cm and is remembered (ticket 123)', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedGarden(api);
+    await page.goto('/plan');
+
+    await page.getByLabel('Plante Rosier ‘Pierre de Ronsard’').click();
+    await expect(page.getByRole('button', { name: 'Pas de déplacement : 5 cm' })).toBeVisible();
+    await page.getByRole('button', { name: 'Pas de déplacement : 5 cm' }).click();
+    await expect(page.getByRole('button', { name: 'Pas de déplacement : 10 cm' })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Déplacer de 10 cm vers le haut' })
+    ).toBeVisible();
+
+    await page.reload();
+    await page.getByLabel('Plante Rosier ‘Pierre de Ronsard’').click();
+    await expect(page.getByRole('button', { name: 'Pas de déplacement : 10 cm' })).toBeVisible();
+  });
+
+  test('an arrow stops at a side of the zone and is then disabled (ticket 123)', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedGarden(api);
+    await page.goto('/plan');
+
+    await page.getByLabel('Plante Rosier ‘Pierre de Ronsard’').click();
+    await page.getByRole('button', { name: 'Pas de déplacement : 5 cm' }).click();
+    // The left side is the nearest, 2 m away: 20 presses of 10 cm reach it.
+    const left = page.getByRole('button', { name: 'Déplacer de 10 cm vers la gauche' });
+    for (let i = 0; i < 20; i++) await left.click();
+
+    await expect(left).toBeDisabled();
+    await expect.poll(() => serverPlant(api, 'plant-rose')?.planX, { timeout: 20000 }).toBe(0);
+    expect(serverPlant(api, 'plant-rose').zoneId).toBe('zone-a');
+    // The other arrows still work.
+    await expect(
+      page.getByRole('button', { name: 'Déplacer de 10 cm vers le haut' })
+    ).toBeEnabled();
+  });
+
   test('the bubble sizes the plant on the plan: + and -, typed metres, synced', async ({
     context,
     page,
