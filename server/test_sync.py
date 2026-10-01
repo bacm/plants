@@ -77,6 +77,26 @@ def test_garden_plan_data_round_trips(client):
     assert changes["plants"][0]["planSizeCm"] == 150
 
 
+def test_plan_features_round_trip(client):
+    stamp = "2026-10-01T10:00:00.000Z"
+    polygon = "[[0,0],[500,0],[500,400],[0,400]]"
+    feature = {
+        "id": "f1",
+        "kind": "terrace",
+        "label": "Terrasse sud",
+        "polygon": polygon,
+        "updatedAt": stamp,
+        "deletedAt": None,
+    }
+    response = push(client, {"plan_features": [feature]})
+    assert response.status_code == 200
+    assert response.json()["accepted"] == 1
+    assert pull(client).json()["changes"]["plan_features"] == [feature]
+    deleted = {**feature, "updatedAt": "2026-10-01T11:00:00.000Z", "deletedAt": "2026-10-01T11:00:00.000Z"}
+    assert push(client, {"plan_features": [deleted]}).json()["accepted"] == 1
+    assert pull(client).json()["changes"]["plan_features"] == [deleted]
+
+
 def test_pull_empty(client):
     assert pull(client).json() == {"changes": {}, "revision": 0, "more": False}
     assert pull(client, since=7).json()["revision"] == 7

@@ -19,7 +19,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-nativ
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import Svg, { G, Polygon, Text as SvgText } from 'react-native-svg';
+import Svg, { G, Polygon, Line, Defs, ClipPath, Text as SvgText } from 'react-native-svg';
 import { PlanGrid } from './PlanGrid';
 import { DraftLayer } from './DraftLayer';
 import { ScreenHeader } from '../ScreenHeader';
@@ -54,6 +54,14 @@ import {
   parsePlanSizeInput,
 } from '../../lib/planView';
 import { hitCorner, moveCorner, translatePolygon, placeRectangle } from '../../lib/zoneDraw';
+import {
+  featureAt,
+  featureLabel,
+  featureLook,
+  isFeatureDraft,
+  dragFeatureCorner,
+  dragFeatureShape,
+} from '../../lib/planFeatures';
 
 const HIT_PX = 44;
 const LONG_PRESS_MS = 450;
@@ -258,6 +266,7 @@ function DrawerItem({ plant, drag }) {
 export function PlanCanvas({
   plan,
   zones,
+  features = [],
   plants,
   summary,
   banner,
@@ -275,11 +284,20 @@ export function PlanCanvas({
   draft,
   sheet,
   controller,
-  onStartTrace,
+  onAdd,
   onAddCorner,
   onDraftChange,
   onEditZone,
   onBack,
+  // Ticket 110: garden elements. `features` are { id, kind, label, polygon }
+  // with the polygon parsed. A long press on one (where no zone covers it)
+  // edits it; a plant dropped on one is refused through `onRefuse`.
+  onEditFeature,
+  onRefuse,
+  onSheetHeight,
+  // The veil behind the "Ajouter" sheet; a tap on it calls `onScrimPress`.
+  scrim = false,
+  onScrimPress,
 }) {
   const [viewport, setViewport] = useState(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
@@ -329,9 +347,12 @@ export function PlanCanvas({
     sheetH,
     viewport,
     snapEnabled,
+    features,
     onAddCorner,
     onDraftChange,
     onEditZone,
+    onEditFeature,
+    onRefuse,
   };
 
   useImperativeHandle(controller, () => ({
@@ -378,9 +399,10 @@ export function PlanCanvas({
 
   // A long press on a zone's empty area edits its outline. A plant keeps its
   // own long press (moving it), so a press on a plant, or while one is being
-  // dragged, does nothing here.
+  // dragged, does nothing here. Where no zone covers the spot, a garden element
+  // under it is edited instead (zones are drawn above elements).
   const zoneLongPress = useCallback((x, y) => {
-    const { view: v, plants: all, onEditZone: edit } = latest.current;
+    const { view: v, plants: all, onEditZone: edit, onEditFeature: editFeature } = latest.current;
     if (dragRef.current) return;
     for (const plant of all) {
       if (plant.planX == null || plant.planY == null) continue;
@@ -388,8 +410,14 @@ export function PlanCanvas({
       const r = Math.max(HIT_PX / 2, dotDiameterPx(plant.planSizeCm, v.scale) / 2);
       if (Math.hypot(c.x - x, c.y - y) <= r) return;
     }
-    const zone = zoneAt(toPlan({ x, y }, v), zonesRef.current);
-    if (zone) edit(zone.id);
+    const at = toPlan({ x, y }, v);
+    const zone = zoneAt(at, zonesRef.current);
+    if (zone) {
+      edit(zone.id);
+      return;
+    }
+    const feature = featureAt(at, latest.current.features);
+    if (feature && editFeature) editFeature(feature.id);
   }, []);
 
   // Moving a corner (edit) or the whole rectangle: the translation in screen px
@@ -399,18 +427,27 @@ export function PlanCanvas({
     () => ({
       onStart: (kind, index) => {
         const d = latest.current.draft;
-        if (d) draftDrag.current = { kind, index, start: d.polygon };
+        if (d) draftDrag.current = { kind, index, start: d.polygon, feature: isFeatureDraft(d) };
       },
       onMove: (tx, ty) => {
         const start = draftDrag.current;
         if (!start) return;
-        const { view: v, plan: p } = latest.current;
+        const { view: v, plan: p, snapEnabled: snap } = latest.current;
         const delta = { dx: Math.round(tx / v.scale), dy: Math.round(ty / v.scale) };
-        latest.current.onDraftChange(
-          start.kind === 'corner'
-            ? moveCorner(start.start, start.index, delta, p)
-            : translatePolygon(start.start, delta, p)
-        );
+        let next;
+        if (start.feature) {
+          // Garden elements snap to the 50 cm grid with the magnet (ticket 110).
+          next =
+            start.kind === 'corner'
+              ? dragFeatureCorner(start.start, start.index, delta, p, snap)
+              : dragFeatureShape(start.start, delta, p, snap);
+        } else {
+          next =
+            start.kind === 'corner'
+              ? moveCorner(start.start, start.index, delta, p)
+              : translatePolygon(start.start, delta, p);
+        }
+        latest.current.onDraftChange(next);
       },
       onEnd: () => {
         draftDrag.current = null;
@@ -454,6 +491,13 @@ export function PlanCanvas({
       const point = toPlan({ x, y }, v);
       if (d.source === 'drawer' && (y >= drawerTop || !isInsidePlan(point, p))) return;
       const at = snap ? snapToGrid(point, p) : clampToPlan(point, p);
+      // A plant never stands on a garden element: the drop is refused and the
+      // plant keeps its place (or stays in the drawer).
+      const blocking = featureAt(at, latest.current.features);
+      if (blocking) {
+        latest.current.onRefuse?.({ plant: d.plant, feature: blocking });
+        return;
+      }
       onDrop({
         plant: d.plant,
         x: at.x,
@@ -589,7 +633,13 @@ export function PlanCanvas({
   const drawnZones = parsedZones.map((zone) =>
     draft?.kind === 'edit' && zone.id === draft.zoneId ? { ...zone, polygon: draft.polygon } : zone
   );
-  const dimOthers = !!draft && draft.kind !== 'edit';
+  const dimOthers = draft?.kind === 'trace' || draft?.kind === 'rect';
+  // The element being edited is drawn from its draft (shape, type and name live).
+  const drawnFeatures = features.map((feature) =>
+    draft?.kind === 'feature' && feature.id === draft.featureId
+      ? { ...feature, polygon: draft.polygon, kind: draft.featureKind, label: draft.label }
+      : feature
+  );
   // The spot a drag would land on: snapped when the magnet is on (ticket 109).
   let ghostAt = drag ? { x: drag.x, y: drag.y } : null;
   let ghostPoint = null;
@@ -601,6 +651,7 @@ export function PlanCanvas({
     }
   }
   const highlightId = ghostPoint ? (zoneAt(ghostPoint, parsedZones)?.id ?? null) : null;
+  const ghostRefused = !!ghostPoint && !!featureAt(ghostPoint, features);
   const drawerHeight = draft ? sheetH : unplaced.length ? drawerH : 0;
 
   const hitSize = HIT_PX * unit;
@@ -670,6 +721,15 @@ export function PlanCanvas({
                   pxPerCm={drawScale}
                   unit={unit}
                   accessibilityLabel={`Plan du jardin, ${plan.widthCm / 100} × ${plan.lengthCm / 100} m`}>
+                  {drawnFeatures.map((feature) => (
+                    <Feature
+                      key={feature.id}
+                      feature={feature}
+                      scale={drawScale}
+                      unit={unit}
+                      editing={draft?.kind === 'feature' && feature.id === draft.featureId}
+                    />
+                  ))}
                   {drawnZones.map((zone) => {
                     const points = zone.polygon
                       .map(([x, y]) => `${x * drawScale},${y * drawScale}`)
@@ -711,6 +771,18 @@ export function PlanCanvas({
                   width={plan.widthCm * drawScale}
                   height={plan.lengthCm * drawScale}
                   pointerEvents="none">
+                  {drawnFeatures.map((feature) => {
+                    const label = polygonLabelPoint(feature.polygon);
+                    return (
+                      <FeatureLabel
+                        key={feature.id}
+                        text={featureLabel(feature)}
+                        lx={label.x * drawScale}
+                        ly={label.y * drawScale}
+                        unit={unit}
+                      />
+                    );
+                  })}
                   {drawnZones.map((zone) => {
                     const label = polygonLabelPoint(zone.polygon);
                     return (
@@ -752,11 +824,11 @@ export function PlanCanvas({
             draft ? null : (
               <TouchableOpacity
                 style={styles.pill}
-                onPress={onStartTrace}
+                onPress={onAdd}
                 accessibilityRole="button"
-                accessibilityLabel="Tracer une zone">
-                <Icon name="pencil-outline" size={16} color={colors.text} />
-                <Text style={styles.pillText}>Tracer une zone</Text>
+                accessibilityLabel="Ajouter">
+                <Icon name="plus" size={18} color={colors.text} />
+                <Text style={styles.pillText}>Ajouter</Text>
               </TouchableOpacity>
             )
           }
@@ -802,8 +874,24 @@ export function PlanCanvas({
         </RoundButton>
       </View>
 
+      {scrim ? (
+        <TouchableOpacity
+          activeOpacity={1}
+          style={styles.scrim}
+          onPress={onScrimPress}
+          accessibilityRole="button"
+          accessibilityLabel="Fermer"
+        />
+      ) : null}
+
       {sheet ? (
-        <View style={styles.sheetWrap} onLayout={(e) => setSheetH(e.nativeEvent.layout.height)}>
+        <View
+          style={styles.sheetWrap}
+          onLayout={(e) => {
+            const h = e.nativeEvent.layout.height;
+            setSheetH(h);
+            onSheetHeight?.(h);
+          }}>
           {sheet}
         </View>
       ) : null}
@@ -844,12 +932,78 @@ export function PlanCanvas({
                 height: d,
                 borderRadius: d / 2,
                 backgroundColor: colorHex(drag.plant.flowerColor),
+                borderColor: ghostRefused ? colors.danger : '#fff',
               };
             })(),
           ]}
         />
       ) : null}
     </View>
+  );
+}
+
+// A garden element (ticket 110, PlanElements artboard): filled and outlined per
+// kind (lib/theme.js), the house also hatched. Drawn under zones and plants.
+function Feature({ feature, scale, unit, editing }) {
+  const look = featureLook(feature.kind);
+  const points = feature.polygon.map(([x, y]) => `${x * scale},${y * scale}`).join(' ');
+  const xs = feature.polygon.map((p) => p[0] * scale);
+  const ys = feature.polygon.map((p) => p[1] * scale);
+  const [left, right] = [Math.min(...xs), Math.max(...xs)];
+  const [top, bottom] = [Math.min(...ys), Math.max(...ys)];
+  const rise = bottom - top;
+  // Diagonal hatching, clipped to the shape; the gap grows with the shape so
+  // a large house never draws thousands of lines.
+  const gap = Math.max(14 * unit, (right - left + rise) / 200);
+  const hatch = [];
+  if (look.hatch) for (let x = left - rise; x < right; x += gap) hatch.push(x);
+  const clipId = `hatch-${feature.id}`;
+  return (
+    <>
+      <Polygon
+        testID={`plan-feature-${feature.id}`}
+        points={points}
+        fill={look.fill}
+        stroke={editing ? colors.text : look.stroke}
+        strokeWidth={(editing ? 2 : 1) * unit}
+      />
+      {hatch.length ? (
+        <>
+          <Defs>
+            <ClipPath id={clipId}>
+              <Polygon points={points} />
+            </ClipPath>
+          </Defs>
+          {hatch.map((x) => (
+            <Line
+              key={x}
+              x1={x}
+              y1={bottom}
+              x2={x + rise}
+              y2={top}
+              stroke={look.hatch}
+              strokeWidth={unit}
+              clipPath={`url(#${clipId})`}
+            />
+          ))}
+        </>
+      ) : null}
+    </>
+  );
+}
+
+function FeatureLabel({ text, lx, ly, unit }) {
+  return (
+    <SvgText
+      x={lx}
+      y={ly + 4 * unit}
+      textAnchor="middle"
+      fontSize={11 * unit}
+      fontFamily={FONT_BOLD}
+      fill={colors.planInk}
+      {...HALO(unit)}>
+      {text}
+    </SvgText>
   );
 }
 
@@ -931,7 +1085,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     zIndex: 2,
   },
-  // The header's "Tracer une zone" button (Plan artboard).
+  // The header's "Ajouter" button (Plan artboard).
   pill: {
     height: 40,
     paddingLeft: 8,
@@ -961,6 +1115,7 @@ const styles = StyleSheet.create({
   },
   instructionText: { fontFamily: FONT_BODY, fontSize: 14, lineHeight: 20, color: colors.planInk },
   sheetWrap: { position: 'absolute', left: 0, right: 0, bottom: 0, zIndex: 5 },
+  scrim: { ...StyleSheet.absoluteFillObject, zIndex: 4, backgroundColor: colors.planScrim },
   dotHit: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
   zoomCol: { position: 'absolute', right: 12, gap: 8, zIndex: 3 },
   roundBtnBig: {

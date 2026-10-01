@@ -13,6 +13,7 @@ import { scheduleOnRN } from 'react-native-worklets';
 import Svg, { Polygon, Polyline, Line } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 import { sideLengths } from '../../lib/zoneDraw';
+import { featureLook } from '../../lib/planFeatures';
 
 const HIT_PX = 44;
 const PILL_OFFSET_PX = 16;
@@ -32,7 +33,7 @@ function panGesture(kind, index, drag) {
     });
 }
 
-function Handle({ cx, cy, unit, drag, index }) {
+function Handle({ cx, cy, unit, drag, index, color }) {
   const hit = HIT_PX * unit;
   const dia = 18 * unit;
   return (
@@ -46,19 +47,19 @@ function Handle({ cx, cy, unit, drag, index }) {
           styles.center,
           { left: cx - hit / 2, top: cy - hit / 2, width: hit, height: hit },
         ]}>
-        <View style={dot(dia, unit, 2.5)} />
+        <View style={dot(dia, unit, 2.5, color)} />
       </View>
     </GestureDetector>
   );
 }
 
-const dot = (dia, unit, border) => ({
+const dot = (dia, unit, border, color = colors.accent) => ({
   width: dia,
   height: dia,
   borderRadius: dia / 2,
   backgroundColor: colors.surface,
   borderWidth: border * unit,
-  borderColor: colors.accent,
+  borderColor: color,
 });
 
 function Pill({ cx, cy, text, unit }) {
@@ -91,16 +92,20 @@ function Pill({ cx, cy, text, unit }) {
 
 export function DraftLayer({ draft, plan, drawScale, unit, pad, drag }) {
   const { kind, polygon, closed } = draft;
-  // A rectangle only exists once "Poser sur le plan" was pressed.
-  if (kind === 'rect' && polygon.length === 0) return null;
+  // A rectangle only exists once "Poser sur le plan" was pressed. A garden
+  // element (ticket 110) is a rectangle too while new, then has corner handles.
+  const isRect = kind === 'rect' || kind === 'element';
+  const hasHandles = kind === 'edit' || kind === 'feature';
+  if (isRect && polygon.length === 0) return null;
   const px = ([x, y]) => ({ x: pad + x * drawScale, y: pad + y * drawScale });
   const local = (point) => `${point[0] * drawScale},${point[1] * drawScale}`;
   const sides = kind === 'trace' ? sideLengths(polygon, closed) : [];
-  const filled = kind === 'rect' || closed;
+  const filled = isRect || closed;
+  const look = featureLook(draft.featureKind);
   const strokeW = 2 * unit;
 
   let bounds = null;
-  if (kind === 'rect') {
+  if (isRect) {
     const xs = polygon.map((p) => p[0]);
     const ys = polygon.map((p) => p[1]);
     bounds = {
@@ -113,7 +118,7 @@ export function DraftLayer({ draft, plan, drawScale, unit, pad, drag }) {
 
   return (
     <>
-      {kind !== 'edit' ? (
+      {!hasHandles ? (
         <View pointerEvents="none" style={[styles.abs, { left: pad, top: pad }]}>
           <Svg
             width={plan.widthCm * drawScale}
@@ -122,11 +127,11 @@ export function DraftLayer({ draft, plan, drawScale, unit, pad, drag }) {
             {filled ? (
               <Polygon
                 points={polygon.map(local).join(' ')}
-                fill={colors.highlight}
-                fillOpacity={0.7}
-                stroke={colors.accent}
+                fill={kind === 'element' ? look.fill : colors.highlight}
+                fillOpacity={kind === 'element' ? 0.8 : 0.7}
+                stroke={kind === 'element' ? colors.text : colors.accent}
                 strokeWidth={strokeW}
-                strokeDasharray={kind === 'rect' ? [5 * unit, 4 * unit] : undefined}
+                strokeDasharray={isRect ? [5 * unit, 4 * unit] : undefined}
               />
             ) : (
               <>
@@ -197,10 +202,20 @@ export function DraftLayer({ draft, plan, drawScale, unit, pad, drag }) {
         );
       })}
 
-      {kind === 'edit'
+      {hasHandles
         ? polygon.map((corner, i) => {
             const at = px(corner);
-            return <Handle key={i} cx={at.x} cy={at.y} index={i} unit={unit} drag={drag} />;
+            return (
+              <Handle
+                key={i}
+                cx={at.x}
+                cy={at.y}
+                index={i}
+                unit={unit}
+                drag={drag}
+                color={kind === 'feature' ? colors.text : colors.accent}
+              />
+            );
           })
         : null}
     </>

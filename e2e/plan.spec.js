@@ -7,6 +7,11 @@ const { test, expect } = require('@playwright/test');
 const { mockAuthApi, visibleText, tabButton } = require('./helpers');
 
 const STAMP = '2026-05-01T10:00:00.000Z';
+// Ticket 110 review screenshots: only taken when SHOTS_DIR names a folder.
+async function shot(page, name) {
+  if (process.env.SHOTS_DIR)
+    await page.screenshot({ path: `${process.env.SHOTS_DIR}/${name}.png` });
+}
 const rect = (x, y, w, h) =>
   JSON.stringify([
     [x, y],
@@ -412,7 +417,8 @@ test.describe('drawing zones (ticket 107)', () => {
     await page.goto('/plan');
     await expect(visibleText(page, '15 × 25 m · 3 zones · 1 plante placée')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Tracer une zone' }).click();
+    await page.getByRole('button', { name: 'Ajouter' }).click();
+    await page.getByRole('button', { name: 'Une zone de plantes' }).click();
     await expect(page.getByText(/Touchez chaque coin de la zone/)).toBeVisible();
     await expect(page.getByRole('button', { name: 'Terminer la zone' })).toBeDisabled();
 
@@ -462,7 +468,8 @@ test.describe('drawing zones (ticket 107)', () => {
     seedDrawGarden(api);
     await page.goto('/plan');
 
-    await page.getByRole('button', { name: 'Tracer une zone' }).click();
+    await page.getByRole('button', { name: 'Ajouter' }).click();
+    await page.getByRole('button', { name: 'Une zone de plantes' }).click();
     await page.getByRole('button', { name: 'Rectangle par cotes' }).click();
     await expect(visibleText(page, 'Zone en rectangle')).toBeVisible();
     await expect(
@@ -505,7 +512,8 @@ test.describe('drawing zones (ticket 107)', () => {
     seedDrawGarden(api);
     await page.goto('/plan');
 
-    await page.getByRole('button', { name: 'Tracer une zone' }).click();
+    await page.getByRole('button', { name: 'Ajouter' }).click();
+    await page.getByRole('button', { name: 'Une zone de plantes' }).click();
     await tapCorners(page, [
       [800, 1000],
       [1400, 1000],
@@ -565,5 +573,220 @@ test.describe('drawing zones (ticket 107)', () => {
     await expect.poll(() => serverZone(api, 'zone-a')?.polygon, { timeout: 20000 }).toBeNull();
     await expect(page.getByText('Massif sud')).toHaveCount(0);
     expect(serverPlant(api, 'plant-rose').zoneId).toBe('zone-a');
+  });
+});
+
+// Ticket 110: garden elements (house, terrace, pond...) drawn on the plan only.
+// What the app writes is read back from the fake server's plan_features rows.
+function seedFeatureGarden(api, { withTerrace = true } = {}) {
+  seedGarden(api);
+  if (withTerrace) {
+    api.server.seed('plan_features', {
+      id: 'feature-terrace',
+      kind: 'terrace',
+      label: 'Terrasse sud',
+      polygon: rect(500, 1200, 500, 400),
+      updatedAt: STAMP,
+      deletedAt: null,
+    });
+  }
+}
+
+const serverFeatures = (api) =>
+  api.server.rows.filter((r) => r.table === 'plan_features').map((r) => r.row);
+const serverFeature = (api, id) => serverFeatures(api).find((row) => row.id === id);
+
+test.describe('garden elements (ticket 110)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  test('Ajouter offers a zone or an element; a terrace is created, placed and dragged', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedFeatureGarden(api, { withTerrace: false });
+    await page.goto('/plan');
+    await expect(visibleText(page, 'À placer · 1')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Ajouter' }).click();
+    await expect(visibleText(page, 'Ajouter au plan')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Une zone de plantes' })).toBeVisible();
+    await shot(page, '1-choice-sheet');
+    await page.getByRole('button', { name: 'Un élément du jardin' }).click();
+
+    await expect(visibleText(page, 'Élément du jardin')).toBeVisible();
+    await expect(visibleText(page, 'Nouvel élément')).toBeVisible();
+    for (const label of ['Maison', 'Abri', 'Terrasse', 'Allée', 'Bassin', 'Clôture', 'Autre']) {
+      await expect(page.getByRole('button', { name: label, exact: true })).toBeVisible();
+    }
+    await page.getByRole('button', { name: 'Terrasse', exact: true }).click();
+    await page.getByLabel('Nom (facultatif)').fill('Terrasse sud');
+    await page.getByLabel('Largeur (m)').fill('5');
+    await page.getByLabel('Longueur (m)').fill('4');
+    await expect(
+      visibleText(page, '20 m² · glissez-le à sa place, puis ajustez ses coins.')
+    ).toBeVisible();
+
+    const handle = page.getByLabel('Rectangle à déplacer');
+    await expect(handle).toBeVisible();
+    await shot(page, '2-element-sheet');
+    const before = await handle.boundingBox();
+    await drag(
+      page,
+      { x: before.x + before.width / 2, y: before.y + before.height / 2 },
+      { x: before.x + before.width / 2 + 53, y: before.y + before.height / 2 - 111 }
+    );
+    const after = await handle.boundingBox();
+    expect(after.x - before.x).toBeGreaterThan(30);
+    expect(before.y - after.y).toBeGreaterThan(80);
+
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect(page.getByText('Terrasse sud')).toBeVisible();
+    await expect.poll(() => serverFeatures(api).length, { timeout: 20000 }).toBe(1);
+    const [created] = serverFeatures(api);
+    expect(created.kind).toBe('terrace');
+    expect(created.label).toBe('Terrasse sud');
+    expect(created.deletedAt).toBeNull();
+    const polygon = JSON.parse(created.polygon);
+    expect(polygon[1][0] - polygon[0][0]).toBe(500);
+    expect(polygon[2][1] - polygon[1][1]).toBe(400);
+    // The magnet is on: the top-left corner sits on the 50 cm grid.
+    expect(polygon[0][0] % 50).toBe(0);
+    expect(polygon[0][1] % 50).toBe(0);
+    // It never shows among the zones.
+    await expect(visibleText(page, '15 × 25 m · 2 zones · 1 plante placée')).toBeVisible();
+  });
+
+  test('two elements drawn under the zones, with their labels', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedFeatureGarden(api);
+    api.server.seed('plan_features', {
+      id: 'feature-house',
+      kind: 'house',
+      label: null,
+      polygon: rect(0, 1900, 800, 600),
+      updatedAt: STAMP,
+      deletedAt: null,
+    });
+    await page.goto('/plan');
+    await expect(page.getByText('Terrasse sud')).toBeVisible();
+    await expect(page.getByText('Maison')).toBeVisible();
+    await shot(page, '3-plan-two-elements');
+  });
+
+  test('a long press edits an element: a corner snaps to 50 cm, then Terminer', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedFeatureGarden(api);
+    await page.goto('/plan');
+    await expect(page.getByText('Terrasse sud')).toBeVisible();
+
+    await holdAt(page, await planPoint(page, 600, 1300));
+    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+    await expect(visibleText(page, '20 m²')).toBeVisible();
+    await expect(
+      visibleText(
+        page,
+        'Glissez un coin pour le déplacer. Aimant actif : les coins se calent tous les 50 cm.'
+      )
+    ).toBeVisible();
+    await shot(page, '4-edit-mode');
+
+    const corner = await planPoint(page, 1000, 1600);
+    await drag(page, corner, { x: corner.x + 41, y: corner.y + 17 });
+    await expect(visibleText(page, '20 m²')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+
+    await expect
+      .poll(() => JSON.parse(serverFeature(api, 'feature-terrace').polygon)[2][0], {
+        timeout: 20000,
+      })
+      .toBeGreaterThan(1050);
+    const polygon = JSON.parse(serverFeature(api, 'feature-terrace').polygon);
+    expect(polygon[2][0] % 50).toBe(0);
+    expect(polygon[2][1] % 50).toBe(0);
+    // Only the dragged corner moved.
+    expect(polygon[0]).toEqual([500, 1200]);
+  });
+
+  test('"Type et nom" changes the kind and the name', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedFeatureGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 600, 1300));
+    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+    await page.getByRole('button', { name: 'Type et nom' }).click();
+    await page.getByRole('button', { name: 'Bassin', exact: true }).click();
+    await page.getByLabel('Nom (facultatif)').fill('');
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect
+      .poll(() => serverFeature(api, 'feature-terrace').kind, { timeout: 20000 })
+      .toBe('pond');
+    expect(serverFeature(api, 'feature-terrace').label).toBeNull();
+    await expect(page.getByText('Bassin')).toBeVisible();
+  });
+
+  test('a plant dropped on an element is refused and keeps its place', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedFeatureGarden(api);
+    await page.goto('/plan');
+    await expect(visibleText(page, 'À placer · 1')).toBeVisible();
+    await expect(page.getByText('Terrasse sud')).toBeVisible();
+
+    const item = await page.getByLabel('À placer : Lavande').boundingBox();
+    await longPressDrag(
+      page,
+      { x: item.x + item.width / 2, y: item.y + 20 },
+      await planPoint(page, 750, 1400)
+    );
+
+    await expect(page.getByRole('alert')).toContainText(
+      'Impossible de poser une plante sur Terrasse sud : la plante reprend sa place.'
+    );
+    await shot(page, '5-refusal-banner');
+    await expect(visibleText(page, 'À placer · 1')).toBeVisible();
+    await page.waitForTimeout(1500);
+    const pushedPlants = api.server.pushes.flatMap((p) => p.plants ?? []);
+    expect(pushedPlants.some((row) => row.id === 'plant-lavande')).toBe(false);
+    expect(serverPlant(api, 'plant-lavande').planX).toBeNull();
+    // The banner goes away by itself.
+    await expect(page.getByRole('alert')).toHaveCount(0, { timeout: 9000 });
+
+    // A placed plant dragged onto the element goes back where it was.
+    await longPressDrag(page, await planPoint(page, 200, 300), await planPoint(page, 800, 1300));
+    await expect(page.getByRole('alert')).toContainText('Impossible de poser une plante sur');
+    expect(serverPlant(api, 'plant-rose').planX).toBe(200);
+    expect(serverPlant(api, 'plant-rose').zoneId).toBe('zone-a');
+  });
+
+  test('Supprimer asks to confirm, then the element is gone and the deletion is pushed', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedFeatureGarden(api);
+    await page.goto('/plan');
+    await expect(page.getByText('Terrasse sud')).toBeVisible();
+
+    await holdAt(page, await planPoint(page, 600, 1300));
+    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+    // Dismissing the confirmation keeps the element.
+    page.once('dialog', (dialog) => dialog.dismiss());
+    await page.getByRole('button', { name: 'Supprimer' }).click();
+    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.getByRole('button', { name: 'Supprimer' }).click();
+    await expect(page.getByText('Terrasse sud')).toHaveCount(0);
+    await expect
+      .poll(() => serverFeature(api, 'feature-terrace').deletedAt, { timeout: 20000 })
+      .not.toBeNull();
   });
 });

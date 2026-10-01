@@ -10,7 +10,9 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Field } from '../form';
+import Icon from '../Icon';
 import { colors, spacing, radius, shadow } from '../../lib/theme';
+import { PLAN_FEATURE_KINDS } from '../../lib/enums';
 
 const FONT_BOLD = 'InstrumentSans_600SemiBold';
 const FONT_MEDIUM = 'InstrumentSans_500Medium';
@@ -239,8 +241,207 @@ export function EditSheet({ name, areaText, onErase, onFinish, saving, onLayout 
   );
 }
 
+/** The kinds of garden element, a single choice. */
+function KindChips({ value, onChange }) {
+  return (
+    <View style={styles.chips}>
+      {PLAN_FEATURE_KINDS.map((kind) => (
+        <Chip
+          key={kind.value}
+          label={kind.label}
+          selected={value === kind.value}
+          onPress={() => onChange(kind.value)}
+        />
+      ))}
+    </View>
+  );
+}
+
+function ChoiceRow({ icon, tint, title, text, onPress, testID }) {
+  return (
+    <TouchableOpacity
+      testID={testID}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      style={styles.choice}>
+      <View style={[styles.choiceIcon, { backgroundColor: tint }]}>
+        <Icon name={icon} size={20} color={colors.text} />
+      </View>
+      <View style={styles.choiceText}>
+        <Text style={styles.choiceTitle}>{title}</Text>
+        <Text style={styles.choiceBody}>{text}</Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+/** "Ajouter au plan" (ticket 110, PlanAjouter artboard): a zone, or a garden element. */
+export function AddSheet({ onZone, onElement, onLayout }) {
+  return (
+    <Sheet onLayout={onLayout}>
+      <View style={styles.grip} />
+      <Text style={styles.title}>Ajouter au plan</Text>
+      <ChoiceRow
+        icon="sprout-outline"
+        tint={colors.planZoneFills[0]}
+        title="Une zone de plantes"
+        text="Massif, bordure, potager… Les plantes posées dedans y sont rangées."
+        onPress={onZone}
+      />
+      <ChoiceRow
+        icon="home-outline"
+        tint={colors.planFeatures.house.fill}
+        title="Un élément du jardin"
+        text="Maison, abri, terrasse, allée, bassin… Seulement sur le plan, sans plantes."
+        onPress={onElement}
+      />
+    </Sheet>
+  );
+}
+
+/** A new element (PlanElement artboard): type, optional name, width x length, then "Terminer". */
+export function ElementSheet({
+  kind,
+  onKind,
+  label,
+  onLabel,
+  width,
+  length,
+  onWidth,
+  onLength,
+  widthError,
+  lengthError,
+  note,
+  saving,
+  onFinish,
+  onLayout,
+}) {
+  return (
+    <Sheet onLayout={onLayout}>
+      <View style={styles.grip} />
+      <Text style={styles.title}>Élément du jardin</Text>
+      <KindChips value={kind} onChange={onKind} />
+      <Field
+        label="Nom (facultatif)"
+        value={label}
+        onChangeText={onLabel}
+        maxLength={60}
+        autoFocus={false}
+      />
+      <View style={styles.row}>
+        <View style={styles.flex}>
+          <Field
+            label="Largeur (m)"
+            value={width}
+            onChangeText={onWidth}
+            error={widthError}
+            keyboardType="decimal-pad"
+            inputMode="decimal"
+          />
+        </View>
+        <View style={styles.flex}>
+          <Field
+            label="Longueur (m)"
+            value={length}
+            onChangeText={onLength}
+            error={lengthError}
+            keyboardType="decimal-pad"
+            inputMode="decimal"
+          />
+        </View>
+      </View>
+      <Text style={styles.note}>{note}</Text>
+      <Button
+        label="Terminer"
+        kind="primary"
+        onPress={onFinish}
+        disabled={saving}
+        style={styles.tall}
+      />
+    </Sheet>
+  );
+}
+
+/** Editing an element (PlanElementModifier artboard). "Type et nom" opens the chips and the name inline. */
+export function FeatureEditSheet({
+  title,
+  areaText,
+  hint,
+  kind,
+  onKind,
+  label,
+  onLabel,
+  detailsOpen,
+  onToggleDetails,
+  onDelete,
+  onFinish,
+  saving,
+  onLayout,
+}) {
+  return (
+    <Sheet onLayout={onLayout} sheetStyle={styles.edit}>
+      <View style={styles.nameRow}>
+        <Text style={styles.editName} numberOfLines={1}>
+          {title}
+        </Text>
+        <Text style={styles.editArea}>{areaText}</Text>
+      </View>
+      {detailsOpen ? (
+        <>
+          <KindChips value={kind} onChange={onKind} />
+          <Field
+            label="Nom (facultatif)"
+            value={label}
+            onChangeText={onLabel}
+            maxLength={60}
+            autoFocus={false}
+          />
+        </>
+      ) : (
+        <Text style={styles.editHint}>{hint}</Text>
+      )}
+      <View style={styles.row}>
+        <Button
+          label="Supprimer"
+          kind="danger"
+          onPress={onDelete}
+          style={[styles.flex, styles.mid]}
+        />
+        <Button label="Type et nom" onPress={onToggleDetails} style={[styles.flex, styles.mid]} />
+        <Button
+          label="Terminer"
+          kind="primary"
+          onPress={onFinish}
+          disabled={saving}
+          style={[styles.flex, styles.mid]}
+        />
+      </View>
+    </Sheet>
+  );
+}
+
 const styles = StyleSheet.create({
   keyboard: {},
+  choice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 14,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  choiceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  choiceText: { flex: 1, gap: 2 },
+  choiceTitle: { fontFamily: FONT_BOLD, fontSize: 16, color: colors.text },
+  choiceBody: { fontFamily: FONT_BODY, fontSize: 13, color: colors.textSecondary },
   sheet: {
     backgroundColor: colors.surface,
     borderTopLeftRadius: radius.xl,

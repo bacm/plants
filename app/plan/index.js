@@ -17,8 +17,12 @@ import {
   FinishSheet,
   RectangleSheet,
   EditSheet,
+  AddSheet,
+  ElementSheet,
+  FeatureEditSheet,
   NEW_ZONE,
 } from '../../components/plan/PlanSheets';
+import Icon from '../../components/Icon';
 import { useSync } from '../../components/SyncProvider';
 import { colors } from '../../lib/theme';
 import { showMessage, confirm } from '../../lib/dialogs';
@@ -31,6 +35,10 @@ import {
   setPlantPlanSize,
   setZonePolygon,
   createZone,
+  getPlanFeatures,
+  createPlanFeature,
+  updatePlanFeature,
+  deletePlanFeature,
   getSetting,
   setSetting,
 } from '../../lib/db';
@@ -46,15 +54,30 @@ import {
   polygonProblem,
 } from '../../lib/zoneDraw';
 import { planSummary, moveMessage, checkPlanResize, parsePlanMetres } from '../../lib/planView';
+import {
+  DEFAULT_FEATURE_KIND,
+  parseFeatures,
+  featureLabel,
+  dragFeatureShape,
+  featureRefusalMessage,
+} from '../../lib/planFeatures';
 
 const UNDO_MS = 6000;
+// The red refusal banner (ticket 110) hides by itself a little sooner.
+const REFUSAL_MS = 5000;
 // Device-local (ticket 109): absent means on.
 const SNAP_SETTING_KEY = 'plan.snapToGrid';
 
 export default function PlanScreen() {
   const router = useRouter();
   const { changeCount } = useSync();
-  const [data, setData] = useState({ loaded: false, plan: null, zones: [], plants: [] });
+  const [data, setData] = useState({
+    loaded: false,
+    plan: null,
+    zones: [],
+    features: [],
+    plants: [],
+  });
   const [editing, setEditing] = useState(false);
   const [banner, setBanner] = useState(null);
   const bannerTimer = useRef(null);
@@ -64,6 +87,10 @@ export default function PlanScreen() {
   const [draft, setDraft] = useState(null);
   const [choice, setChoice] = useState({ zoneId: null, newName: '', nameError: null });
   const [rectSize, setRectSize] = useState({ width: '4', length: '1,5', tried: false });
+  // Ticket 110: the "Ajouter" choice sheet, and the new element's size fields.
+  const [adding, setAdding] = useState(false);
+  const [elementForm, setElementForm] = useState({ width: '4', length: '2,5', tried: false });
+  const [sheetH, setSheetH] = useState(0);
   const [saving, setSaving] = useState(false);
   const [snapEnabled, setSnapEnabled] = useState(true);
 
@@ -89,7 +116,12 @@ export default function PlanScreen() {
   }, [snapEnabled]);
 
   const load = useCallback(async () => {
-    const [plan, zones, plants] = await Promise.all([getGardenPlan(), getZones(), getPlants()]);
+    const [plan, zones, plants, featureRows] = await Promise.all([
+      getGardenPlan(),
+      getZones(),
+      getPlants(),
+      getPlanFeatures(),
+    ]);
     setData((prev) => ({
       loaded: true,
       // Same object while the size is unchanged: the canvas only re-fits when
@@ -102,6 +134,7 @@ export default function PlanScreen() {
           ? prev.plan
           : plan,
       zones,
+      features: parseFeatures(featureRows),
       plants,
     }));
   }, []);
@@ -119,11 +152,19 @@ export default function PlanScreen() {
 
   useEffect(() => () => clearTimeout(bannerTimer.current), []);
 
-  const showBanner = useCallback((next) => {
+  const showBanner = useCallback((next, ms = UNDO_MS) => {
     clearTimeout(bannerTimer.current);
     setBanner(next);
-    if (next) bannerTimer.current = setTimeout(() => setBanner(null), UNDO_MS);
+    if (next) bannerTimer.current = setTimeout(() => setBanner(null), ms);
   }, []);
+
+  // A plant dropped on a garden element is not saved: it keeps its place.
+  const onRefuse = useCallback(
+    ({ feature }) => {
+      showBanner({ tone: 'danger', message: featureRefusalMessage(feature) }, REFUSAL_MS);
+    },
+    [showBanner]
+  );
 
   const write = useCallback(
     async (plantId, position) => {
@@ -180,7 +221,7 @@ export default function PlanScreen() {
   const onSubmitSize = useCallback(
     async (size) => {
       if (data.plan) {
-        const check = checkPlanResize(size, data.zones, data.plants);
+        const check = checkPlanResize(size, data.zones, data.plants, data.features);
         if (!check.ok) return check.message;
       }
       try {
@@ -193,10 +234,11 @@ export default function PlanScreen() {
       setEditing(false);
       return null;
     },
-    [data.plan, data.zones, data.plants, load]
+    [data.plan, data.zones, data.plants, data.features, load]
   );
 
   const startTrace = useCallback(() => {
+    setAdding(false);
     showBanner(null);
     setChoice({ zoneId: null, newName: '', nameError: null });
     setDraft({ kind: 'trace', polygon: [], closed: false });
@@ -209,7 +251,41 @@ export default function PlanScreen() {
         : d
     );
   }, []);
-  const changeDraft = useCallback((polygon) => setDraft((d) => (d ? { ...d, polygon } : d)), []);
+  const changeDraft = useCallback(
+    (polygon) => setDraft((d) => (d ? { ...d, polygon, moved: true } : d)),
+    []
+  );
+  const patchDraft = useCallback((patch) => setDraft((d) => (d ? { ...d, ...patch } : d)), []);
+  const startElement = useCallback(() => {
+    setAdding(false);
+    showBanner(null);
+    setElementForm({ width: '4', length: '2,5', tried: false });
+    setDraft({
+      kind: 'element',
+      polygon: [],
+      closed: false,
+      featureKind: DEFAULT_FEATURE_KIND,
+      label: '',
+      moved: false,
+    });
+  }, [showBanner]);
+  const editFeature = useCallback(
+    (featureId) => {
+      const feature = data.features.find((f) => f.id === featureId);
+      if (!feature) return;
+      showBanner(null);
+      setDraft({
+        kind: 'feature',
+        polygon: feature.polygon,
+        closed: true,
+        featureId,
+        featureKind: feature.kind,
+        label: feature.label ?? '',
+        detailsOpen: false,
+      });
+    },
+    [data.features, showBanner]
+  );
   const editZone = useCallback(
     (zoneId) => {
       const polygon = parsePolygon(data.zones.find((z) => z.id === zoneId)?.polygon);
@@ -252,6 +328,84 @@ export default function PlanScreen() {
     },
     [draft, load]
   );
+
+  // A new element is put on the plan as soon as its sheet is measured, in the
+  // visible area, until the finger moves it (the sheet's height may still
+  // change while it settles, so it is placed again until then).
+  const unplacedElement = draft?.kind === 'element' && !draft.moved;
+  const plan = data.plan;
+  useEffect(() => {
+    if (!unplacedElement || !sheetH || !plan) return;
+    const w = parsePlanMetres(elementForm.width);
+    const l = parsePlanMetres(elementForm.length);
+    if (w.cm == null || l.cm == null) return;
+    const polygon = controller.current?.placeRectangle({ widthCm: w.cm, lengthCm: l.cm });
+    if (!polygon) return;
+    const placed = snapEnabled ? dragFeatureShape(polygon, { dx: 0, dy: 0 }, plan, true) : polygon;
+    setDraft((d) => (d?.kind === 'element' && !d.moved ? { ...d, polygon: placed } : d));
+  }, [unplacedElement, sheetH, plan, elementForm.width, elementForm.length, snapEnabled]);
+
+  // Writes the new element, then leaves the mode.
+  const finishElement = useCallback(async () => {
+    const problem = polygonProblem(draft.polygon);
+    if (problem) {
+      showMessage('Tracé invalide', problem);
+      return;
+    }
+    setSaving(true);
+    try {
+      createPlanFeature({ kind: draft.featureKind, label: draft.label, polygon: draft.polygon });
+    } catch (error) {
+      showMessage('Erreur', error?.message || "Impossible d'enregistrer l'élément.");
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+    setDraft(null);
+    await load();
+  }, [draft, load]);
+
+  const finishFeatureEdit = useCallback(async () => {
+    const problem = polygonProblem(draft.polygon);
+    if (problem) {
+      showMessage('Tracé invalide', problem);
+      return;
+    }
+    setSaving(true);
+    try {
+      updatePlanFeature(draft.featureId, {
+        kind: draft.featureKind,
+        label: draft.label,
+        polygon: draft.polygon,
+      });
+    } catch (error) {
+      showMessage('Erreur', error?.message || "Impossible d'enregistrer l'élément.");
+      setSaving(false);
+      return;
+    }
+    setSaving(false);
+    setDraft(null);
+    await load();
+  }, [draft, load]);
+
+  const deleteFeature = useCallback(async () => {
+    const name = featureLabel({ kind: draft.featureKind, label: draft.label });
+    const ok = await confirm({
+      title: 'Supprimer cet élément ?',
+      message: `« ${name} » disparaît du plan. Les plantes et les zones ne changent pas.`,
+      confirmLabel: 'Supprimer',
+      destructive: true,
+    });
+    if (!ok) return;
+    try {
+      deletePlanFeature(draft.featureId);
+    } catch (error) {
+      showMessage('Erreur', error?.message || "Impossible de supprimer l'élément.");
+      return;
+    }
+    setDraft(null);
+    await load();
+  }, [draft, load]);
 
   const eraseOutline = useCallback(async () => {
     const zone = data.zones.find((z) => z.id === draft.zoneId);
@@ -302,24 +456,33 @@ export default function PlanScreen() {
     nameError: choice.nameError,
   };
 
-  const width = parsePlanMetres(rectSize.width);
-  const length = parsePlanMetres(rectSize.length);
+  const elementDraft = draft?.kind === 'element';
+  const form = elementDraft ? elementForm : rectSize;
+  const setForm = elementDraft ? setElementForm : setRectSize;
+  const width = parsePlanMetres(form.width);
+  const length = parsePlanMetres(form.length);
   const fits =
     width.cm != null &&
     length.cm != null &&
     width.cm <= data.plan.widthCm &&
     length.cm <= data.plan.lengthCm;
   const sizeError = (parsed, max, text) => {
-    if (parsed.error) return rectSize.tried || text !== '' ? parsed.error : null;
+    if (parsed.error) return form.tried || text !== '' ? parsed.error : null;
     return parsed.cm > max ? 'Plus grand que le plan.' : null;
   };
   // Typing new sides after the rectangle is on the plan resizes it in place.
   const setSide = (key, text) => {
-    const next = { ...rectSize, [key]: text };
-    setRectSize(next);
+    const next = { ...form, [key]: text };
+    setForm(next);
     const w = parsePlanMetres(next.width);
     const l = parsePlanMetres(next.length);
-    if (draft?.kind === 'rect' && draft.polygon.length && w.cm != null && l.cm != null) {
+    // A new element nobody dragged yet is simply placed again by the effect above.
+    if (
+      (draft?.kind === 'rect' || (elementDraft && draft.moved)) &&
+      draft.polygon.length &&
+      w.cm != null &&
+      l.cm != null
+    ) {
       const resized = resizeRectangle(draft.polygon, { widthCm: w.cm, lengthCm: l.cm }, data.plan);
       if (resized) changeDraft(resized);
     }
@@ -371,6 +534,46 @@ export default function PlanScreen() {
         onFinish={() => finish(target, choice.newName)}
       />
     );
+  } else if (elementDraft) {
+    subtitle = 'Nouvel élément';
+    const area = fits ? formatArea((width.cm * length.cm) / 10000) : '—';
+    sheet = (
+      <ElementSheet
+        kind={draft.featureKind}
+        onKind={(featureKind) => patchDraft({ featureKind })}
+        label={draft.label}
+        onLabel={(label) => patchDraft({ label })}
+        width={elementForm.width}
+        length={elementForm.length}
+        onWidth={(text) => setSide('width', text)}
+        onLength={(text) => setSide('length', text)}
+        widthError={sizeError(width, data.plan.widthCm, elementForm.width)}
+        lengthError={sizeError(length, data.plan.lengthCm, elementForm.length)}
+        note={`${area} · glissez-le à sa place, puis ajustez ses coins.`}
+        saving={saving || draft.polygon.length === 0}
+        onFinish={finishElement}
+      />
+    );
+  } else if (draft?.kind === 'feature') {
+    subtitle = 'Modifier l’élément';
+    sheet = (
+      <FeatureEditSheet
+        title={featureLabel({ kind: draft.featureKind, label: draft.label })}
+        areaText={formatArea(polygonAreaM2(draft.polygon))}
+        hint={`Glissez un coin pour le déplacer.${
+          snapEnabled ? ' Aimant actif : les coins se calent tous les 50 cm.' : ''
+        }`}
+        kind={draft.featureKind}
+        onKind={(featureKind) => patchDraft({ featureKind })}
+        label={draft.label}
+        onLabel={(label) => patchDraft({ label })}
+        detailsOpen={!!draft.detailsOpen}
+        onToggleDetails={() => patchDraft({ detailsOpen: !draft.detailsOpen })}
+        onDelete={deleteFeature}
+        onFinish={finishFeatureEdit}
+        saving={saving}
+      />
+    );
   } else if (draft?.kind === 'edit') {
     subtitle = 'Modifier la zone';
     sheet = (
@@ -384,17 +587,28 @@ export default function PlanScreen() {
     );
   }
 
+  if (adding && !draft) {
+    subtitle = planSummary(data.plan, data.zones.length, placed);
+    sheet = <AddSheet onZone={startTrace} onElement={startElement} />;
+  }
+
   return (
     <View style={styles.container}>
       <PlanCanvas
         plan={data.plan}
         zones={data.zones}
+        features={data.features}
         plants={data.plants}
         summary={subtitle}
         draft={draft}
         sheet={sheet}
         controller={controller}
-        onStartTrace={startTrace}
+        onAdd={() => setAdding(true)}
+        scrim={adding && !draft}
+        onScrimPress={() => setAdding(false)}
+        onSheetHeight={setSheetH}
+        onEditFeature={editFeature}
+        onRefuse={onRefuse}
         onAddCorner={addDraftCorner}
         onDraftChange={changeDraft}
         onEditZone={editZone}
@@ -407,20 +621,29 @@ export default function PlanScreen() {
         onEditSize={() => setEditing(true)}
         banner={
           banner ? (
-            <View style={styles.banner} accessibilityRole="alert">
-              <Text style={styles.bannerText}>
+            <View
+              style={[styles.banner, banner.tone === 'danger' && styles.bannerDanger]}
+              accessibilityRole="alert">
+              {banner.tone === 'danger' ? (
+                <Icon name="alert-circle-outline" size={20} color="#fff" />
+              ) : null}
+              <Text
+                style={[styles.bannerText, banner.tone === 'danger' && styles.bannerTextDanger]}>
                 {banner.message.text}
                 {banner.message.strong ? (
                   <Text style={styles.bannerStrong}>{banner.message.strong}</Text>
                 ) : null}
+                {banner.message.after ?? ''}
               </Text>
-              <TouchableOpacity
-                onPress={banner.undo}
-                style={styles.undo}
-                accessibilityRole="button"
-                accessibilityLabel="Annuler le déplacement">
-                <Text style={styles.undoText}>Annuler</Text>
-              </TouchableOpacity>
+              {banner.undo ? (
+                <TouchableOpacity
+                  onPress={banner.undo}
+                  style={styles.undo}
+                  accessibilityRole="button"
+                  accessibilityLabel="Annuler le déplacement">
+                  <Text style={styles.undoText}>Annuler</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : null
         }
@@ -448,6 +671,8 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: colors.background,
   },
+  bannerDanger: { backgroundColor: colors.danger, paddingRight: 16 },
+  bannerTextDanger: { color: '#fff' },
   bannerStrong: { fontFamily: 'InstrumentSans_600SemiBold' },
   undo: { height: 40, paddingHorizontal: 14, justifyContent: 'center' },
   undoText: { fontFamily: 'InstrumentSans_600SemiBold', fontSize: 14, color: colors.highlight },

@@ -1,6 +1,7 @@
 {
   "zones": ["id", "name", "description", "icon", "orderIndex", "polygon", "updatedAt", "deletedAt"],
   "garden_plan": ["id", "widthCm", "lengthCm", "updatedAt", "deletedAt"],
+  "plan_features": ["id", "kind", "label", "polygon", "updatedAt", "deletedAt"],
   "plants": [
     "id",
     "name",
