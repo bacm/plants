@@ -409,6 +409,49 @@ function DimensionsRow({ dims, onChange, onSubmit }) {
   );
 }
 
+/**
+ * Ticket 116 (PlanEditionPliee artboard): the edit sheets fold to their name, a
+ * one-line summary and their buttons. "Réglages" unfolds, "Plier" folds.
+ */
+function FoldToggle({ folded, onPress }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={folded ? 'Déplier les réglages' : 'Plier les réglages'}
+      accessibilityState={{ expanded: !folded }}
+      style={styles.fold}>
+      <Text style={styles.foldText}>{folded ? 'Réglages' : 'Plier'}</Text>
+      <Icon name={folded ? 'chevron-up' : 'chevron-down'} size={16} />
+    </TouchableOpacity>
+  );
+}
+
+function EditHeader({ name, areaText, summary, folded, onToggleFold }) {
+  return (
+    <View style={styles.foldRow}>
+      {folded ? (
+        <View style={styles.flex}>
+          <Text style={styles.editName} numberOfLines={1}>
+            {name}
+          </Text>
+          <Text style={styles.foldSummary} numberOfLines={2}>
+            {summary}
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.flex, styles.nameRow]}>
+          <Text style={styles.editName} numberOfLines={1}>
+            {name}
+          </Text>
+          <Text style={styles.editArea}>{areaText}</Text>
+        </View>
+      )}
+      <FoldToggle folded={folded} onPress={onToggleFold} />
+    </View>
+  );
+}
+
 /** Editing a zone: its name and area, erase the outline, or finish. */
 export function EditSheet({
   name,
@@ -418,22 +461,30 @@ export function EditSheet({
   hint,
   snap,
   onSnap,
+  summary,
+  folded,
+  onToggleFold,
   onErase,
   onFinish,
   saving,
   onLayout,
 }) {
   return (
-    <Sheet onLayout={onLayout} sheetStyle={styles.edit} scroll>
-      <View style={styles.nameRow}>
-        <Text style={styles.editName} numberOfLines={1}>
-          {name}
-        </Text>
-        <Text style={styles.editArea}>{areaText}</Text>
-      </View>
-      <DimensionsRow dims={dims} onChange={onDims} onSubmit={onFinish} />
-      <Text style={styles.editHint}>{hint}</Text>
-      <SnapBlock settings={snap} onChange={onSnap} />
+    <Sheet onLayout={onLayout} sheetStyle={styles.edit} scroll={!folded}>
+      <EditHeader
+        name={name}
+        areaText={areaText}
+        summary={summary}
+        folded={folded}
+        onToggleFold={onToggleFold}
+      />
+      {folded ? null : (
+        <>
+          <DimensionsRow dims={dims} onChange={onDims} onSubmit={onFinish} />
+          <Text style={styles.editHint}>{hint}</Text>
+          <SnapBlock settings={snap} onChange={onSnap} />
+        </>
+      )}
       <View style={styles.row}>
         <Button
           label="Effacer le tracé"
@@ -648,21 +699,25 @@ export function FeatureEditSheet({
   onToggleDetails,
   snap,
   onSnap,
+  summary,
+  folded,
+  onToggleFold,
   onDelete,
   onFinish,
   saving,
   onLayout,
 }) {
   return (
-    <Sheet onLayout={onLayout} sheetStyle={styles.edit} scroll>
-      <View style={styles.nameRow}>
-        <Text style={styles.editName} numberOfLines={1}>
-          {title}
-        </Text>
-        <Text style={styles.editArea}>{areaText}</Text>
-      </View>
-      <DimensionsRow dims={dims} onChange={onDims} onSubmit={onFinish} />
-      {detailsOpen ? (
+    <Sheet onLayout={onLayout} sheetStyle={styles.edit} scroll={!folded}>
+      <EditHeader
+        name={title}
+        areaText={areaText}
+        summary={summary}
+        folded={folded}
+        onToggleFold={onToggleFold}
+      />
+      {folded ? null : <DimensionsRow dims={dims} onChange={onDims} onSubmit={onFinish} />}
+      {folded ? null : detailsOpen ? (
         <>
           <KindChips value={kind} onChange={onKind} />
           <Field
@@ -678,7 +733,7 @@ export function FeatureEditSheet({
       ) : (
         <Text style={styles.editHint}>{hint}</Text>
       )}
-      <SnapBlock settings={snap} onChange={onSnap} />
+      {folded ? null : <SnapBlock settings={snap} onChange={onSnap} />}
       <View style={styles.row}>
         <Button
           label="Supprimer"
@@ -817,4 +872,18 @@ const styles = StyleSheet.create({
   dimInput: { minHeight: 44, borderRadius: 14, paddingHorizontal: 12, fontSize: 15 },
   dimError: { fontFamily: FONT_BODY, fontSize: 12, color: colors.danger },
   editHint: { fontFamily: FONT_BODY, fontSize: 14, color: colors.textSecondary },
+  foldRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  foldSummary: { fontFamily: FONT_BODY, fontSize: 13, color: colors.textSecondary, marginTop: 2 },
+  fold: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 22,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+  },
+  foldText: { fontFamily: FONT_MEDIUM, fontSize: 13, color: colors.text },
 });

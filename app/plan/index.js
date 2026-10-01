@@ -64,7 +64,7 @@ import {
   typedSide,
   sideLabel,
 } from '../../lib/zoneDraw';
-import { DEFAULT_SNAP_SETTINGS, parseSnapSettings } from '../../lib/planSnap';
+import { DEFAULT_SNAP_SETTINGS, parseSnapSettings, snapSummary } from '../../lib/planSnap';
 import {
   planSummary,
   moveMessage,
@@ -103,6 +103,14 @@ const REFUSAL_MS = 5000;
 const SNAP_SETTING_KEY = 'plan.snapToGrid';
 // Ticket 114: what corners snap to (JSON, lib/planSnap.js).
 const SNAP_SETTINGS_KEY = 'plan.snapSettings';
+// Ticket 116: the edit sheets folded ('1', the default) or unfolded ('0').
+const EDIT_FOLDED_KEY = 'plan.editFolded';
+
+/** The folded edit sheet's line: area · size · active snapping. */
+function foldedSummary(draft, snapSettings, snapEnabled) {
+  const size = draft.dims ? ` · ${draft.dims.width} × ${draft.dims.length} m` : '';
+  return `${areaText(draft)}${size} · ${snapSummary(snapSettings, snapEnabled)}`;
+}
 
 export default function PlanScreen() {
   const router = useRouter();
@@ -131,6 +139,7 @@ export default function PlanScreen() {
   const nameRef = useRef(null);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [snapSettings, setSnapSettings] = useState(DEFAULT_SNAP_SETTINGS);
+  const [editFolded, setEditFolded] = useState(true);
 
   useEffect(() => {
     let alive = true;
@@ -139,6 +148,8 @@ export default function PlanScreen() {
       if (alive && stored != null) setSnapEnabled(stored !== '0');
       const settings = await getSetting(SNAP_SETTINGS_KEY);
       if (alive && settings != null) setSnapSettings(parseSnapSettings(settings));
+      const folded = await getSetting(EDIT_FOLDED_KEY);
+      if (alive && folded != null) setEditFolded(folded !== '0');
     })();
     return () => {
       alive = false;
@@ -154,6 +165,15 @@ export default function PlanScreen() {
       showMessage('Erreur', error?.message || 'Impossible de mémoriser ce réglage.');
     }
   }, [snapEnabled]);
+
+  const setFolded = useCallback((next) => {
+    setEditFolded(next);
+    try {
+      setSetting(EDIT_FOLDED_KEY, next ? '1' : '0');
+    } catch (error) {
+      showMessage('Erreur', error?.message || 'Impossible de mémoriser ce réglage.');
+    }
+  }, []);
 
   const changeSnapSettings = useCallback(
     (patch) => {
@@ -710,9 +730,18 @@ export default function PlanScreen() {
         label={draft.label}
         onLabel={(label) => patchDraft({ label })}
         detailsOpen={!!draft.detailsOpen}
-        onToggleDetails={() => patchDraft({ detailsOpen: !draft.detailsOpen })}
+        onToggleDetails={() => {
+          // Folded, "Type et nom" unfolds the sheet with the details open.
+          if (editFolded) {
+            setFolded(false);
+            patchDraft({ detailsOpen: true });
+          } else patchDraft({ detailsOpen: !draft.detailsOpen });
+        }}
         snap={snapSettings}
         onSnap={changeSnapSettings}
+        summary={foldedSummary(draft, snapSettings, snapEnabled)}
+        folded={editFolded}
+        onToggleFold={() => setFolded(!editFolded)}
         onDelete={deleteFeature}
         onFinish={finishFeatureEdit}
         saving={saving}
@@ -731,6 +760,9 @@ export default function PlanScreen() {
         }`}
         snap={snapSettings}
         onSnap={changeSnapSettings}
+        summary={foldedSummary(draft, snapSettings, snapEnabled)}
+        folded={editFolded}
+        onToggleFold={() => setFolded(!editFolded)}
         saving={saving}
         onErase={eraseOutline}
         onFinish={() => finish(draft.zoneId, '')}

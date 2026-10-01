@@ -398,6 +398,15 @@ async function tapCorners(page, corners) {
 }
 
 // A press held still on the plan (no movement): the zone under it is edited.
+// Ticket 116: the edit sheets open folded; this shows dimensions and Aimantation.
+async function unfold(page) {
+  await page.getByRole('button', { name: 'Déplier les réglages' }).click();
+}
+
+async function fold(page) {
+  await page.getByRole('button', { name: 'Plier les réglages' }).click();
+}
+
 async function holdAt(page, point) {
   await page.mouse.move(point.x, point.y);
   await page.mouse.down();
@@ -547,6 +556,7 @@ test.describe('drawing zones (ticket 107)', () => {
     seedDrawGarden(api);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 500, 700));
+    await unfold(page);
     await expect(
       visibleText(page, 'Modifier la zone · touchez une longueur pour la saisir')
     ).toBeVisible();
@@ -661,6 +671,7 @@ test.describe('drawing zones (ticket 107)', () => {
 
     const spot = await planPoint(page, 500, 700);
     await holdAt(page, spot);
+    await unfold(page);
     await expect(
       visibleText(page, 'Modifier la zone · touchez une longueur pour la saisir')
     ).toBeVisible();
@@ -668,6 +679,7 @@ test.describe('drawing zones (ticket 107)', () => {
     await expect(page.getByTestId('plan-dim-width')).toHaveValue('6');
     await expect(page.getByTestId('plan-dim-length')).toHaveValue('8');
     await expect(page.getByLabel('Coin 3')).toBeVisible();
+    await fold(page);
 
     const corner = await planPoint(page, 600, 800);
     await drag(page, corner, { x: corner.x + 40, y: corner.y });
@@ -802,14 +814,13 @@ test.describe('garden elements (ticket 110)', () => {
     context,
     page,
   }) => {
-    // Ticket 114: the Aimantation block makes the edit sheet taller; a taller screen keeps the lower plan in view.
-    await page.setViewportSize({ width: 390, height: 1200 });
     const api = await mockAuthApi(context);
     seedFeatureGarden(api);
     await page.goto('/plan');
     await expect(page.getByText('Terrasse sud')).toBeVisible();
 
     await holdAt(page, await planPoint(page, 600, 1300));
+    await unfold(page);
     await expect(
       visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
     ).toBeVisible();
@@ -820,6 +831,8 @@ test.describe('garden elements (ticket 110)', () => {
     await expect(page.getByTestId('plan-dim-width')).toHaveValue('5');
     await expect(page.getByTestId('plan-dim-length')).toHaveValue('4');
     await shot(page, '4-edit-mode');
+    // Ticket 116: folded, the sheet leaves the lower plan in view.
+    await fold(page);
 
     const corner = await planPoint(page, 1000, 1600);
     await drag(page, corner, { x: corner.x + 41, y: corner.y + 17 });
@@ -846,6 +859,7 @@ test.describe('garden elements (ticket 110)', () => {
     seedFeatureGarden(api);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 600, 1300));
+    await unfold(page);
     await expect(
       visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
     ).toBeVisible();
@@ -1172,10 +1186,36 @@ test.describe('snapping to other shapes (ticket 114)', () => {
       .not.toBe('[600,800]');
     return pushedPolygon(api, 'zone-a');
   }
+  test('the edit sheet opens folded: summary and buttons; unfolding is remembered (ticket 116)', async ({
+    context,
+    page,
+  }) => {
+    await seedSnapGarden(context);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    await expect(
+      visibleText(page, '48 m² · 6 × 8 m · Grille 50 cm · Sommets · Côtés · Angles')
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Terminer', exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Effacer le tracé' })).toBeVisible();
+    await expect(page.getByText('Aimantation', { exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('plan-dim-width')).toHaveCount(0);
+    await shot(page, 'edit-folded');
+    await unfold(page);
+    await expect(page.getByText('Aimantation', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('plan-dim-width')).toBeVisible();
+    await page.reload();
+    await holdAt(page, await planPoint(page, 500, 700));
+    await expect(page.getByText('Aimantation', { exact: true })).toBeVisible();
+    await fold(page);
+    await expect(page.getByText('Aimantation', { exact: true })).toHaveCount(0);
+  });
+
   test('the edit sheet has the Aimantation block', async ({ context, page }) => {
     await seedSnapGarden(context);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 500, 700));
+    await unfold(page);
     await expect(page.getByText('Aimantation', { exact: true })).toBeVisible();
     await expect(page.getByText('priorité : sommet › côté › angle › grille')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Grille · 50 cm' })).toBeVisible();
@@ -1246,7 +1286,9 @@ test.describe('snapping to other shapes (ticket 114)', () => {
     const api = await seedSnapGarden(context);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 500, 700));
+    await unfold(page);
     await page.getByRole('button', { name: 'Angles 90° / plat' }).click();
+    await fold(page);
     await dragCornerTo(page, 645, 1195);
     expect((await finishEdit(page, api))[2]).toEqual([650, 1200]);
   });
@@ -1258,7 +1300,9 @@ test.describe('snapping to other shapes (ticket 114)', () => {
     const api = await seedSnapGarden(context);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 500, 700));
+    await unfold(page);
     await page.getByRole('button', { name: 'Sommets' }).click();
+    await fold(page);
     await dragCornerTo(page, 1013, 117, 3, -2);
     const [x, y] = (await finishEdit(page, api))[2];
     expect(y).toBe(117);
@@ -1272,9 +1316,11 @@ test.describe('snapping to other shapes (ticket 114)', () => {
     const api = await seedSnapGarden(context);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 500, 700));
+    await unfold(page);
     await page.getByRole('button', { name: 'Pas de la grille 1 m' }).click();
     await expect(page.getByRole('button', { name: 'Grille · 1 m' })).toBeVisible();
     await page.getByRole('button', { name: 'Bord du jardin' }).click();
+    await fold(page);
     await dragCornerTo(page, 730, 1330, 2, 3);
     const [x, y] = (await finishEdit(page, api))[2];
     expect(x % 100).toBe(0);
@@ -1282,6 +1328,8 @@ test.describe('snapping to other shapes (ticket 114)', () => {
 
     await page.reload();
     await holdAt(page, await planPoint(page, 500, 700));
+    // Folded before the drag, the sheet stays folded after the reload.
+    await unfold(page);
     await expect(page.getByRole('button', { name: 'Grille · 1 m' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Bord du jardin' })).toHaveCSS(
       'background-color',
@@ -1347,6 +1395,7 @@ test.describe('adding and removing corners (ticket 117)', () => {
     seedCornerGarden(api);
     await page.goto('/plan');
     await holdAt(page, await planPoint(page, 350, 450));
+    await unfold(page);
     await expect(visibleText(page, EDIT_ZONE)).toBeVisible();
     await expect(corners(page)).toHaveCount(4);
     await expect(pluses(page)).toHaveCount(4);

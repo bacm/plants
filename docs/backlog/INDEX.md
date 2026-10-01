@@ -19,7 +19,6 @@
 | P2 | feature | [057 — Send a Saturday-morning "ce week-end au jardin" digest](057-weekend-garden-digest.md) |
 | P2 | feature | [058 — Turn the dashboard into "Aujourd'hui au jardin](058-home-today-in-the-garden.md) |
 | P2 | feature | [059 — Guide the first launch to a first zone, plant and photo](059-first-launch-onboarding.md) |
-| P2 | feature | [116 — Collapse the Aimantation settings in the plan edit sheets](116-collapse-snap-settings.md) |
 | P3 | feature | [025 — Warn before a frost that is colder than a plant tolerates](025-frost-alerts.md) |
 | P3 | feature | [026 — Identify an unknown plant from a photo](026-identify-plant-from-photo.md) |
 | P3 | feature | [027 — Make every screen usable with a screen reader](027-accessibility-labels.md) |
@@ -47,6 +46,7 @@
 | P2 | feature | [113 — Type the length of a shape's side and stretch the shape](113-type-side-lengths.md) |
 | P2 | feature | [114 — Snap shape corners to other shapes, with snapping settings](114-snap-to-vertices-and-edges.md) |
 | P2 | feature | [115 — Turn care logs into a plant journal with measurements](115-plant-journal-and-measurements.md) |
+| P2 | feature | [116 — Fold the plan edit sheets to their name, summary and buttons](116-collapse-snap-settings.md) |
 | P2 | feature | [117 — Add a corner in the middle of a side and remove a corner](117-add-and-remove-shape-corners.md) |
 | P2 | feature | [120 — Move a whole zone or element in edit mode with a long press](120-move-an-edited-shape.md) |
 | P2 | feature | [121 — Snap a dragged corner to a right or flat angle before the grid](121-snap-to-right-and-flat-angles.md) |
