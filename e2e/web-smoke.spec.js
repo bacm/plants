@@ -86,10 +86,10 @@ test.describe('web smoke', () => {
     await expect(visibleText(page, editedLatinName)).toBeVisible();
 
     // --- Add a care log ---
-    // "Enregistrer un soin" is the sticky bottom button (ticket 067),
+    // "Ajouter au journal" is the sticky bottom button (ticket 067),
     // visible on every tab -- no need to switch to Actions first.
-    await visibleText(page, 'Enregistrer un soin').click();
-    await expect(visibleText(page, 'Enregistrer un soin')).toBeVisible();
+    await visibleText(page, 'Ajouter au journal').click();
+    await expect(visibleText(page, 'Nouvelle entrée')).toBeVisible();
     // Default care type ('Arrosé') and today's date are prefilled; just save.
     await visibleText(page, 'Enregistrer').click();
 

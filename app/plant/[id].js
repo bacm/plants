@@ -336,8 +336,8 @@ export default function PlantDetailScreen() {
 
   const handleDeleteCareLog = async (log) => {
     const ok = await confirm({
-      title: 'Supprimer le soin',
-      message: 'Ce soin sera supprimé.',
+      title: 'Supprimer l’entrée',
+      message: 'Cette entrée sera supprimée.',
       confirmLabel: 'Supprimer',
       destructive: true,
     });
@@ -345,7 +345,7 @@ export default function PlantDetailScreen() {
     try {
       await deleteCareLog(log.id);
     } catch (e) {
-      showMessage('Erreur', `Impossible de supprimer le soin : ${e.message}`);
+      showMessage('Erreur', `Impossible de supprimer l’entrée : ${e.message}`);
       return;
     }
     await load();
@@ -534,7 +534,7 @@ export default function PlantDetailScreen() {
       </ScrollView>
 
       <View style={[styles.stickyButtonWrap, { bottom: insets.bottom + spacing.md }]}>
-        <PrimaryButton label="Enregistrer un soin" onPress={goToLog} />
+        <PrimaryButton label="Ajouter au journal" onPress={goToLog} />
       </View>
 
       <Modal visible={showDatePicker} transparent animationType="fade">

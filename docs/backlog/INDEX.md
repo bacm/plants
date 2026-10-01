@@ -20,7 +20,6 @@
 | P2 | feature | [058 — Turn the dashboard into "Aujourd'hui au jardin](058-home-today-in-the-garden.md) |
 | P2 | feature | [059 — Guide the first launch to a first zone, plant and photo](059-first-launch-onboarding.md) |
 | P2 | chore | [089 — Bring the mock-up up to date with tickets 086 to 090](089-sync-mockup-photo-viewer.md) |
-| P2 | feature | [115 — Turn care logs into a plant journal with measurements](115-plant-journal-and-measurements.md) |
 | P3 | feature | [025 — Warn before a frost that is colder than a plant tolerates](025-frost-alerts.md) |
 | P3 | feature | [026 — Identify an unknown plant from a photo](026-identify-plant-from-photo.md) |
 | P3 | feature | [027 — Make every screen usable with a screen reader](027-accessibility-labels.md) |
@@ -50,6 +49,7 @@
 | P2 | feature | [112 — Snap planting zones to the grid when the magnet is on](112-snap-zones-with-magnet.md) |
 | P2 | feature | [113 — Type the length of a shape's side and stretch the shape](113-type-side-lengths.md) |
 | P2 | feature | [114 — Snap shape corners to other shapes, with snapping settings](114-snap-to-vertices-and-edges.md) |
+| P2 | feature | [115 — Turn care logs into a plant journal with measurements](115-plant-journal-and-measurements.md) |
 
 ## blocked
 

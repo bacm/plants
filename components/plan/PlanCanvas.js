@@ -35,7 +35,6 @@ import {
   formatArea,
   formatLength,
   polygonAreaM2,
-  DEFAULT_PLAN_SIZE_CM,
 } from '../../lib/gardenPlan';
 import {
   PLAN_INSETS,
@@ -55,6 +54,8 @@ import {
   parsePlanSizeInput,
 } from '../../lib/planView';
 import { hitCorner, hitSide, placeRectangle } from '../../lib/zoneDraw';
+import { effectivePlanSize, planSizeOf, planSizeSourceText } from '../../lib/planSize';
+import { formatShortDate } from '../../lib/journal';
 import {
   featureAt,
   featureLabel,
@@ -158,13 +159,14 @@ function PlanDot({ plant, left, top, hit, dia, selected, hidden, passive, ring, 
 // The "Taille sur le plan" row of the bubble (PlanBulle artboard): "−" and "+"
 // step the size, the value opens an inline input in metres. `onChange(cm)`
 // saves and resolves to true on success.
-function BubbleSize({ planSizeCm, onChange }) {
+function BubbleSize({ size, onChange }) {
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const [error, setError] = useState(null);
-  const current = planSizeCm ?? DEFAULT_PLAN_SIZE_CM;
+  const current = size.cm;
+  const sourceText = planSizeSourceText(size, formatShortDate);
 
-  const step = (direction) => onChange(nextPlanSize(planSizeCm, direction));
+  const step = (direction) => onChange(nextPlanSize(current, direction));
   const open = () => {
     setText(String(current / 100).replace('.', ','));
     setError(null);
@@ -220,7 +222,14 @@ function BubbleSize({ planSizeCm, onChange }) {
   }
   return (
     <View style={styles.sizeRow}>
-      <Text style={[styles.sizeLabel, styles.sizeTitle]}>Taille sur le plan</Text>
+      <View style={styles.sizeTitle}>
+        <Text style={styles.sizeLabel}>Taille sur le plan</Text>
+        {sourceText ? (
+          <Text testID="plan-size-source" style={styles.sizeSource}>
+            {sourceText}
+          </Text>
+        ) : null}
+      </View>
       <TouchableOpacity
         accessibilityRole="button"
         accessibilityLabel="Réduire la taille sur le plan"
@@ -432,7 +441,7 @@ export function PlanCanvas({
     for (const plant of all) {
       if (plant.planX == null || plant.planY == null) continue;
       const c = toScreen({ x: plant.planX, y: plant.planY }, v);
-      const r = Math.max(HIT_PX / 2, dotDiameterPx(plant.planSizeCm, v.scale) / 2);
+      const r = Math.max(HIT_PX / 2, dotDiameterPx(planSizeOf(plant), v.scale) / 2);
       if (Math.hypot(c.x - x, c.y - y) <= r) return;
     }
     const at = toPlan({ x, y }, v);
@@ -672,12 +681,12 @@ export function PlanCanvas({
   const drawerHeight = draft ? sheetH : unplaced.length ? drawerH : 0;
 
   const hitSize = HIT_PX * unit;
-  const dotDia = (plant) => dotDiameterPx(plant.planSizeCm, view.scale) * unit;
+  const dotDia = (plant) => dotDiameterPx(planSizeOf(plant), view.scale) * unit;
 
   let bubble = null;
   if (selected && view && viewport) {
     const c = toScreen({ x: selected.planX, y: selected.planY }, view);
-    const r = dotDiameterPx(selected.planSizeCm, view.scale) / 2 + 5;
+    const r = dotDiameterPx(planSizeOf(selected), view.scale) / 2 + 5;
     const left = clampNumber(c.x - 20, 12, Math.max(12, viewport.width - 312));
     const below = c.y + r + 3 < viewport.height - keyboardHeight - drawerHeight - 90;
     bubble = (
@@ -709,7 +718,7 @@ export function PlanCanvas({
         <View style={styles.bubbleRule} />
         <BubbleSize
           key={selected.id}
-          planSizeCm={selected.planSizeCm}
+          size={effectivePlanSize(selected)}
           onChange={(cm) => onChangePlanSize(selected.id, cm)}
         />
       </View>
@@ -942,7 +951,7 @@ export function PlanCanvas({
             styles.ghost,
             shadow.card,
             (() => {
-              const d = Math.max(32, dotDiameterPx(drag.plant.planSizeCm, view.scale));
+              const d = Math.max(32, dotDiameterPx(planSizeOf(drag.plant), view.scale));
               return {
                 left: ghostAt.x - d / 2,
                 top: ghostAt.y - d / 2,
@@ -1174,6 +1183,7 @@ const styles = StyleSheet.create({
   sizeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 6 },
   sizeLabel: { fontFamily: FONT_BODY, fontSize: 13, color: colors.planInk },
   sizeTitle: { flexGrow: 1, flexShrink: 1 },
+  sizeSource: { fontFamily: FONT_BODY, fontSize: 11, color: colors.textSecondary },
   sizeButton: {
     width: 36,
     height: 36,

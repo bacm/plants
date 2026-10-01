@@ -54,7 +54,17 @@
     "updatedAt",
     "deletedAt"
   ],
-  "care_logs": ["id", "plantId", "type", "date", "notes", "updatedAt", "deletedAt"],
+  "care_logs": [
+    "id",
+    "plantId",
+    "type",
+    "date",
+    "notes",
+    "widthCm",
+    "heightCm",
+    "updatedAt",
+    "deletedAt"
+  ],
   "photos": [
     "id",
     "plantId",

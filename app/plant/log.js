@@ -14,20 +14,39 @@ import * as ImagePicker from 'expo-image-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import Icon from '../../components/Icon';
-import { Field, ChipGroup, ChoiceTiles, PrimaryButton, StickyFooter } from '../../components/form';
+import {
+  Field,
+  ChipGroup,
+  ChoiceTiles,
+  PrimaryButton,
+  Segmented,
+  StickyFooter,
+} from '../../components/form';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { showMessage } from '../../lib/dialogs';
-import { getPlantById, createCareLog, addPhoto } from '../../lib/db';
-import { CARE_TYPES } from '../../lib/enums';
+import { getPlantById, createCareLog, addPhoto, addBloomObservation } from '../../lib/db';
+import { CARE_TYPES, OBSERVATION_CHOICES } from '../../lib/enums';
 import { parseISODate } from '../../lib/validation';
 import { addDaysISO } from '../../lib/dates';
+
+// The two sides of the entry screen (ticket 115): care, or an observation.
+const ENTRY_KINDS = [
+  { value: 'care', label: 'Soin' },
+  { value: 'observation', label: 'Observation' },
+];
+
+const digitsOnly = (text) => text.replace(/\D/g, '');
 
 export default function LogCareScreen() {
   const insets = useSafeAreaInsets();
   const { plantId } = useLocalSearchParams();
   const router = useRouter();
   const [plant, setPlant] = useState(null);
+  const [kind, setKind] = useState('care');
   const [type, setType] = useState('watered');
+  const [observation, setObservation] = useState('measured');
+  const [widthCm, setWidthCm] = useState('');
+  const [heightCm, setHeightCm] = useState('');
   const today = new Date().toISOString().slice(0, 10);
   const yesterday = addDaysISO(today, -1);
   const [date, setDate] = useState(today);
@@ -70,7 +89,18 @@ export default function LogCareScreen() {
     setDateError('');
     setSaving(true);
     try {
-      const logId = createCareLog({ plantId, type, date: value, notes: notes.trim() || null });
+      const isCare = kind === 'care';
+      const entryType = isCare ? type : observation;
+      // "En fleur" is also a bloom observation, like the capture screen's.
+      if (entryType === 'bloom') await addBloomObservation({ plantId, date: value });
+      const logId = createCareLog({
+        plantId,
+        type: entryType,
+        date: value,
+        notes: notes.trim() || null,
+        widthCm: entryType === 'measured' ? widthCm : null,
+        heightCm: entryType === 'measured' ? heightCm : null,
+      });
       if (photoUri) {
         await addPhoto({ plantId, careLogId: logId, uri: photoUri, date: value });
       }
@@ -97,17 +127,63 @@ export default function LogCareScreen() {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12 }]}
         keyboardShouldPersistTaps="handled">
-        <ScreenHeader title="Enregistrer un soin" subtitle={plant.name} />
+        <ScreenHeader title="Nouvelle entrée" subtitle={plant.name} />
 
-        <ChoiceTiles
-          label="Type de soin"
-          columns={2}
-          stacked={false}
-          options={CARE_TYPES}
-          value={type}
-          onChange={setType}
-          allowClear={false}
+        <Segmented
+          accessibilityLabel="Type d’entrée"
+          options={ENTRY_KINDS}
+          value={kind}
+          onChange={setKind}
         />
+
+        {kind === 'care' ? (
+          <ChoiceTiles
+            label="Type de soin"
+            columns={2}
+            stacked={false}
+            options={CARE_TYPES}
+            value={type}
+            onChange={setType}
+            allowClear={false}
+          />
+        ) : (
+          <>
+            <ChoiceTiles
+              label="Observation"
+              columns={3}
+              stacked={false}
+              options={OBSERVATION_CHOICES}
+              value={observation}
+              onChange={setObservation}
+              allowClear={false}
+            />
+            {observation === 'measured' ? (
+              <View style={styles.measureBlock}>
+                <View style={styles.measureRow}>
+                  <View style={styles.measureField}>
+                    <Field
+                      label="Largeur (cm)"
+                      keyboardType="number-pad"
+                      value={widthCm}
+                      onChangeText={(v) => setWidthCm(digitsOnly(v))}
+                    />
+                  </View>
+                  <View style={styles.measureField}>
+                    <Field
+                      label="Hauteur (cm)"
+                      keyboardType="number-pad"
+                      value={heightCm}
+                      onChangeText={(v) => setHeightCm(digitsOnly(v))}
+                    />
+                  </View>
+                </View>
+                <Text style={styles.hint}>
+                  Au moins l’une des deux. La largeur mesurée sera utilisée sur le plan.
+                </Text>
+              </View>
+            ) : null}
+          </>
+        )}
 
         <View style={styles.dateBlock}>
           <Text style={styles.label}>Date</Text>
@@ -140,8 +216,9 @@ export default function LogCareScreen() {
           <View style={styles.notesCol}>
             <Field
               label="Notes"
+              required={kind === 'observation' && observation === 'note'}
               multiline
-              placeholder="Facultatif"
+              placeholder={kind === 'observation' && observation === 'note' ? '' : 'Facultatif'}
               style={styles.notesInput}
               value={notes}
               onChangeText={setNotes}
@@ -194,6 +271,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   label: { ...typography.label, color: colors.text },
+  measureBlock: { gap: spacing.sm },
+  measureRow: { flexDirection: 'row', gap: spacing.sm },
+  measureField: { flex: 1, flexBasis: 'auto', minWidth: 0 },
+  hint: { ...typography.bodySmall, color: colors.textSecondary },
   dateBlock: { gap: spacing.sm },
   dateRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   dateField: { flex: 1, flexBasis: 'auto', minWidth: 0 },

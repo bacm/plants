@@ -216,3 +216,22 @@ def test_normalize_timestamp():
     assert normalize_timestamp("nope") is None
     assert normalize_timestamp(5) is None
     assert normalize_timestamp("") is None
+
+
+def test_care_log_measurement_round_trips(client):
+    stamp = "2026-10-01T10:00:00.000Z"
+    log = {
+        "id": "c1",
+        "plantId": "p1",
+        "type": "measured",
+        "date": "2026-09-12",
+        "notes": None,
+        "widthCm": 120,
+        "heightCm": 90,
+        "updatedAt": stamp,
+        "deletedAt": None,
+    }
+    response = push(client, {"care_logs": [log]})
+    assert response.status_code == 200
+    assert response.json()["accepted"] == 1
+    assert pull(client).json()["changes"]["care_logs"] == [log]

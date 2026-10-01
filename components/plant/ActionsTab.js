@@ -1,19 +1,85 @@
 // The plant detail screen's Actions tab (ticket 067): reminder cards (an
-// overdue one in terracotta) with a "Fait" button, and the 10 newest care
-// logs as a vertical timeline. app/plant/[id].js owns data loading and every
+// overdue one in terracotta) with a "Fait" button, the latest measured size
+// with its growth curve (ticket 115), and the 10 newest journal entries (care
+// and observations) as a vertical timeline. app/plant/[id].js owns data loading and every
 // handler passed in here.
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Svg, { Polyline, Circle, Text as SvgText } from 'react-native-svg';
 import Icon from '../Icon';
 import { colors, spacing, typography, radius } from '../../lib/theme';
-import { CARE_TYPES, REMINDER_KINDS, labelFor } from '../../lib/enums';
-import { monthShort } from '../../lib/months';
+import { REMINDER_KINDS, labelFor } from '../../lib/enums';
+import {
+  formatShortDate,
+  growthCurve,
+  journalEntryText,
+  latestMeasurement,
+  measurementText,
+  measurementsOf,
+  polylinePoints,
+} from '../../lib/journal';
 import { reminderDueText } from '../../lib/reminderDue';
 
-function formatLogDate(iso) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '');
-  if (!match) return iso ?? '';
-  const [, , m, d] = match;
-  return `${Number(d)} ${monthShort(Number(m)).toLowerCase()}.`;
+const CURVE_W = 150;
+const CURVE_H = 56;
+
+// The "Taille" card (PlanteActions artboard): the latest measurement and,
+// from two measurements on, the growth curve (width solid, height dotted).
+function SizeCard({ careLogs }) {
+  const latest = latestMeasurement(careLogs);
+  if (!latest) return null;
+  const measurements = measurementsOf(careLogs);
+  const curve = growthCurve(measurements, { width: CURVE_W, height: CURVE_H });
+  const lastWidth = curve.width[curve.width.length - 1];
+  return (
+    <View style={styles.sizeCard} testID="size-card">
+      <View style={styles.sizeInfo}>
+        <Text style={styles.sizeEyebrow}>Taille</Text>
+        <Text style={styles.sizeValue}>{measurementText(latest)}</Text>
+        <Text style={styles.sizeDate}>mesuré le {formatShortDate(latest.date)}</Text>
+      </View>
+      {measurements.length >= 2 ? (
+        <Svg
+          testID="growth-curve"
+          width="100%"
+          height={CURVE_H}
+          viewBox={`0 0 ${CURVE_W} ${CURVE_H}`}
+          accessibilityLabel="Croissance : largeur et hauteur mesurées"
+          style={styles.curve}>
+          {curve.width.length >= 2 ? (
+            <Polyline
+              points={polylinePoints(curve.width)}
+              fill="none"
+              stroke={colors.accent}
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          ) : null}
+          {curve.height.length >= 2 ? (
+            <Polyline
+              points={polylinePoints(curve.height)}
+              fill="none"
+              stroke={colors.textSecondary}
+              strokeWidth={2}
+              strokeDasharray="4 3"
+              strokeLinecap="round"
+            />
+          ) : null}
+          {lastWidth ? (
+            <Circle cx={lastWidth.x} cy={lastWidth.y} r={3.5} fill={colors.accent} />
+          ) : null}
+          <SvgText
+            x={4}
+            y={10}
+            fontSize={9}
+            fontFamily={typography.body.fontFamily}
+            fill={colors.textSecondary}>
+            — largeur - - hauteur
+          </SvgText>
+        </Svg>
+      ) : null}
+    </View>
+  );
 }
 
 export function ActionsTab({
@@ -67,32 +133,34 @@ export function ActionsTab({
         )}
       </View>
 
+      <SizeCard careLogs={careLogs} />
+
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Historique</Text>
+        <Text style={styles.sectionTitle}>Journal</Text>
         {recentLogs.length === 0 ? (
-          <Text style={styles.emptyText}>Aucun soin enregistré.</Text>
+          <Text style={styles.emptyText}>Rien dans le journal pour l’instant.</Text>
         ) : (
           <View style={styles.timeline}>
-            {recentLogs.map((log, index) => (
-              <View key={log.id} style={styles.timelineRow}>
-                <View style={styles.timelineRail}>
-                  <View style={styles.timelineDot} />
-                  {index < recentLogs.length - 1 ? <View style={styles.timelineLine} /> : null}
-                </View>
-                <View style={styles.timelineContent}>
-                  <View style={styles.timelineTextCol}>
-                    <Text style={styles.logType}>{labelFor(CARE_TYPES, log.type)}</Text>
-                    <Text style={styles.logMeta}>
-                      {formatLogDate(log.date)}
-                      {log.notes ? ` · ${log.notes}` : ''}
-                    </Text>
+            {recentLogs.map((log, index) => {
+              const entry = journalEntryText(log);
+              return (
+                <View key={log.id} style={styles.timelineRow}>
+                  <View style={styles.timelineRail}>
+                    <View style={styles.timelineDot} />
+                    {index < recentLogs.length - 1 ? <View style={styles.timelineLine} /> : null}
                   </View>
-                  <TouchableOpacity onPress={() => onDeleteCareLog(log)}>
-                    <Text style={styles.logDeleteText}>Supprimer</Text>
-                  </TouchableOpacity>
+                  <View style={styles.timelineContent}>
+                    <View style={styles.timelineTextCol}>
+                      <Text style={styles.logType}>{entry.title}</Text>
+                      <Text style={styles.logMeta}>{entry.meta}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => onDeleteCareLog(log)}>
+                      <Text style={styles.logDeleteText}>Supprimer</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         )}
       </View>
@@ -144,6 +212,29 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   doneButtonText: { ...typography.label, fontWeight: '600', color: colors.accent },
+
+  sizeCard: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.xl,
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  sizeInfo: { gap: 2, flexShrink: 0 },
+  sizeEyebrow: {
+    ...typography.caption,
+    fontWeight: '500',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    color: colors.textSecondary,
+  },
+  sizeValue: { ...typography.title, fontSize: 20, fontWeight: '600', color: colors.text },
+  sizeDate: { ...typography.caption, color: colors.textSecondary },
+  curve: { flexGrow: 1, flexShrink: 1, minWidth: 0 },
 
   timeline: { gap: 0 },
   timelineRow: { flexDirection: 'row', gap: spacing.md },

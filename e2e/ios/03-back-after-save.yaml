@@ -30,11 +30,11 @@ appId: host.exp.Exponent
 - tapOn: "Enregistrer"
 - runFlow: _dismiss-dev-menu.yaml
 
-# Since 067 the care log opens from the sticky "Enregistrer un soin" button,
+# Since 067 the care log opens from the sticky "Ajouter au journal" button (115),
 # shown on every tab of the detail screen (the old "+ Log" link is gone).
-- tapOn: "Enregistrer un soin"
+- tapOn: "Ajouter au journal"
 - tapOn: "Taillé"
-# The log screen's own title is also "Enregistrer un soin"; the exact
+# The log screen's own title is "Nouvelle entrée"; the exact
 # "Enregistrer" only matches its sticky save button.
 - tapOn: "Enregistrer"
 - runFlow: _dismiss-dev-menu.yaml
