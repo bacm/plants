@@ -1,7 +1,7 @@
 ---
 id: 080
 title: Plant search does not know rare cultivars such as Rosier La Fraîcheur
-status: in-progress
+status: done
 priority: P2
 type: feature
 ---
@@ -25,8 +25,9 @@ reminders, or types every field by hand.
       search found nothing; it reruns the same query with a stronger model
 - [x] The app sends only `precise: true`; the model names are fixed in
       `server/app.py`, so a client cannot pick an arbitrary model
-- [ ] A normal search still uses `gpt-4o-mini` with unchanged parameters; a
-      precise one uses `gpt-5.5` with the parameters that model accepts
+- [x] ~~A normal search still uses `gpt-4o-mini` with unchanged parameters; a
+      precise one uses `gpt-5.5` with the parameters that model accepts~~
+      Superseded by 103: every search now uses `gpt-5.5`
 - [x] Server and app tests cover the new field; `npm run verify`, the server
       tests and `npm run e2e:web` pass
 
@@ -38,3 +39,7 @@ tokens against about $0.15 / $0.60 for `gpt-4o-mini`, so a precise search costs
 a few cents, against a 10 EUR prepaid balance. Both count as one call against
 `SEARCH_DAILY_BUDGET`. Web search grounding (Responses API) stays an option if
 the stronger model still misses cultivars.
+
+Superseded on 2026-09-30 by 103 (owner: always the strongest model, no
+"Recherche approfondie" button). The two-model split this ticket describes no
+longer exists, so its last criterion cannot and need not be met.
