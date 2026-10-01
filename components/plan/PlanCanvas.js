@@ -15,7 +15,15 @@
 // long press (so a quick drag still pans the canvas) and then drags a "ghost"
 // dot at the finger. The drop is resolved in JS (toPlan, zoneAt).
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Keyboard, StyleSheet } from 'react-native';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Keyboard,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -1284,16 +1292,16 @@ function Feature({ feature, scale, unit, editing }) {
 
 function FeatureLabel({ text, lx, ly, unit }) {
   return (
-    <SvgText
+    <HaloText
+      unit={unit}
       x={lx}
       y={ly + 4 * unit}
       textAnchor="middle"
       fontSize={11 * unit}
       fontFamily={FONT_BOLD}
-      fill={colors.planInk}
-      {...HALO(unit)}>
+      fill={colors.planInk}>
       {text}
-    </SvgText>
+    </HaloText>
   );
 }
 
@@ -1327,17 +1335,17 @@ function EdgeDistances({ point, distances, scale, pxPerCm, unit }) {
             stroke={colors.planInk}
             strokeWidth={1.25 * unit}
           />
-          <SvgText
+          <HaloText
+            unit={unit}
             testID={`plan-distance-${dir}`}
             x={horizontal ? (x1 + x2) / 2 : x1 + 4 * unit}
             y={horizontal ? y1 - 4 * unit : (y1 + y2) / 2 + 4 * unit}
             textAnchor={horizontal ? 'middle' : 'start'}
             fontSize={11 * unit}
             fontFamily={FONT_BOLD}
-            fill={colors.planInk}
-            {...HALO(unit)}>
+            fill={colors.planInk}>
             {formatDistance(cm)}
-          </SvgText>
+          </HaloText>
         </G>
       );
     });
@@ -1358,38 +1366,57 @@ function Zone({ zone, points, unit, highlighted, dim }) {
 }
 
 // Zone name and area, drawn above the plants (ticket 106) with a paper-coloured
-// halo so they stay readable over a dot.
-const HALO = (unit) => ({
-  stroke: colors.planPaper,
-  strokeWidth: 3 * unit,
-  strokeLinejoin: 'round',
-  paintOrder: 'stroke',
-});
+// halo so they stay readable over a dot. react-native-svg ignores paintOrder on
+// iOS and Android, where the stroke then covers the letters (ticket 124): there
+// the halo is a stroked copy drawn under the text instead.
+function HaloText({ unit, children, ...props }) {
+  const halo = {
+    stroke: colors.planPaper,
+    strokeWidth: 3 * unit,
+    strokeLinejoin: 'round',
+  };
+  if (Platform.OS === 'web') {
+    return (
+      <SvgText {...props} {...halo} paintOrder="stroke">
+        {children}
+      </SvgText>
+    );
+  }
+  const { testID: _testID, ...rest } = props;
+  return (
+    <G>
+      <SvgText {...rest} {...halo} fill={colors.planPaper}>
+        {children}
+      </SvgText>
+      <SvgText {...props}>{children}</SvgText>
+    </G>
+  );
+}
 
 function ZoneLabel({ zone, lx, ly, unit, dim }) {
   const area = formatArea(polygonAreaM2(zone.polygon));
   return (
     <G opacity={dim ? DIM_OPACITY : 1}>
-      <SvgText
+      <HaloText
+        unit={unit}
         x={lx}
         y={ly - 1 * unit}
         textAnchor="middle"
         fontSize={11 * unit}
         fontFamily={FONT_BOLD}
-        fill={colors.planInk}
-        {...HALO(unit)}>
+        fill={colors.planInk}>
         {zone.name}
-      </SvgText>
-      <SvgText
+      </HaloText>
+      <HaloText
+        unit={unit}
         x={lx}
         y={ly + 12 * unit}
         textAnchor="middle"
         fontSize={10 * unit}
         fontFamily={FONT_BODY}
-        fill={colors.textSecondary}
-        {...HALO(unit)}>
+        fill={colors.textSecondary}>
         {area}
-      </SvgText>
+      </HaloText>
     </G>
   );
 }
