@@ -19,24 +19,24 @@ for example to trace the garden plan on a big screen.
 
 ## Acceptance criteria
 
-- [ ] The web app keeps `lib/db.web.js`'s local store as a cache of the
+- [x] The web app keeps `lib/db.web.js`'s local store as a cache of the
       signed-in account's garden, and syncs it with the server through the
       same engine as the phone (`lib/sync.js`), authenticated by the session
       cookie; `db-parity.test.js` passes and no screen changes
-- [ ] Signing in (or a different account than the cached one) empties the
+- [x] Signing in (or a different account than the cached one) empties the
       local cache, then pulls the account's garden; signing out empties it
-- [ ] Sync runs on load, when the tab becomes visible again and a few seconds
+- [x] Sync runs on load, when the tab becomes visible again and a few seconds
       after a local write; on the web there is no "première synchronisation"
       step: the server holds the reference copy
-- [ ] Photos are not all downloaded: a photo is fetched from
+- [x] Photos are not all downloaded: a photo is fetched from
       `GET /photos/{id}` with the cookie when displayed and shown from a blob
       URL (kept in memory while the page lives); a photo added on the web is
       stored locally then uploaded by the sync
 - [ ] An edit made on the web appears on the phone after its next sync, and
       the reverse (checked by hand, steps noted in the commit)
-- [ ] With the server unreachable, the web app says so instead of silently
+- [x] With the server unreachable, the web app says so instead of silently
       showing a stale or empty garden
-- [ ] `npm run verify` and `npm run e2e:web` pass
+- [x] `npm run verify` and `npm run e2e:web` pass
 
 ## Notes
 

@@ -19,11 +19,11 @@ owner could believe data was lost.
 
 ## Acceptance criteria
 
-- [ ] Before the first sync, Réglages offers to export a backup (the existing
+- [x] Before the first sync, Réglages offers to export a backup (the existing
       "Exporter mon jardin")
-- [ ] The first sync shows its progress (rows, then photos: "124 / 480
+- [x] The first sync shows its progress (rows, then photos: "124 / 480
       photos") and resumes where it stopped if the app is closed
-- [ ] At the end, the row and photo counts on the server match the phone's,
+- [x] At the end, the row and photo counts on the server match the phone's,
       and the screen says so
 - [ ] Checked on the iPhone with the real garden (`npm run deploy:iphone`)
 

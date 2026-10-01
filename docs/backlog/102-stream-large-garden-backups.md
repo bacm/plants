@@ -24,19 +24,19 @@ the first sync (096).
 
 ## Acceptance criteria
 
-- [ ] Export writes the backup file piece by piece: no string or buffer ever
+- [x] Export writes the backup file piece by piece: no string or buffer ever
       holds more than one photo; memory stays flat whatever the garden size
-- [ ] Import reads the file piece by piece and writes each photo to disk as
+- [x] Import reads the file piece by piece and writes each photo to disk as
       it goes, then replaces the garden in one transaction as today
-- [ ] Backups written before this change (one JSON object) still import
-- [ ] The same code path works on the web build (Blob parts to write,
+- [x] Backups written before this change (one JSON object) still import
+- [x] The same code path works on the web build (Blob parts to write,
       `File.stream()` to read)
-- [ ] Jest covers the new format: round trip, a truncated or corrupted
+- [x] Jest covers the new format: round trip, a truncated or corrupted
       file refused before anything is replaced, an old-format file, and a
       large simulated garden where no single chunk exceeds one photo
 - [ ] Checked on the iPhone with the real garden: the export completes, and
       the file imports back on the simulator with the same counts
-- [ ] `npm run verify` and `npm run e2e:web` pass
+- [x] `npm run verify` and `npm run e2e:web` pass
 
 ## Notes
 

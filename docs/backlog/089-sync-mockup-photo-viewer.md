@@ -21,17 +21,17 @@ reference for the next screens.
 
 ## Acceptance criteria
 
-- [ ] Sort artboard ("Tri"): an expand badge (round, overlayDark, `arrow-expand`
+- [x] Sort artboard ("Tri"): an expand badge (round, overlayDark, `arrow-expand`
       icon) top-left of the photo; new artboard "TriPleinEcran": the photo whole
       on black, "‹ Retour" top-left
-- [ ] PhotoVisionneuse: the date line reads "12 mai 2026 · 2 / 5"; a
+- [x] PhotoVisionneuse: the date line reads "12 mai 2026 · 2 / 5"; a
       "☆ Mettre en accueil" button top-right in the header, opposite "Retour"
-- [ ] New artboard "PhotoAccueil" (or a PhotoVisionneuse variant): the same
+- [x] New artboard "PhotoAccueil" (or a PhotoVisionneuse variant): the same
       viewer with the photo already chosen — filled star in the highlight
       colour, label "Photo d'accueil"
-- [ ] Plant detail Photos tab: one thumbnail carries the cover badge (round,
+- [x] Plant detail Photos tab: one thumbnail carries the cover badge (round,
       overlayDark, small highlight `star`, top-left)
-- [ ] Plant form bloom section gets an "Abondance" chip row (Insignifiante · Modérée ·
+- [x] Plant form bloom section gets an "Abondance" chip row (Insignifiante · Modérée ·
       Abondante), and bloom lists show insignificant blooms last and dimmed
 - [ ] Artboards compared against the app's web build at 390×844
 
