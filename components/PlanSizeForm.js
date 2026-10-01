@@ -3,8 +3,18 @@
 // enlarge it later. The preview is drawn to scale. Validation is inline; the
 // caller's `onSubmit({ widthCm, lengthCm })` may return an error message
 // (refusing a size smaller than what is drawn) which is shown under the form.
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRef, useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  KeyboardAvoidingView,
+  Keyboard,
+  Platform,
+  StyleSheet,
+} from 'react-native';
 import { ScreenHeader } from './ScreenHeader';
 import { PlanGrid } from './plan/PlanGrid';
 import { colors, spacing, typography, radius } from '../lib/theme';
@@ -23,12 +33,14 @@ export function PlanSizeForm({ initial, submitLabel, onSubmit, onBack }) {
   const [length, setLength] = useState(metresText(initial?.lengthCm ?? 2500));
   const [submitted, setSubmitted] = useState(false);
   const [refusal, setRefusal] = useState(null);
+  const lengthRef = useRef(null);
 
   const w = parsePlanMetres(width);
   const l = parsePlanMetres(length);
   const valid = w.cm != null && l.cm != null;
 
   const submit = async () => {
+    Keyboard.dismiss();
     setSubmitted(true);
     setRefusal(null);
     if (!valid) return;
@@ -40,8 +52,13 @@ export function PlanSizeForm({ initial, submitLabel, onSubmit, onBack }) {
   const pxPerCm = preview ? Math.min(PREVIEW_W / preview.widthCm, PREVIEW_H / preview.lengthCm) : 0;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.content}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag">
         <ScreenHeader title="Plan du jardin" onBack={onBack} />
         <Text style={styles.intro}>
           Indiquez les dimensions de votre jardin. Vous pourrez l’agrandir plus tard.
@@ -53,6 +70,8 @@ export function PlanSizeForm({ initial, submitLabel, onSubmit, onBack }) {
             onChangeText={setWidth}
             error={submitted || width !== '' ? w.error : null}
             testID="plan-width"
+            returnKeyType="next"
+            onSubmitEditing={() => lengthRef.current?.focus()}
           />
           <Field
             label="Longueur (m)"
@@ -60,6 +79,9 @@ export function PlanSizeForm({ initial, submitLabel, onSubmit, onBack }) {
             onChangeText={setLength}
             error={submitted || length !== '' ? l.error : null}
             testID="plan-length"
+            inputRef={lengthRef}
+            returnKeyType="done"
+            onSubmitEditing={submit}
           />
         </View>
         {refusal ? (
@@ -76,7 +98,7 @@ export function PlanSizeForm({ initial, submitLabel, onSubmit, onBack }) {
             </Text>
           </View>
         ) : null}
-      </View>
+      </ScrollView>
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.submit}
@@ -86,11 +108,11 @@ export function PlanSizeForm({ initial, submitLabel, onSubmit, onBack }) {
           <Text style={styles.submitText}>{submitLabel}</Text>
         </TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
-function Field({ label, value, onChangeText, error, testID }) {
+function Field({ label, value, onChangeText, error, testID, inputRef, ...inputProps }) {
   const [focused, setFocused] = useState(false);
   return (
     <View style={styles.field}>
@@ -105,6 +127,8 @@ function Field({ label, value, onChangeText, error, testID }) {
         onBlur={() => setFocused(false)}
         keyboardType="decimal-pad"
         inputMode="decimal"
+        ref={inputRef}
+        {...inputProps}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
@@ -113,7 +137,7 @@ function Field({ label, value, onChangeText, error, testID }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  content: { paddingTop: 56, paddingHorizontal: spacing.lg - 4, gap: 18 },
+  content: { paddingTop: 56, paddingBottom: 24, paddingHorizontal: spacing.lg - 4, gap: 18 },
   intro: {
     fontFamily: 'InstrumentSans_400Regular',
     fontSize: 15,
@@ -140,10 +164,6 @@ const styles = StyleSheet.create({
   previewWrap: { alignItems: 'center', gap: 8, paddingTop: 8 },
   caption: { ...typography.bodySmall, fontSize: 13, color: colors.textSecondary },
   footer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
     paddingHorizontal: spacing.lg - 4,
     paddingTop: 12,
     paddingBottom: 28,

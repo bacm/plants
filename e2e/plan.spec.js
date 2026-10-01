@@ -537,6 +537,20 @@ test.describe('drawing zones (ticket 107)', () => {
     expect(JSON.parse(created.polygon)).toHaveLength(3);
   });
 
+  test('typing the dimensions of a zone resizes it without snapping', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedDrawGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    await expect(visibleText(page, 'Modifier la zone')).toBeVisible();
+    await page.getByTestId('plan-dim-width').fill('7,15');
+    await page.getByTestId('plan-dim-length').fill('9');
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    await expect.poll(() => pushedPolygon(api, 'zone-a')?.[2]?.[0], { timeout: 20000 }).toBe(715);
+    expect(pushedPolygon(api, 'zone-a')[0]).toEqual([0, 0]);
+    expect(pushedPolygon(api, 'zone-a')[2]).toEqual([715, 900]);
+  });
+
   test('a long press edits a zone: drag a corner, finish; then erase the outline', async ({
     context,
     page,
@@ -549,7 +563,9 @@ test.describe('drawing zones (ticket 107)', () => {
     const spot = await planPoint(page, 500, 700);
     await holdAt(page, spot);
     await expect(visibleText(page, 'Modifier la zone')).toBeVisible();
-    await expect(visibleText(page, 'Glissez un coin pour le déplacer.')).toBeVisible();
+    await expect(visibleText(page, 'Glissez un coin, ou saisissez les dimensions.')).toBeVisible();
+    await expect(page.getByTestId('plan-dim-width')).toHaveValue('6');
+    await expect(page.getByTestId('plan-dim-length')).toHaveValue('8');
     await expect(page.getByLabel('Coin 3')).toBeVisible();
 
     const corner = await planPoint(page, 600, 800);
@@ -691,9 +707,11 @@ test.describe('garden elements (ticket 110)', () => {
     await expect(
       visibleText(
         page,
-        'Glissez un coin pour le déplacer. Aimant actif : les coins se calent tous les 50 cm.'
+        'Glissez un coin, ou saisissez les dimensions. Aimant actif : les coins se calent tous les 50 cm.'
       )
     ).toBeVisible();
+    await expect(page.getByTestId('plan-dim-width')).toHaveValue('5');
+    await expect(page.getByTestId('plan-dim-length')).toHaveValue('4');
     await shot(page, '4-edit-mode');
 
     const corner = await planPoint(page, 1000, 1600);
@@ -711,6 +729,39 @@ test.describe('garden elements (ticket 110)', () => {
     expect(polygon[2][1] % 50).toBe(0);
     // Only the dragged corner moved.
     expect(polygon[0]).toEqual([500, 1200]);
+  });
+
+  test('typing the dimensions of an element resizes it on the 50 cm grid', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedFeatureGarden(api);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 600, 1300));
+    await expect(visibleText(page, 'Modifier l’élément')).toBeVisible();
+
+    await page.getByTestId('plan-dim-width').fill('6,2');
+    await page.getByTestId('plan-dim-length').fill('5,3');
+    await shot(page, 'edit-element');
+    // An invalid value is refused; the last good shape is kept.
+    await page.getByTestId('plan-dim-width').fill('abc');
+    await expect(page.getByText('Valeur invalide, par exemple 12,5.')).toBeVisible();
+    await page.getByTestId('plan-dim-width').fill('6,2');
+    await expect(page.getByText('Valeur invalide, par exemple 12,5.')).toHaveCount(0);
+    await page.getByTestId('plan-dim-width').fill('40');
+    await expect(page.getByText('Trop grand pour le plan.')).toBeVisible();
+    await page.getByTestId('plan-dim-width').fill('6,2');
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+
+    await expect
+      .poll(() => JSON.parse(serverFeature(api, 'feature-terrace').polygon)[2][0], {
+        timeout: 20000,
+      })
+      .toBe(1100);
+    const polygon = JSON.parse(serverFeature(api, 'feature-terrace').polygon);
+    expect(polygon[0]).toEqual([500, 1200]);
+    expect(polygon[2]).toEqual([1100, 1750]);
   });
 
   test('"Type et nom" changes the kind and the name', async ({ context, page }) => {

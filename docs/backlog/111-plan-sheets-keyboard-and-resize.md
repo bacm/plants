@@ -26,14 +26,14 @@ terrace or a bed to its measured size by dragging corners is imprecise.
       rises above the keyboard and scrolls, so the focused field and the
       sheet's confirm button stay visible; the keyboard's return key
       confirms or moves to the next field; tapping outside closes it
-- [ ] Editing a garden element or a zone shows a "Dimensions" row
+- [x] Editing a garden element or a zone shows a "Dimensions" row
       (Largeur / Longueur in metres) prefilled from the shape's bounding box;
       changing it resizes the shape from its top-left corner (exact for a
       rectangle, proportional for another shape), live, then saved with
       "Terminer"; invalid or too large values are refused in French
-- [ ] With the magnet on, a resized element's corners stay on the 50 cm grid
+- [x] With the magnet on, a resized element's corners stay on the 50 cm grid
       (zones are never snapped)
-- [ ] Matches the updated PlanElementModifier and PlanModifierZone
+- [x] Matches the updated PlanElementModifier and PlanModifierZone
       artboards; `npm run verify` and `npm run e2e:web` pass
 - [ ] Checked on the owner's iPhone
 

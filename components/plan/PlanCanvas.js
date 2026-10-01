@@ -15,10 +15,11 @@
 // long press (so a quick drag still pans the canvas) and then drags a "ghost"
 // dot at the finger. The drop is resolved in JS (toPlan, zoneAt).
 import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Keyboard, StyleSheet } from 'react-native';
 import { Gesture, GestureDetector, ScrollView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { useKeyboardHeight } from './useKeyboardHeight';
 import Svg, { G, Polygon, Line, Defs, ClipPath, Text as SvgText } from 'react-native-svg';
 import { PlanGrid } from './PlanGrid';
 import { DraftLayer } from './DraftLayer';
@@ -192,6 +193,7 @@ function BubbleSize({ planSizeCm, onChange }) {
               setError(null);
             }}
             onSubmitEditing={submit}
+            returnKeyType="done"
             keyboardType="decimal-pad"
             autoFocus
             selectTextOnFocus
@@ -378,12 +380,18 @@ export function PlanCanvas({
   zonesRef.current = parsedZones;
 
   const commit = useCallback((next) => setView(next), []);
-  const clearSelection = useCallback(() => setSelectedId(null), []);
+  const keyboardHeight = useKeyboardHeight();
+  // Touching the canvas closes the keyboard (the bubble's or a sheet's field).
+  const clearSelection = useCallback(() => {
+    Keyboard.dismiss();
+    setSelectedId(null);
+  }, []);
   const select = useCallback((id) => {
     selectedAt.current = Date.now();
     setSelectedId(id);
   }, []);
   const backgroundTap = useCallback((x, y) => {
+    Keyboard.dismiss();
     const { draft: d, view: v, plan: p } = latest.current;
     if (d) {
       // Drawing: a tap places a corner (not on top of one already there).
@@ -662,14 +670,16 @@ export function PlanCanvas({
     const c = toScreen({ x: selected.planX, y: selected.planY }, view);
     const r = dotDiameterPx(selected.planSizeCm, view.scale) / 2 + 5;
     const left = clampNumber(c.x - 20, 12, Math.max(12, viewport.width - 312));
-    const below = c.y + r + 3 < viewport.height - drawerHeight - 90;
+    const below = c.y + r + 3 < viewport.height - keyboardHeight - drawerHeight - 90;
     bubble = (
       <View
         testID="plan-bubble"
         style={[
           styles.bubble,
           { left },
-          below ? { top: c.y + r + 3 } : { bottom: viewport.height - (c.y - r - 3) },
+          below
+            ? { top: c.y + r + 3 }
+            : { bottom: Math.max(viewport.height - (c.y - r - 3), keyboardHeight + 12) },
         ]}>
         <TouchableOpacity
           activeOpacity={0.9}

@@ -52,8 +52,16 @@ import {
   zonesWithoutOutline,
   parseZoneName,
   polygonProblem,
+  polygonBounds,
+  resizePolygon,
 } from '../../lib/zoneDraw';
-import { planSummary, moveMessage, checkPlanResize, parsePlanMetres } from '../../lib/planView';
+import {
+  planSummary,
+  moveMessage,
+  checkPlanResize,
+  parsePlanMetres,
+  metresText,
+} from '../../lib/planView';
 import {
   DEFAULT_FEATURE_KIND,
   parseFeatures,
@@ -61,6 +69,12 @@ import {
   dragFeatureShape,
   featureRefusalMessage,
 } from '../../lib/planFeatures';
+
+// The Largeur / Longueur fields of an edited shape, from its bounding box.
+function dimsOf(polygon) {
+  const box = polygonBounds(polygon);
+  return { width: metresText(box.widthCm), length: metresText(box.lengthCm), error: null };
+}
 
 const UNDO_MS = 6000;
 // The red refusal banner (ticket 110) hides by itself a little sooner.
@@ -92,6 +106,7 @@ export default function PlanScreen() {
   const [elementForm, setElementForm] = useState({ width: '4', length: '2,5', tried: false });
   const [sheetH, setSheetH] = useState(0);
   const [saving, setSaving] = useState(false);
+  const nameRef = useRef(null);
   const [snapEnabled, setSnapEnabled] = useState(true);
 
   useEffect(() => {
@@ -252,7 +267,19 @@ export default function PlanScreen() {
     );
   }, []);
   const changeDraft = useCallback(
-    (polygon) => setDraft((d) => (d ? { ...d, polygon, moved: true } : d)),
+    // A drag of an edited shape also refreshes its Dimensions fields and the
+    // shape typed sizes are scaled from.
+    (polygon) =>
+      setDraft((d) =>
+        d
+          ? {
+              ...d,
+              polygon,
+              moved: true,
+              ...(d.dims ? { base: polygon, dims: dimsOf(polygon) } : {}),
+            }
+          : d
+      ),
     []
   );
   const patchDraft = useCallback((patch) => setDraft((d) => (d ? { ...d, ...patch } : d)), []);
@@ -282,6 +309,8 @@ export default function PlanScreen() {
         featureKind: feature.kind,
         label: feature.label ?? '',
         detailsOpen: false,
+        base: feature.polygon,
+        dims: dimsOf(feature.polygon),
       });
     },
     [data.features, showBanner]
@@ -291,7 +320,14 @@ export default function PlanScreen() {
       const polygon = parsePolygon(data.zones.find((z) => z.id === zoneId)?.polygon);
       if (!polygon) return;
       showBanner(null);
-      setDraft({ kind: 'edit', polygon, closed: true, zoneId });
+      setDraft({
+        kind: 'edit',
+        polygon,
+        closed: true,
+        zoneId,
+        base: polygon,
+        dims: dimsOf(polygon),
+      });
     },
     [data.zones, showBanner]
   );
@@ -454,6 +490,7 @@ export default function PlanScreen() {
     newName: choice.newName,
     onNewName: (newName) => setChoice((c) => ({ ...c, newName, nameError: null })),
     nameError: choice.nameError,
+    nameRef,
   };
 
   const elementDraft = draft?.kind === 'element';
@@ -486,6 +523,22 @@ export default function PlanScreen() {
       const resized = resizeRectangle(draft.polygon, { widthCm: w.cm, lengthCm: l.cm }, data.plan);
       if (resized) changeDraft(resized);
     }
+  };
+  // Typing the Largeur / Longueur of an edited shape resizes it live from its
+  // top-left corner; an invalid value shows an error and keeps the last good shape.
+  const setDimension = (key, text) => {
+    setDraft((d) => {
+      if (!d?.dims) return d;
+      const dims = { ...d.dims, [key]: text };
+      const w = parsePlanMetres(dims.width);
+      const l = parsePlanMetres(dims.length);
+      if (w.error || l.error) return { ...d, dims: { ...dims, error: w.error || l.error } };
+      const result = resizePolygon(d.base, { widthCm: w.cm, lengthCm: l.cm }, data.plan, {
+        magnet: d.kind === 'feature' && snapEnabled,
+      });
+      if (result.error) return { ...d, dims: { ...dims, error: result.error } };
+      return { ...d, polygon: result.polygon, moved: true, dims: { ...dims, error: null } };
+    });
   };
   const placeRectangle = () => {
     setRectSize((r) => ({ ...r, tried: true }));
@@ -560,7 +613,9 @@ export default function PlanScreen() {
       <FeatureEditSheet
         title={featureLabel({ kind: draft.featureKind, label: draft.label })}
         areaText={formatArea(polygonAreaM2(draft.polygon))}
-        hint={`Glissez un coin pour le déplacer.${
+        dims={draft.dims}
+        onDims={setDimension}
+        hint={`Glissez un coin, ou saisissez les dimensions.${
           snapEnabled ? ' Aimant actif : les coins se calent tous les 50 cm.' : ''
         }`}
         kind={draft.featureKind}
@@ -580,6 +635,8 @@ export default function PlanScreen() {
       <EditSheet
         name={data.zones.find((z) => z.id === draft.zoneId)?.name ?? ''}
         areaText={formatArea(polygonAreaM2(draft.polygon))}
+        dims={draft.dims}
+        onDims={setDimension}
         saving={saving}
         onErase={eraseOutline}
         onFinish={() => finish(draft.zoneId, '')}

@@ -1,18 +1,21 @@
 // The bottom bars and sheets of the zone drawing modes (ticket 107; PlanTracer,
 // PlanRectangle and PlanModifierZone artboards). They hold no state of their
 // own: app/plan/index.js owns it and passes values and callbacks.
+import { useRef } from 'react';
 import {
   View,
   Text,
+  ScrollView,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
+  Keyboard,
+  useWindowDimensions,
   StyleSheet,
 } from 'react-native';
 import { Field } from '../form';
 import Icon from '../Icon';
 import { colors, spacing, radius, shadow } from '../../lib/theme';
 import { PLAN_FEATURE_KINDS } from '../../lib/enums';
+import { useKeyboardHeight } from './useKeyboardHeight';
 
 const FONT_BOLD = 'InstrumentSans_600SemiBold';
 const FONT_MEDIUM = 'InstrumentSans_500Medium';
@@ -20,16 +23,41 @@ const FONT_BODY = 'InstrumentSans_400Regular';
 
 export const NEW_ZONE = 'new';
 
-function Sheet({ onLayout, sheetStyle, children }) {
-  return (
-    <KeyboardAvoidingView
-      style={styles.keyboard}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      pointerEvents="box-none">
+// Space kept free above a sheet: the plan's header.
+const SHEET_TOP_PX = 120;
+
+// A sheet pinned to the bottom. With `scroll` (a sheet with text fields) its
+// content scrolls and the sheet rises above the iOS keyboard, so the focused
+// field and the confirm button stay reachable (ticket 111).
+function Sheet({ onLayout, sheetStyle, scroll, children }) {
+  const keyboard = useKeyboardHeight();
+  const { height } = useWindowDimensions();
+  if (!scroll) {
+    return (
       <View style={[styles.sheet, sheetStyle]} onLayout={onLayout}>
         {children}
       </View>
-    </KeyboardAvoidingView>
+    );
+  }
+  return (
+    <View
+      style={[
+        styles.sheet,
+        sheetStyle,
+        keyboard > 0 && { marginBottom: keyboard, paddingBottom: 12 },
+      ]}
+      onLayout={onLayout}>
+      <ScrollView
+        style={{ maxHeight: Math.max(160, height - keyboard - SHEET_TOP_PX) }}
+        contentContainerStyle={[
+          styles.sheetContent,
+          sheetStyle?.gap != null && { gap: sheetStyle.gap },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
+        {children}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -61,7 +89,16 @@ function Button({ label, onPress, kind = 'outline', disabled, style, testID }) {
 }
 
 /** "Pour quelle zone ?": the zones without an outline, "+ Nouvelle zone", and the name of a new one. */
-export function ZoneChooser({ zones, value, onChange, newName, onNewName, nameError }) {
+export function ZoneChooser({
+  zones,
+  value,
+  onChange,
+  newName,
+  onNewName,
+  nameError,
+  nameRef,
+  onNameSubmit,
+}) {
   return (
     <View style={styles.chooser}>
       <Text style={styles.label}>Pour quelle zone ?</Text>
@@ -88,6 +125,12 @@ export function ZoneChooser({ zones, value, onChange, newName, onNewName, nameEr
           error={nameError}
           accessibilityLabel="Nom de la nouvelle zone"
           autoFocus={false}
+          ref={nameRef}
+          returnKeyType="done"
+          onSubmitEditing={() => {
+            Keyboard.dismiss();
+            onNameSubmit?.();
+          }}
         />
       ) : null}
       <Text style={styles.hint}>Seules les zones sans tracé sont proposées.</Text>
@@ -135,10 +178,10 @@ export function TraceBar({ canUndo, canFinish, onRectangle, onUndo, onFinish, on
 /** Finger mode, once the shape is closed: choose the zone, then save. */
 export function FinishSheet({ areaText, chooser, onSave, onBack, saving, onLayout }) {
   return (
-    <Sheet onLayout={onLayout}>
+    <Sheet onLayout={onLayout} scroll>
       <View style={styles.grip} />
       <Text style={styles.title}>Zone tracée</Text>
-      <ZoneChooser {...chooser} />
+      <ZoneChooser {...chooser} onNameSubmit={onSave} />
       <Text style={styles.note}>{areaText}</Text>
       <Button
         label="Enregistrer la zone"
@@ -168,8 +211,11 @@ export function RectangleSheet({
   onFinish,
   onLayout,
 }) {
+  const lengthRef = useRef(null);
+  const confirm = placed ? onFinish : onPlace;
+  const newZone = chooser.value === NEW_ZONE;
   return (
-    <Sheet onLayout={onLayout}>
+    <Sheet onLayout={onLayout} scroll>
       <View style={styles.grip} />
       <Text style={styles.title}>Zone en rectangle</Text>
       <View style={styles.row}>
@@ -181,6 +227,8 @@ export function RectangleSheet({
             error={widthError}
             keyboardType="decimal-pad"
             inputMode="decimal"
+            returnKeyType="next"
+            onSubmitEditing={() => lengthRef.current?.focus()}
           />
         </View>
         <View style={styles.flex}>
@@ -191,10 +239,19 @@ export function RectangleSheet({
             error={lengthError}
             keyboardType="decimal-pad"
             inputMode="decimal"
+            ref={lengthRef}
+            returnKeyType={newZone ? 'next' : 'done'}
+            onSubmitEditing={() => {
+              if (newZone) chooser.nameRef?.current?.focus();
+              else {
+                Keyboard.dismiss();
+                confirm();
+              }
+            }}
           />
         </View>
       </View>
-      <ZoneChooser {...chooser} />
+      <ZoneChooser {...chooser} onNameSubmit={confirm} />
       <Text style={styles.note}>{note}</Text>
       {placed ? (
         <Button
@@ -211,17 +268,68 @@ export function RectangleSheet({
   );
 }
 
-/** Editing a zone: its name and area, erase the outline, or finish. */
-export function EditSheet({ name, areaText, onErase, onFinish, saving, onLayout }) {
+/**
+ * "Dimensions" of a shape being edited (PlanElementModifier and
+ * PlanModifierZone artboards): Largeur / Longueur in metres, an inline error
+ * under the row. `dims` is { width, length, error }; `onChange(key, text)`.
+ */
+function DimensionsRow({ dims, onChange, onSubmit }) {
+  const lengthRef = useRef(null);
   return (
-    <Sheet onLayout={onLayout} sheetStyle={styles.edit}>
+    <View style={styles.dims}>
+      <View style={styles.row}>
+        <View style={styles.flex}>
+          <Field
+            label="Largeur (m)"
+            value={dims.width}
+            onChangeText={(text) => onChange('width', text)}
+            keyboardType="decimal-pad"
+            inputMode="decimal"
+            returnKeyType="next"
+            onSubmitEditing={() => lengthRef.current?.focus()}
+            style={styles.dimInput}
+            testID="plan-dim-width"
+          />
+        </View>
+        <View style={styles.flex}>
+          <Field
+            label="Longueur (m)"
+            value={dims.length}
+            onChangeText={(text) => onChange('length', text)}
+            keyboardType="decimal-pad"
+            inputMode="decimal"
+            ref={lengthRef}
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              Keyboard.dismiss();
+              onSubmit();
+            }}
+            style={styles.dimInput}
+            testID="plan-dim-length"
+          />
+        </View>
+      </View>
+      {dims.error ? (
+        <Text style={styles.dimError} accessibilityRole="alert">
+          {dims.error}
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+/** Editing a zone: its name and area, erase the outline, or finish. */
+export function EditSheet({ name, areaText, dims, onDims, onErase, onFinish, saving, onLayout }) {
+  return (
+    <Sheet onLayout={onLayout} sheetStyle={styles.edit} scroll>
       <View style={styles.nameRow}>
         <Text style={styles.editName} numberOfLines={1}>
           {name}
         </Text>
         <Text style={styles.editArea}>{areaText}</Text>
       </View>
-      <Text style={styles.editHint}>Glissez un coin pour le déplacer.</Text>
+      <DimensionsRow dims={dims} onChange={onDims} onSubmit={onFinish} />
+      <Text style={styles.editHint}>Glissez un coin, ou saisissez les dimensions.</Text>
       <View style={styles.row}>
         <Button
           label="Effacer le tracé"
@@ -317,8 +425,10 @@ export function ElementSheet({
   onFinish,
   onLayout,
 }) {
+  const widthRef = useRef(null);
+  const lengthRef = useRef(null);
   return (
-    <Sheet onLayout={onLayout}>
+    <Sheet onLayout={onLayout} scroll>
       <View style={styles.grip} />
       <Text style={styles.title}>Élément du jardin</Text>
       <KindChips value={kind} onChange={onKind} />
@@ -328,6 +438,8 @@ export function ElementSheet({
         onChangeText={onLabel}
         maxLength={60}
         autoFocus={false}
+        returnKeyType="next"
+        onSubmitEditing={() => widthRef.current?.focus()}
       />
       <View style={styles.row}>
         <View style={styles.flex}>
@@ -338,6 +450,9 @@ export function ElementSheet({
             error={widthError}
             keyboardType="decimal-pad"
             inputMode="decimal"
+            ref={widthRef}
+            returnKeyType="next"
+            onSubmitEditing={() => lengthRef.current?.focus()}
           />
         </View>
         <View style={styles.flex}>
@@ -348,6 +463,12 @@ export function ElementSheet({
             error={lengthError}
             keyboardType="decimal-pad"
             inputMode="decimal"
+            ref={lengthRef}
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              Keyboard.dismiss();
+              onFinish();
+            }}
           />
         </View>
       </View>
@@ -368,6 +489,8 @@ export function FeatureEditSheet({
   title,
   areaText,
   hint,
+  dims,
+  onDims,
   kind,
   onKind,
   label,
@@ -380,13 +503,14 @@ export function FeatureEditSheet({
   onLayout,
 }) {
   return (
-    <Sheet onLayout={onLayout} sheetStyle={styles.edit}>
+    <Sheet onLayout={onLayout} sheetStyle={styles.edit} scroll>
       <View style={styles.nameRow}>
         <Text style={styles.editName} numberOfLines={1}>
           {title}
         </Text>
         <Text style={styles.editArea}>{areaText}</Text>
       </View>
+      <DimensionsRow dims={dims} onChange={onDims} onSubmit={onFinish} />
       {detailsOpen ? (
         <>
           <KindChips value={kind} onChange={onKind} />
@@ -396,6 +520,8 @@ export function FeatureEditSheet({
             onChangeText={onLabel}
             maxLength={60}
             autoFocus={false}
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
           />
         </>
       ) : (
@@ -422,7 +548,7 @@ export function FeatureEditSheet({
 }
 
 const styles = StyleSheet.create({
-  keyboard: {},
+  sheetContent: { gap: 14 },
   choice: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -507,5 +633,8 @@ const styles = StyleSheet.create({
   },
   editName: { flexShrink: 1, fontFamily: FONT_BOLD, fontSize: 17, color: colors.text },
   editArea: { fontFamily: FONT_BODY, fontSize: 14, color: colors.textSecondary },
+  dims: { gap: 6 },
+  dimInput: { minHeight: 44, borderRadius: 14, paddingHorizontal: 12, fontSize: 15 },
+  dimError: { fontFamily: FONT_BODY, fontSize: 12, color: colors.danger },
   editHint: { fontFamily: FONT_BODY, fontSize: 14, color: colors.textSecondary },
 });
