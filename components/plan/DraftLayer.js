@@ -14,6 +14,7 @@ import Svg, { Polygon, Polyline, Line } from 'react-native-svg';
 import { colors } from '../../lib/theme';
 import { sideLengths, PILL_OFFSET_PX } from '../../lib/zoneDraw';
 import { featureLook } from '../../lib/planFeatures';
+import { SNAP_KIND_LABELS } from '../../lib/planSnap';
 
 const HIT_PX = 44;
 const PILL_W = 64;
@@ -149,7 +150,65 @@ function EditPill({ cx, cy, text, unit, onChange, onSubmit, label }) {
   );
 }
 
-export function DraftLayer({ draft, plan, drawScale, unit, pad, drag, sideEdit }) {
+// The snapping target (ticket 114, PlanAimantation artboard): an orange dashed
+// ring with a pill "Sommet" / "Côté" / "Bord" above it.
+function SnapMarker({ cx, cy, kind, unit }) {
+  const ring = 26 * unit;
+  const pillW = 64 * unit;
+  const pillH = 18 * unit;
+  return (
+    <View pointerEvents="none">
+      <View
+        testID="plan-snap-marker"
+        accessibilityLabel={SNAP_KIND_LABELS[kind]}
+        style={[
+          styles.abs,
+          {
+            left: cx - ring / 2,
+            top: cy - ring / 2,
+            width: ring,
+            height: ring,
+            borderRadius: ring / 2,
+            borderWidth: 2 * unit,
+            borderStyle: 'dashed',
+            borderColor: colors.terracotta,
+          },
+        ]}
+      />
+      <View
+        style={[
+          styles.abs,
+          styles.center,
+          {
+            left: cx - pillW / 2,
+            top: cy - ring / 2 - pillH - 4 * unit,
+            width: pillW,
+            height: pillH,
+          },
+        ]}>
+        <View
+          style={{
+            height: pillH,
+            paddingHorizontal: 8 * unit,
+            borderRadius: pillH / 2,
+            backgroundColor: colors.terracotta,
+            justifyContent: 'center',
+          }}>
+          <Text
+            style={{
+              fontFamily: 'InstrumentSans_600SemiBold',
+              fontSize: 10 * unit,
+              color: '#fff',
+            }}>
+            {SNAP_KIND_LABELS[kind]}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+export function DraftLayer({ draft, plan, drawScale, unit, pad, drag, sideEdit, marker = null }) {
   const { kind, polygon, closed } = draft;
   // A rectangle only exists once "Poser sur le plan" was pressed. A garden
   // element (ticket 110) is a rectangle too while new, then has corner handles.
@@ -322,6 +381,15 @@ export function DraftLayer({ draft, plan, drawScale, unit, pad, drag, sideEdit }
             );
           })
         : null}
+
+      {marker ? (
+        <SnapMarker
+          cx={pad + marker.x * drawScale}
+          cy={pad + marker.y * drawScale}
+          kind={marker.kind}
+          unit={unit}
+        />
+      ) : null}
     </>
   );
 }

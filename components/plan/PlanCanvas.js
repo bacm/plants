@@ -56,6 +56,7 @@ import {
 import { hitCorner, hitSide, placeRectangle } from '../../lib/zoneDraw';
 import { effectivePlanSize, planSizeOf, planSizeSourceText } from '../../lib/planSize';
 import { formatShortDate } from '../../lib/journal';
+import { DEFAULT_SNAP_SETTINGS, makeSnapper, snapShapes } from '../../lib/planSnap';
 import {
   featureAt,
   featureLabel,
@@ -287,6 +288,8 @@ export function PlanCanvas({
   // Ticket 109: the magnet. When on, a plant's ghost and drop snap to the grid.
   snapEnabled = true,
   onToggleSnap,
+  // Ticket 114: what zone and element corners snap to (lib/planSnap.js).
+  snapSettings = DEFAULT_SNAP_SETTINGS,
   // Ticket 107: drawing and editing a zone. `draft` is null, or
   // { kind: 'trace' | 'rect' | 'edit', polygon, closed, zoneId }; `sheet` is the
   // bar or sheet shown under the plan while it lasts; `controller` receives
@@ -361,6 +364,7 @@ export function PlanCanvas({
     sheetH,
     viewport,
     snapEnabled,
+    snapSettings,
     features,
     onAddCorner,
     onDraftChange,
@@ -370,7 +374,39 @@ export function PlanCanvas({
     onSidePress,
   };
 
+  // Ticket 114: point -> { point, kind } for the shape being drawn or edited
+  // (itself excluded), or null with the magnet off.
+  const buildSnapper = useCallback(() => {
+    const l = latest.current;
+    const excludeId =
+      l.draft?.kind === 'edit'
+        ? `zone:${l.draft.zoneId}`
+        : l.draft?.kind === 'feature'
+          ? `feature:${l.draft.featureId}`
+          : null;
+    return makeSnapper({
+      enabled: l.snapEnabled,
+      settings: l.snapSettings,
+      shapes: snapShapes(l.zones, l.features),
+      plan: l.plan,
+      scalePxPerCm: l.view.scale,
+      excludeId,
+    });
+  }, []);
+  // The marker on the chosen target (a vertex, side or border), shown while a
+  // corner is dragged and briefly after a tracing tap.
+  const [snapMarker, setSnapMarker] = useState(null);
+  const markerTimer = useRef(null);
+  const showMarker = useCallback((result, ms) => {
+    clearTimeout(markerTimer.current);
+    const shown = result && result.kind && result.kind !== 'grid' ? result : null;
+    setSnapMarker(shown ? { x: shown.point.x, y: shown.point.y, kind: shown.kind } : null);
+    if (shown && ms) markerTimer.current = setTimeout(() => setSnapMarker(null), ms);
+  }, []);
+  useEffect(() => () => clearTimeout(markerTimer.current), []);
+
   useImperativeHandle(controller, () => ({
+    snapper: buildSnapper,
     placeRectangle: (size) => {
       const { view: v, viewport: vp, plan: p, sheetH: h } = latest.current;
       return placeRectangle(size, { view: v, viewport: vp, plan: p, bottomPx: h });
@@ -403,33 +439,39 @@ export function PlanCanvas({
     selectedAt.current = Date.now();
     setSelectedId(id);
   }, []);
-  const backgroundTap = useCallback((x, y) => {
-    const { draft: d, view: v, plan: p, snapEnabled: snap } = latest.current;
-    // Ticket 113: a length pill is tapped to type into it (while tracing, only the
-    // last side's); a tap on the one being typed into must not close its keyboard.
-    const sideIndex =
-      d && (d.kind === 'trace' || d.kind === 'edit' || d.kind === 'feature')
-        ? hitSide(d.polygon, d.kind !== 'trace', { x, y }, v)
-        : -1;
-    const tappable = d?.kind === 'trace' ? d.polygon.length - 2 : sideIndex;
-    if (sideIndex >= 0 && sideIndex === tappable && !(d.kind === 'trace' && d.closed)) {
-      if (d.side?.index !== sideIndex) latest.current.onSidePress?.(sideIndex);
-      return;
-    }
-    Keyboard.dismiss();
-    if (d) {
-      // Typing a side's length: a tap elsewhere only closes the keyboard.
-      if (d.side) return;
-      // Drawing: a tap places a corner (not on top of one already there).
-      if (d.kind === 'trace' && !d.closed && hitCorner(d.polygon, { x, y }, v, HIT_PX / 2) < 0) {
-        latest.current.onAddCorner(toPlan({ x, y }, v), p, snap);
+  const backgroundTap = useCallback(
+    (x, y) => {
+      const { draft: d, view: v, plan: p, snapEnabled: snap } = latest.current;
+      // Ticket 113: a length pill is tapped to type into it (while tracing, only the
+      // last side's); a tap on the one being typed into must not close its keyboard.
+      const sideIndex =
+        d && (d.kind === 'trace' || d.kind === 'edit' || d.kind === 'feature')
+          ? hitSide(d.polygon, d.kind !== 'trace', { x, y }, v)
+          : -1;
+      const tappable = d?.kind === 'trace' ? d.polygon.length - 2 : sideIndex;
+      if (sideIndex >= 0 && sideIndex === tappable && !(d.kind === 'trace' && d.closed)) {
+        if (d.side?.index !== sideIndex) latest.current.onSidePress?.(sideIndex);
+        return;
       }
-      return;
-    }
-    // A tap on a plant reaches both its own tap and this one; the plant wins.
-    if (Date.now() - selectedAt.current < 250) return;
-    setSelectedId(null);
-  }, []);
+      Keyboard.dismiss();
+      if (d) {
+        // Typing a side's length: a tap elsewhere only closes the keyboard.
+        if (d.side) return;
+        // Drawing: a tap places a corner (not on top of one already there).
+        if (d.kind === 'trace' && !d.closed && hitCorner(d.polygon, { x, y }, v, HIT_PX / 2) < 0) {
+          const snapper = buildSnapper();
+          const at = toPlan({ x, y }, v);
+          latest.current.onAddCorner(at, p, snapper ?? snap);
+          showMarker(snapper?.(at), 1500);
+        }
+        return;
+      }
+      // A tap on a plant reaches both its own tap and this one; the plant wins.
+      if (Date.now() - selectedAt.current < 250) return;
+      setSelectedId(null);
+    },
+    [buildSnapper, showMarker]
+  );
 
   // A long press on a zone's empty area edits its outline. A plant keeps its
   // own long press (moving it), so a press on a plant, or while one is being
@@ -468,18 +510,28 @@ export function PlanCanvas({
         if (!start) return;
         const { view: v, plan: p, snapEnabled: snap } = latest.current;
         const delta = { dx: Math.round(tx / v.scale), dy: Math.round(ty / v.scale) };
-        // Zones and elements share one path: snapped to 50 cm with the magnet (tickets 110, 112).
+        // Zones and elements share one path: snapped with the magnet (tickets 110, 112, 114).
+        const snapper = buildSnapper();
+        let last = null;
+        const magnet = snapper
+          ? (point) => {
+              last = snapper(point);
+              return last;
+            }
+          : snap;
         const next =
           start.kind === 'corner'
-            ? dragFeatureCorner(start.start, start.index, delta, p, snap)
-            : dragFeatureShape(start.start, delta, p, snap);
+            ? dragFeatureCorner(start.start, start.index, delta, p, magnet)
+            : dragFeatureShape(start.start, delta, p, magnet);
+        showMarker(last, 0);
         latest.current.onDraftChange(next);
       },
       onEnd: () => {
         draftDrag.current = null;
+        showMarker(null, 0);
       },
     }),
-    []
+    [buildSnapper, showMarker]
   );
 
   const startDrag = useCallback((plant, source, absX, absY) => {
@@ -834,6 +886,7 @@ export function PlanCanvas({
                   unit={unit}
                   pad={PAD}
                   drag={draftHandlers}
+                  marker={snapMarker}
                   sideEdit={sideEdit}
                 />
               ) : null}
@@ -869,7 +922,7 @@ export function PlanCanvas({
       {draft?.kind === 'trace' && !draft.closed ? (
         <View style={styles.instruction} pointerEvents="none">
           <Text style={styles.instructionText}>
-            {`Touchez chaque coin de la zone${snapEnabled ? ' (calé tous les 50 cm, aimant actif)' : ''}. Au moins 3 coins ; « Terminer » referme la forme.`}
+            {`Touchez chaque coin de la zone${snapEnabled ? ' (aimant actif : les coins se calent)' : ''}. Au moins 3 coins ; « Terminer » referme la forme.`}
           </Text>
         </View>
       ) : null}

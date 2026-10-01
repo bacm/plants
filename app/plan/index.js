@@ -64,6 +64,7 @@ import {
   typedSide,
   sideLabel,
 } from '../../lib/zoneDraw';
+import { DEFAULT_SNAP_SETTINGS, parseSnapSettings } from '../../lib/planSnap';
 import {
   planSummary,
   moveMessage,
@@ -90,6 +91,8 @@ const UNDO_MS = 6000;
 const REFUSAL_MS = 5000;
 // Device-local (ticket 109): absent means on.
 const SNAP_SETTING_KEY = 'plan.snapToGrid';
+// Ticket 114: what corners snap to (JSON, lib/planSnap.js).
+const SNAP_SETTINGS_KEY = 'plan.snapSettings';
 
 export default function PlanScreen() {
   const router = useRouter();
@@ -117,12 +120,15 @@ export default function PlanScreen() {
   const [saving, setSaving] = useState(false);
   const nameRef = useRef(null);
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [snapSettings, setSnapSettings] = useState(DEFAULT_SNAP_SETTINGS);
 
   useEffect(() => {
     let alive = true;
     (async () => {
       const stored = await getSetting(SNAP_SETTING_KEY);
       if (alive && stored != null) setSnapEnabled(stored !== '0');
+      const settings = await getSetting(SNAP_SETTINGS_KEY);
+      if (alive && settings != null) setSnapSettings(parseSnapSettings(settings));
     })();
     return () => {
       alive = false;
@@ -138,6 +144,19 @@ export default function PlanScreen() {
       showMessage('Erreur', error?.message || 'Impossible de mémoriser ce réglage.');
     }
   }, [snapEnabled]);
+
+  const changeSnapSettings = useCallback(
+    (patch) => {
+      const next = { ...snapSettings, ...patch };
+      setSnapSettings(next);
+      try {
+        setSetting(SNAP_SETTINGS_KEY, JSON.stringify(next));
+      } catch (error) {
+        showMessage('Erreur', error?.message || 'Impossible de mémoriser ce réglage.');
+      }
+    },
+    [snapSettings]
+  );
 
   const load = useCallback(async () => {
     const [plan, zones, plants, featureRows] = await Promise.all([
@@ -268,6 +287,7 @@ export default function PlanScreen() {
     setDraft({ kind: 'trace', polygon: [], closed: false });
   }, [showBanner]);
   const cancelDraft = useCallback(() => setDraft(null), []);
+  // `magnet`: true (50 cm grid) or the canvas's snapper function (ticket 114).
   const addDraftCorner = useCallback((point, plan, magnet) => {
     setDraft((d) =>
       d && d.kind === 'trace' && !d.closed
@@ -415,7 +435,8 @@ export default function PlanScreen() {
     if (w.cm == null || l.cm == null) return;
     const polygon = controller.current?.placeRectangle({ widthCm: w.cm, lengthCm: l.cm });
     if (!polygon) return;
-    const placed = snapEnabled ? dragFeatureShape(polygon, { dx: 0, dy: 0 }, plan, true) : polygon;
+    const magnet = controller.current?.snapper() ?? snapEnabled;
+    const placed = magnet ? dragFeatureShape(polygon, { dx: 0, dy: 0 }, plan, magnet) : polygon;
     setDraft((d) => (d?.kind === 'element' && !d.moved ? { ...d, polygon: placed } : d));
   }, [unplacedElement, sheetH, plan, elementForm.width, elementForm.length, snapEnabled]);
 
@@ -572,7 +593,7 @@ export default function PlanScreen() {
       const l = parsePlanMetres(dims.length);
       if (w.error || l.error) return { ...d, dims: { ...dims, error: w.error || l.error } };
       const result = resizePolygon(d.base, { widthCm: w.cm, lengthCm: l.cm }, data.plan, {
-        magnet: snapEnabled,
+        magnet: controller.current?.snapper() ?? snapEnabled,
       });
       if (result.error) return { ...d, dims: { ...dims, error: result.error } };
       return { ...d, polygon: result.polygon, moved: true, dims: { ...dims, error: null } };
@@ -582,10 +603,12 @@ export default function PlanScreen() {
     setRectSize((r) => ({ ...r, tried: true }));
     if (!fits) return;
     const polygon = controller.current?.placeRectangle({ widthCm: width.cm, lengthCm: length.cm });
-    if (polygon)
+    const magnet = controller.current?.snapper() ?? snapEnabled;
+    if (polygon) {
       changeDraft(
-        snapEnabled ? dragFeatureShape(polygon, { dx: 0, dy: 0 }, data.plan, true) : polygon
+        magnet ? dragFeatureShape(polygon, { dx: 0, dy: 0 }, data.plan, magnet) : polygon
       );
+    }
   };
 
   // Ticket 113: the stretched shape for the length typed in a pill, if any.
@@ -668,7 +691,7 @@ export default function PlanScreen() {
         dims={draft.dims}
         onDims={setDimension}
         hint={`Glissez un coin, ou saisissez les dimensions.${
-          snapEnabled ? ' Aimant actif : les coins se calent tous les 50 cm.' : ''
+          snapEnabled ? ' Aimant actif : les coins se calent (voir Aimantation).' : ''
         }`}
         kind={draft.featureKind}
         onKind={(featureKind) => patchDraft({ featureKind })}
@@ -676,6 +699,8 @@ export default function PlanScreen() {
         onLabel={(label) => patchDraft({ label })}
         detailsOpen={!!draft.detailsOpen}
         onToggleDetails={() => patchDraft({ detailsOpen: !draft.detailsOpen })}
+        snap={snapSettings}
+        onSnap={changeSnapSettings}
         onDelete={deleteFeature}
         onFinish={finishFeatureEdit}
         saving={saving}
@@ -690,8 +715,10 @@ export default function PlanScreen() {
         dims={draft.dims}
         onDims={setDimension}
         hint={`Glissez un coin, ou saisissez les dimensions.${
-          snapEnabled ? ' Aimant actif : les coins se calent tous les 50 cm.' : ''
+          snapEnabled ? ' Aimant actif : les coins se calent (voir Aimantation).' : ''
         }`}
+        snap={snapSettings}
+        onSnap={changeSnapSettings}
         saving={saving}
         onErase={eraseOutline}
         onFinish={() => finish(draft.zoneId, '')}
@@ -767,6 +794,7 @@ export default function PlanScreen() {
         onDrop={onDrop}
         snapEnabled={snapEnabled}
         onToggleSnap={toggleSnap}
+        snapSettings={snapSettings}
         onChangePlanSize={changePlanSize}
         onOpenPlant={(id) => router.push(`/plant/${id}`)}
         onEditSize={() => setEditing(true)}

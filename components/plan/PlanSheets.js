@@ -15,6 +15,7 @@ import { Field } from '../form';
 import Icon from '../Icon';
 import { colors, spacing, radius, shadow } from '../../lib/theme';
 import { PLAN_FEATURE_KINDS } from '../../lib/enums';
+import { GRID_STEPS_CM } from '../../lib/planSnap';
 import { useKeyboardHeight } from './useKeyboardHeight';
 
 const FONT_BOLD = 'InstrumentSans_600SemiBold';
@@ -148,6 +149,91 @@ function Chip({ label, selected, onPress }) {
       style={[styles.chip, selected && styles.chipSelected]}>
       <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{label}</Text>
     </TouchableOpacity>
+  );
+}
+
+const stepLabel = (cm) => (cm >= 100 ? `${cm / 100} m` : `${cm} cm`);
+const DISTANCES = [
+  { value: 'small', label: 'Petite' },
+  { value: 'medium', label: 'Moyenne' },
+  { value: 'large', label: 'Grande' },
+];
+
+function Segments({ options, value, onChange, label }) {
+  return (
+    <View style={styles.segments} accessibilityLabel={label}>
+      {options.map((o) => (
+        <TouchableOpacity
+          key={o.value}
+          onPress={() => onChange(o.value)}
+          accessibilityRole="button"
+          accessibilityLabel={`${label} ${o.label}`}
+          accessibilityState={{ selected: o.value === value }}
+          style={[styles.segment, o.value === value && styles.segmentOn]}>
+          <Text style={[styles.segmentText, o.value === value && styles.segmentTextOn]}>
+            {o.label}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+/**
+ * The snapping settings of a zone or element edit sheet (ticket 114, PlanAimantation
+ * artboard): which targets attract a corner, the grid step and the reach.
+ * `settings` as in lib/planSnap.js; `onChange(patch)` applies at once.
+ */
+export function SnapBlock({ settings, onChange }) {
+  return (
+    <View style={styles.snapCard}>
+      <View style={styles.nameRow}>
+        <Text style={styles.snapTitle}>Aimantation</Text>
+        <Text style={styles.hint}>priorité : sommet › côté › grille</Text>
+      </View>
+      <View style={styles.chipsTight}>
+        <Chip
+          label={`Grille · ${stepLabel(settings.gridStepCm)}`}
+          selected={settings.grid}
+          onPress={() => onChange({ grid: !settings.grid })}
+        />
+        <Chip
+          label="Sommets"
+          selected={settings.vertices}
+          onPress={() => onChange({ vertices: !settings.vertices })}
+        />
+        <Chip
+          label="Côtés"
+          selected={settings.edges}
+          onPress={() => onChange({ edges: !settings.edges })}
+        />
+        <Chip
+          label="Bord du jardin"
+          selected={settings.border}
+          onPress={() => onChange({ border: !settings.border })}
+        />
+      </View>
+      {settings.grid ? (
+        <View style={styles.snapRow}>
+          <Text style={styles.snapLabel}>Pas</Text>
+          <Segments
+            label="Pas de la grille"
+            value={settings.gridStepCm}
+            onChange={(gridStepCm) => onChange({ gridStepCm })}
+            options={GRID_STEPS_CM.map((cm) => ({ value: cm, label: stepLabel(cm) }))}
+          />
+        </View>
+      ) : null}
+      <View style={styles.snapRow}>
+        <Text style={styles.snapLabel}>Distance</Text>
+        <Segments
+          label="Distance"
+          value={settings.distance}
+          onChange={(distance) => onChange({ distance })}
+          options={DISTANCES}
+        />
+      </View>
+    </View>
   );
 }
 
@@ -325,6 +411,8 @@ export function EditSheet({
   dims,
   onDims,
   hint,
+  snap,
+  onSnap,
   onErase,
   onFinish,
   saving,
@@ -340,6 +428,7 @@ export function EditSheet({
       </View>
       <DimensionsRow dims={dims} onChange={onDims} onSubmit={onFinish} />
       <Text style={styles.editHint}>{hint}</Text>
+      <SnapBlock settings={snap} onChange={onSnap} />
       <View style={styles.row}>
         <Button
           label="Effacer le tracé"
@@ -552,6 +641,8 @@ export function FeatureEditSheet({
   onLabel,
   detailsOpen,
   onToggleDetails,
+  snap,
+  onSnap,
   onDelete,
   onFinish,
   saving,
@@ -582,6 +673,7 @@ export function FeatureEditSheet({
       ) : (
         <Text style={styles.editHint}>{hint}</Text>
       )}
+      <SnapBlock settings={snap} onChange={onSnap} />
       <View style={styles.row}>
         <Button
           label="Supprimer"
@@ -678,6 +770,34 @@ const styles = StyleSheet.create({
   chipSelected: { backgroundColor: colors.text, borderColor: colors.text },
   chipText: { fontFamily: FONT_MEDIUM, fontSize: 14, color: colors.text },
   chipTextSelected: { color: colors.background },
+  chipsTight: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  snapCard: {
+    backgroundColor: colors.background,
+    borderRadius: 20,
+    padding: 12,
+    gap: 10,
+  },
+  snapTitle: { fontFamily: FONT_BOLD, fontSize: 13, color: colors.text },
+  snapRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  snapLabel: { fontFamily: FONT_BODY, fontSize: 12, color: colors.textSecondary, width: 54 },
+  segments: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 4,
+    padding: 3,
+    borderRadius: 18,
+    backgroundColor: colors.track,
+  },
+  segment: {
+    flex: 1,
+    height: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  segmentOn: { backgroundColor: colors.surface },
+  segmentText: { fontFamily: FONT_MEDIUM, fontSize: 13, color: colors.text },
+  segmentTextOn: { fontFamily: FONT_BOLD },
   hint: { fontFamily: FONT_BODY, fontSize: 12, color: colors.textSecondary },
   note: { fontFamily: FONT_BODY, fontSize: 13, color: colors.textSecondary },
   nameRow: {

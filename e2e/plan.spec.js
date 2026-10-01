@@ -551,7 +551,7 @@ test.describe('drawing zones (ticket 107)', () => {
     await expect(
       visibleText(
         page,
-        'Glissez un coin, ou saisissez les dimensions. Aimant actif : les coins se calent tous les 50 cm.'
+        'Glissez un coin, ou saisissez les dimensions. Aimant actif : les coins se calent (voir Aimantation).'
       )
     ).toBeVisible();
     // The magnet is reachable while editing; off, the hint loses its second sentence.
@@ -573,7 +573,7 @@ test.describe('drawing zones (ticket 107)', () => {
     await page.getByRole('button', { name: 'Une zone de plantes' }).click();
     await expect(
       page.getByText(
-        'Touchez chaque coin de la zone (calé tous les 50 cm, aimant actif). Au moins 3 coins ; « Terminer » referme la forme.'
+        'Touchez chaque coin de la zone (aimant actif : les coins se calent). Au moins 3 coins ; « Terminer » referme la forme.'
       )
     ).toBeVisible();
     await expect(
@@ -803,6 +803,8 @@ test.describe('garden elements (ticket 110)', () => {
     context,
     page,
   }) => {
+    // Ticket 114: the Aimantation block makes the edit sheet taller; a taller screen keeps the lower plan in view.
+    await page.setViewportSize({ width: 390, height: 1100 });
     const api = await mockAuthApi(context);
     seedFeatureGarden(api);
     await page.goto('/plan');
@@ -816,7 +818,7 @@ test.describe('garden elements (ticket 110)', () => {
     await expect(
       visibleText(
         page,
-        'Glissez un coin, ou saisissez les dimensions. Aimant actif : les coins se calent tous les 50 cm.'
+        'Glissez un coin, ou saisissez les dimensions. Aimant actif : les coins se calent (voir Aimantation).'
       )
     ).toBeVisible();
     await expect(page.getByTestId('plan-dim-width')).toHaveValue('5');
@@ -977,7 +979,8 @@ function seedSideGarden(api) {
     id: 'feature-terrace',
     kind: 'terrace',
     label: 'Terrasse sud',
-    polygon: rect(500, 1800, 500, 400),
+    // Ticket 114: in the upper plan, clear of the taller edit sheet.
+    polygon: rect(800, 200, 500, 400),
     updatedAt: STAMP,
     deletedAt: null,
   });
@@ -1064,11 +1067,11 @@ test.describe('typing a side length (ticket 113)', () => {
     const api = await mockAuthApi(context);
     seedSideGarden(api);
     await page.goto('/plan');
-    await holdAt(page, await planPoint(page, 750, 2000));
+    await holdAt(page, await planPoint(page, 1050, 400));
     await expect(
       visibleText(page, 'Modifier l’élément · touchez une longueur pour la saisir')
     ).toBeVisible();
-    await clickTopPill(page, 750, 1800);
+    await clickTopPill(page, 1050, 200);
     await page.getByLabel('Longueur du côté du haut, en mètres').fill('6');
     await expect(visibleText(page, '20 m² → 24 m²')).toBeVisible();
     await page.getByRole('button', { name: 'Valider' }).click();
@@ -1077,12 +1080,12 @@ test.describe('typing a side length (ticket 113)', () => {
       .poll(() => JSON.parse(serverFeature(api, 'feature-terrace').polygon)[1][0], {
         timeout: 20000,
       })
-      .toBe(1100);
+      .toBe(1400);
     expect(JSON.parse(serverFeature(api, 'feature-terrace').polygon)).toEqual([
-      [500, 1800],
-      [1100, 1800],
-      [1100, 2200],
-      [500, 2200],
+      [800, 200],
+      [1400, 200],
+      [1400, 600],
+      [800, 600],
     ]);
   });
 
@@ -1137,5 +1140,142 @@ test.describe('typing a side length (ticket 113)', () => {
     expect((b[0] - a[0]) * (c[0] - b[0]) + (b[1] - a[1]) * (c[1] - b[1])).toBe(0);
     // Not grid snapped: the magnet is off.
     expect(a[0] % 50 !== 0 || a[1] % 50 !== 0).toBe(true);
+  });
+});
+
+// Ticket 114: corners snap to the other shapes' corners and sides. Zone A
+// (0,0 600x800) is edited; zone E is the neighbour, with an off-grid corner
+// (1013,117) so that a snap cannot be mistaken for the 50 cm grid. The reach is
+// 12 px (about 54 cm at this zoom).
+test.describe('snapping to other shapes (ticket 114)', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+  });
+
+  async function seedSnapGarden(context) {
+    const api = await mockAuthApi(context);
+    seedDrawGarden(api);
+    api.server.seed('zones', zone('zone-e', 'Allée', rect(1013, 117, 387, 883), 3));
+    return api;
+  }
+
+  // Edits zone A and drags its corner 3 (600,800) to the plan point (xCm, yCm)
+  // shifted by (dxPx, dyPx) screen pixels, then finishes.
+  async function dragCornerTo(page, xCm, yCm, dxPx = 0, dyPx = 0) {
+    const corner = await planPoint(page, 600, 800);
+    const target = await planPoint(page, xCm, yCm);
+    await drag(page, corner, { x: target.x + dxPx, y: target.y + dyPx });
+  }
+  async function finishEdit(page, api) {
+    await page.getByRole('button', { name: 'Terminer', exact: true }).click();
+    // Zone A already has its seeded outline: wait for the moved corner.
+    await expect
+      .poll(() => JSON.stringify(pushedPolygon(api, 'zone-a')?.[2]), { timeout: 20000 })
+      .not.toBe('[600,800]');
+    return pushedPolygon(api, 'zone-a');
+  }
+  test('the edit sheet has the Aimantation block', async ({ context, page }) => {
+    await seedSnapGarden(context);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    await expect(page.getByText('Aimantation', { exact: true })).toBeVisible();
+    await expect(page.getByText('priorité : sommet › côté › grille')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Grille · 50 cm' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sommets' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Côtés' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bord du jardin' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Distance Moyenne' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bord du jardin' })).toHaveCSS(
+      'background-color',
+      'rgb(255, 255, 255)'
+    );
+    await expect(page.getByRole('button', { name: 'Sommets' })).toHaveCSS(
+      'background-color',
+      'rgb(31, 42, 34)'
+    );
+    if (process.env.SHOTS_DIR)
+      await page.screenshot({ path: `${process.env.SHOTS_DIR}/aimantation.png` });
+  });
+
+  test('a corner dragged near another zone corner lands on it, with its marker', async ({
+    context,
+    page,
+  }) => {
+    const api = await seedSnapGarden(context);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    const corner = await planPoint(page, 600, 800);
+    const target = await planPoint(page, 1013, 117);
+    await page.mouse.move(corner.x, corner.y);
+    await page.mouse.down();
+    await page.mouse.move(corner.x + 3, corner.y + 3, { steps: 2 });
+    await page.mouse.move(target.x + 4, target.y + 3, { steps: 10 });
+    await expect(page.getByTestId('plan-snap-marker')).toBeVisible();
+    await expect(page.getByText('Sommet', { exact: true })).toBeVisible();
+    if (process.env.SHOTS_DIR)
+      await page.screenshot({ path: `${process.env.SHOTS_DIR}/marker.png` });
+    await page.mouse.up();
+    await expect(page.getByTestId('plan-snap-marker')).toHaveCount(0);
+    expect((await finishEdit(page, api))[2]).toEqual([1013, 117]);
+  });
+
+  test('away from corners, a corner lands on the other zone side', async ({ context, page }) => {
+    const api = await seedSnapGarden(context);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    await dragCornerTo(page, 1013, 600, -8, 0);
+    const [x, y] = (await finishEdit(page, api))[2];
+    expect(x).toBe(1013);
+    expect(y).toBeGreaterThan(117);
+    expect(y).toBeLessThan(1000);
+  });
+
+  test('Sommets off: near a corner the point goes to the side instead', async ({
+    context,
+    page,
+  }) => {
+    const api = await seedSnapGarden(context);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    await page.getByRole('button', { name: 'Sommets' }).click();
+    await dragCornerTo(page, 1013, 117, 3, -2);
+    const [x, y] = (await finishEdit(page, api))[2];
+    expect(y).toBe(117);
+    expect(x).not.toBe(1013);
+  });
+
+  test('the grid step changes to 1 m and is remembered after a reload', async ({
+    context,
+    page,
+  }) => {
+    const api = await seedSnapGarden(context);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    await page.getByRole('button', { name: 'Pas de la grille 1 m' }).click();
+    await expect(page.getByRole('button', { name: 'Grille · 1 m' })).toBeVisible();
+    await page.getByRole('button', { name: 'Bord du jardin' }).click();
+    await dragCornerTo(page, 730, 1330, 2, 3);
+    const [x, y] = (await finishEdit(page, api))[2];
+    expect(x % 100).toBe(0);
+    expect(y % 100).toBe(0);
+
+    await page.reload();
+    await holdAt(page, await planPoint(page, 500, 700));
+    await expect(page.getByRole('button', { name: 'Grille · 1 m' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bord du jardin' })).toHaveCSS(
+      'background-color',
+      'rgb(31, 42, 34)'
+    );
+  });
+
+  test('the magnet off: no snapping to the other zone', async ({ context, page }) => {
+    const api = await seedSnapGarden(context);
+    await page.goto('/plan');
+    await holdAt(page, await planPoint(page, 500, 700));
+    await page.getByRole('button', { name: 'Aimanter les plantes à la grille (activé)' }).click();
+    await dragCornerTo(page, 1013, 117, 4, 3);
+    const polygon = await finishEdit(page, api);
+    expect(polygon[2]).not.toEqual([1013, 117]);
+    expect(polygon[2][0] % 50 === 0 && polygon[2][1] % 50 === 0).toBe(false);
   });
 });

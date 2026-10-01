@@ -19,21 +19,21 @@ along the terrace); snapping to neighbours is what makes it fit.
 
 ## Acceptance criteria
 
-- [ ] With the magnet on, a zone or element corner (tracing, dragging, typed
-      side, resize) snaps to the enabled targets within the attraction
+- [x] With the magnet on, a zone or element corner (tracing, dragging, resize;
+      a typed side length stays exact, as in 113) snaps to the enabled targets within the attraction
       distance, in priority order: another shape's corner (or the garden's
       corner) › the nearest point on another shape's side (or the garden's
       border) › the grid
-- [ ] A marker shows the chosen target while dragging or tracing ("Sommet",
+- [x] A marker shows the chosen target while dragging or tracing ("Sommet",
       "Côté", "Bord", nothing for the grid)
-- [ ] The zone and element edit sheets have an "Aimantation" section: toggles
+- [x] The zone and element edit sheets have an "Aimantation" section: toggles
       Grille (with its step: 10, 25, 50 cm or 1 m), Sommets, Côtés, Bord du
       jardin, and a distance Petite / Moyenne (12 px) / Grande, measured on
       screen whatever the zoom; remembered on the device; applies to every
       zone and element corner
-- [ ] The magnet button stays the master switch; plants keep snapping to the
+- [x] The magnet button stays the master switch; plants keep snapping to the
       grid only
-- [ ] The snapping maths is pure and Jest-tested (priority, distance, the
+- [x] The snapping maths is pure and Jest-tested (priority, distance, the
       shape being edited never snaps to itself); matches the PlanAimantation
       artboard; `npm run verify` and `npm run e2e:web` pass
 - [ ] Checked on the owner's iPhone
