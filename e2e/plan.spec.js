@@ -258,7 +258,12 @@ test.describe('garden plan (ticket 106)', () => {
     const api = await mockAuthApi(context);
     seedGarden(api);
     await page.goto('/plan');
-    const dia = async () => (await page.getByTestId('plan-dot-plant-rose').boundingBox()).width;
+    // The marker stops growing at 28 px (ticket 125): past that the canopy shows the size.
+    const dia = async () => {
+      const canopy = page.getByTestId('plan-canopy-plant-rose');
+      const target = (await canopy.count()) ? canopy : page.getByTestId('plan-dot-plant-rose');
+      return (await target.boundingBox()).width;
+    };
 
     await page.getByLabel('Plante Rosier ‘Pierre de Ronsard’').click();
     const bubble = page.getByTestId('plan-bubble');
@@ -304,6 +309,35 @@ test.describe('garden plan (ticket 106)', () => {
     await expect(page).toHaveURL(/\/plan/);
     await page.getByRole('button', { name: /Ouvrir la fiche/ }).click();
     await expect(page).toHaveURL(/\/plant\/plant-rose/);
+  });
+
+  test('a big plant shows a canopy and does not hide the small plant under it (ticket 125)', async ({
+    context,
+    page,
+  }) => {
+    const api = await mockAuthApi(context);
+    seedGarden(api);
+    // The small plant is seeded first: the plan, not the data order, puts it on top.
+    api.server.seed(
+      'plants',
+      plant('plant-small', 'Hosta', { zoneId: 'zone-a', planX: 460, planY: 500, planSizeCm: 30 })
+    );
+    api.server.seed(
+      'plants',
+      plant('plant-big', 'Chêne', { zoneId: 'zone-a', planX: 400, planY: 500, planSizeCm: 500 })
+    );
+    await page.goto('/plan');
+
+    const canopy = page.getByTestId('plan-canopy-plant-big');
+    await expect(canopy).toBeVisible();
+    const canopyBox = await canopy.boundingBox();
+    const markerBox = await page.getByTestId('plan-dot-plant-big').boundingBox();
+    expect(markerBox.width).toBeLessThanOrEqual(29);
+    expect(canopyBox.width).toBeGreaterThan(markerBox.width * 2);
+    await expect(page.getByTestId('plan-dot-plant-small')).toBeVisible();
+
+    await page.getByLabel('Plante Hosta').click();
+    await expect(page.getByRole('button', { name: /Ouvrir la fiche/ })).toContainText('Hosta');
   });
 
   test('zoom buttons change the scale and "Voir tout" brings it back', async ({

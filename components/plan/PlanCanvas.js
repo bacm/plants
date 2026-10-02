@@ -43,6 +43,7 @@ import {
   formatDistance,
   rectanglePolygon,
   dotDiameterPx,
+  markerDiameterPx,
   formatArea,
   formatLength,
   polygonAreaM2,
@@ -131,6 +132,41 @@ function dragGesture({ onStart, onMove, onEnd }) {
     });
 }
 
+// The see-through canopy of a placed plant at its real size (ticket 125). Never
+// touchable: the marker (PlanDot) and the zones under it keep the touches.
+function PlanCanopy({ plant, left, top, dia, selected, dragged, unit }) {
+  const base = { position: 'absolute', left, top, width: dia, height: dia, borderRadius: dia / 2 };
+  if (dragged) {
+    return (
+      <View
+        pointerEvents="none"
+        testID={`plan-canopy-${plant.id}`}
+        style={[
+          base,
+          { borderWidth: 1.5 * unit, borderStyle: 'dashed', borderColor: colors.planOutline },
+        ]}
+      />
+    );
+  }
+  const colour = colorHex(plant.flowerColor);
+  return (
+    <View
+      pointerEvents="none"
+      testID={`plan-canopy-${plant.id}`}
+      style={[
+        base,
+        {
+          borderWidth: selected ? 2 * unit : 1.25 * unit,
+          borderColor: selected ? colors.accent : colour,
+          opacity: selected ? 1 : 0.75,
+          overflow: 'hidden',
+        },
+      ]}>
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: colour, opacity: 0.16 }]} />
+    </View>
+  );
+}
+
 function PlanDot({ plant, left, top, hit, dia, selected, hidden, passive, ring, onSelect, drag }) {
   const tap = Gesture.Tap()
     .maxDuration(400)
@@ -144,18 +180,7 @@ function PlanDot({ plant, left, top, hit, dia, selected, hidden, passive, ring, 
       accessibilityRole="button"
       accessibilityLabel={`Plante ${plant.name}`}
       style={[styles.dotHit, { width: hit, height: hit, left: 0, top: 0 }]}>
-      {hidden ? (
-        <View
-          style={{
-            width: dia,
-            height: dia,
-            borderRadius: dia / 2,
-            borderWidth: ring.thin,
-            borderStyle: 'dashed',
-            borderColor: colors.planOutline,
-          }}
-        />
-      ) : (
+      {hidden ? null : (
         <>
           {selected ? (
             <View
@@ -603,7 +628,10 @@ export function PlanCanvas({
     for (const plant of all) {
       if (plant.planX == null || plant.planY == null) continue;
       const c = toScreen({ x: plant.planX, y: plant.planY }, v);
-      const r = Math.max(HIT_PX / 2, dotDiameterPx(planSizeOf(plant), v.scale) / 2);
+      const r = Math.max(
+        HIT_PX / 2,
+        markerDiameterPx(dotDiameterPx(planSizeOf(plant), v.scale)) / 2
+      );
       if (Math.hypot(c.x - x, c.y - y) <= r) return;
     }
     const at = toPlan({ x, y }, v);
@@ -881,11 +909,16 @@ export function PlanCanvas({
 
   const hitSize = HIT_PX * unit;
   const dotDia = (plant) => dotDiameterPx(planSizeOf(plant), view.scale) * unit;
+  const markerDia = (plant) =>
+    markerDiameterPx(dotDiameterPx(planSizeOf(plant), view.scale)) * unit;
+  // Largest first, so a small plant's canopy, marker and touch area are drawn
+  // above a big neighbour's (ticket 125).
+  const bySize = view ? [...placed].sort((a, b) => dotDia(b) - dotDia(a)) : placed;
 
   let bubble = null;
   if (selected && view && viewport) {
     const c = toScreen({ x: selected.planX, y: selected.planY }, view);
-    const r = dotDiameterPx(planSizeOf(selected), view.scale) / 2 + 5;
+    const r = markerDiameterPx(dotDiameterPx(planSizeOf(selected), view.scale)) / 2 + 5;
     const left = clampNumber(c.x - 20, 12, Math.max(12, viewport.width - 312));
     const below = c.y + r + 3 < viewport.height - keyboardHeight - drawerHeight - 136;
     const nudgeContext = { zones: parsedZones, features, plan };
@@ -993,14 +1026,28 @@ export function PlanCanvas({
                   })}
                 </PlanGrid>
               </View>
-              {placed.map((plant) => (
+              {bySize
+                .filter((plant) => dotDia(plant) > markerDia(plant) || drag?.plant.id === plant.id)
+                .map((plant) => (
+                  <PlanCanopy
+                    key={plant.id}
+                    plant={plant}
+                    left={PAD + plant.planX * drawScale - dotDia(plant) / 2}
+                    top={PAD + plant.planY * drawScale - dotDia(plant) / 2}
+                    dia={dotDia(plant)}
+                    selected={plant.id === selectedId}
+                    dragged={drag?.plant.id === plant.id}
+                    unit={unit}
+                  />
+                ))}
+              {bySize.map((plant) => (
                 <PlanDot
                   key={plant.id}
                   plant={plant}
-                  left={PAD + plant.planX * drawScale - Math.max(hitSize, dotDia(plant)) / 2}
-                  top={PAD + plant.planY * drawScale - Math.max(hitSize, dotDia(plant)) / 2}
-                  hit={Math.max(hitSize, dotDia(plant))}
-                  dia={dotDia(plant)}
+                  left={PAD + plant.planX * drawScale - Math.max(hitSize, markerDia(plant)) / 2}
+                  top={PAD + plant.planY * drawScale - Math.max(hitSize, markerDia(plant)) / 2}
+                  hit={Math.max(hitSize, markerDia(plant))}
+                  dia={markerDia(plant)}
                   selected={plant.id === selectedId}
                   hidden={drag?.plant.id === plant.id}
                   passive={!!draft}
@@ -1214,28 +1261,49 @@ export function PlanCanvas({
         </View>
       ) : null}
 
-      {drag && view ? (
-        <View
-          pointerEvents="none"
-          accessibilityLabel={`Déplacement : ${drag.plant.name}`}
-          style={[
-            styles.ghost,
-            shadow.card,
-            (() => {
-              const d = Math.max(32, dotDiameterPx(planSizeOf(drag.plant), view.scale));
-              return {
-                left: ghostAt.x - d / 2,
-                top: ghostAt.y - d / 2,
-                width: d,
-                height: d,
-                borderRadius: d / 2,
-                backgroundColor: colorHex(drag.plant.flowerColor),
-                borderColor: ghostRefused ? colors.danger : '#fff',
-              };
-            })(),
-          ]}
-        />
-      ) : null}
+      {drag && view
+        ? (() => {
+            const canopy = dotDiameterPx(planSizeOf(drag.plant), view.scale);
+            const d = Math.max(32, markerDiameterPx(canopy));
+            return (
+              <>
+                {canopy > d ? (
+                  <View
+                    pointerEvents="none"
+                    style={{
+                      position: 'absolute',
+                      left: ghostAt.x - canopy / 2,
+                      top: ghostAt.y - canopy / 2,
+                      width: canopy,
+                      height: canopy,
+                      borderRadius: canopy / 2,
+                      borderWidth: 1.5,
+                      borderStyle: 'dashed',
+                      borderColor: ghostRefused ? colors.danger : colors.planOutline,
+                    }}
+                  />
+                ) : null}
+                <View
+                  pointerEvents="none"
+                  accessibilityLabel={`Déplacement : ${drag.plant.name}`}
+                  style={[
+                    styles.ghost,
+                    shadow.card,
+                    {
+                      left: ghostAt.x - d / 2,
+                      top: ghostAt.y - d / 2,
+                      width: d,
+                      height: d,
+                      borderRadius: d / 2,
+                      backgroundColor: colorHex(drag.plant.flowerColor),
+                      borderColor: ghostRefused ? colors.danger : '#fff',
+                    },
+                  ]}
+                />
+              </>
+            );
+          })()
+        : null}
     </View>
   );
 }

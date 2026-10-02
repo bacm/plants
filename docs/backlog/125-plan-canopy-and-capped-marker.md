@@ -1,7 +1,7 @@
 ---
 id: 125
 title: Draw a big plant as a see-through canopy with a capped marker
-status: open
+status: in-progress
 priority: P2
 type: feature
 ---
@@ -23,31 +23,31 @@ how the owner judges spacing.
 
 ## Acceptance criteria
 
-- [ ] Each placed plant is drawn as two layers: a **canopy** at its real
+- [x] Each placed plant is drawn as two layers: a **canopy** at its real
       size (same `planSizeOf` / `dotDiameterPx` as today) and a **marker**
       whose diameter is the canopy's, capped at 28 px on screen (never under
       the current 12 px minimum)
-- [ ] The cap is in screen px, so it holds at every zoom; a plant whose
+- [x] The cap is in screen px, so it holds at every zoom; a plant whose
       canopy is under the cap looks exactly as today (one solid dot)
-- [ ] Canopy: the plant's colour with a light fill (~16 %) and a thin outline;
+- [x] Canopy: the plant's colour with a light fill (~16 %) and a thin outline;
       marker: solid as today (85 %, white ring)
-- [ ] Every canopy is drawn under every marker; canopies are ordered largest
+- [x] Every canopy is drawn under every marker; canopies are ordered largest
       first
-- [ ] Canopies never take a touch; the marker keeps a touch area of at least
+- [x] Canopies never take a touch; the marker keeps a touch area of at least
       44 px (`HIT_PX`) for the tap (bubble) and the long press (drag)
-- [ ] A long press on a zone's empty area under a canopy edits the zone
+- [x] A long press on a zone's empty area under a canopy edits the zone
       (`zoneLongPress` tests the marker radius, not the canopy's)
-- [ ] The selected plant's ring goes round its marker and its canopy outline
+- [x] The selected plant's ring goes round its marker and its canopy outline
       uses the accent colour; while dragging, the dashed ghost keeps the
       canopy size
-- [ ] Distance lines (122) still start at the plant's centre; the bubble's
+- [x] Distance lines (122) still start at the plant's centre; the bubble's
       "Taille sur le plan" still sets the canopy
-- [ ] Jest: the pure marker-size function (under / over the cap, minimum);
+- [x] Jest: the pure marker-size function (under / over the cap, minimum);
       e2e: a large plant placed over a small one, tapping the small one opens
       its bubble
-- [ ] Mock-up: the Plan artboard shows a 5 m tree as canopy + marker over
-      small plants, validated by the owner before implementing
-- [ ] `npm run verify` and the plan e2e suite pass
+- [x] Mock-up: the Plan artboard shows a 5 m tree as canopy + marker over
+      small plants, validated by the owner before implementing (2026-10-02)
+- [x] `npm run verify` and the plan e2e suite pass
 - [ ] Tried on the iPhone
 
 ## Notes

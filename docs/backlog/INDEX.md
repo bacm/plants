@@ -19,7 +19,6 @@
 | P2 | feature | [057 — Send a Saturday-morning "ce week-end au jardin" digest](057-weekend-garden-digest.md) |
 | P2 | feature | [058 — Turn the dashboard into "Aujourd'hui au jardin](058-home-today-in-the-garden.md) |
 | P2 | feature | [059 — Guide the first launch to a first zone, plant and photo](059-first-launch-onboarding.md) |
-| P2 | feature | [125 — Draw a big plant as a see-through canopy with a capped marker](125-plan-canopy-and-capped-marker.md) |
 | P3 | feature | [025 — Warn before a frost that is colder than a plant tolerates](025-frost-alerts.md) |
 | P3 | feature | [026 — Identify an unknown plant from a photo](026-identify-plant-from-photo.md) |
 | P3 | feature | [027 — Make every screen usable with a screen reader](027-accessibility-labels.md) |
@@ -54,6 +53,7 @@
 | P2 | feature | [121 — Snap a dragged corner to a right or flat angle before the grid](121-snap-to-right-and-flat-angles.md) |
 | P2 | feature | [122 — Show a plant's distances to the edges of its zone on the plan](122-plant-distances-to-zone-edges.md) |
 | P2 | feature | [123 — Nudge a placed plant by a few centimetres with arrow buttons](123-nudge-a-plant-with-arrows.md) |
+| P2 | feature | [125 — Draw a big plant as a see-through canopy with a capped marker](125-plan-canopy-and-capped-marker.md) |
 
 ## blocked
 
