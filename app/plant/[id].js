@@ -28,6 +28,7 @@ import { useDeletePlant } from '../../components/plant/useDeletePlant';
 import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
 import { showMessage, confirm, choose } from '../../lib/dialogs';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareForStorage } from '../../lib/photoPipeline';
 import {
   getPlantById,
   getCareLogsByPlantId,
@@ -191,7 +192,9 @@ export default function PlantDetailScreen() {
       });
       if (!result.canceled) {
         const today = new Date().toISOString().slice(0, 10);
-        setPendingPhotos([{ uri: result.assets[0].uri, date: today, unknown: false }]);
+        const asset = result.assets[0];
+        const uri = await prepareForStorage(asset.uri, asset.width, asset.height);
+        setPendingPhotos([{ uri, date: today, unknown: false }]);
         setPhotoDate(today);
       }
     } else {
@@ -209,12 +212,17 @@ export default function PlantDetailScreen() {
       });
       if (!result.canceled && result.assets?.length) {
         // Each photo keeps the day it was taken; the modal's date field is
-        // the one photo's date, or the fallback for those without one.
-        const picked = result.assets.map((asset) => ({
-          uri: asset.uri,
-          ...originalPhotoDate(asset),
-          fingerprint: photoFingerprint(asset),
-        }));
+        // the one photo's date, or the fallback for those without one. The
+        // image is downscaled now, not on confirm: Safari can no longer read
+        // the picked file once the date modal has been dismissed.
+        const picked = [];
+        for (const asset of result.assets) {
+          picked.push({
+            uri: await prepareForStorage(asset.uri, asset.width, asset.height),
+            ...originalPhotoDate(asset),
+            fingerprint: photoFingerprint(asset),
+          });
+        }
         setPendingPhotos(picked);
         setPhotoDate(picked.length === 1 ? picked[0].date : new Date().toISOString().slice(0, 10));
       }

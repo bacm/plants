@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
+import { prepareForStorage } from '../../lib/photoPipeline';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import Icon from '../../components/Icon';
@@ -71,7 +72,11 @@ export default function LogCareScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,
     });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    if (result.canceled) return;
+    // Downscaled now, not on save: Safari can no longer read the picked file
+    // by the time the form is submitted.
+    const asset = result.assets[0];
+    setPhotoUri(await prepareForStorage(asset.uri, asset.width, asset.height));
   };
 
   const setDateValue = (v) => {
