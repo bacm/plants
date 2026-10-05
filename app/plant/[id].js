@@ -50,6 +50,8 @@ import { PLANT_TYPES, isUnknown, labelFor, iconFor } from '../../lib/enums';
 import { parseISODate } from '../../lib/validation';
 import { isoDateLabel } from '../../lib/months';
 import { parseImageUrls } from '../../lib/plantFields';
+import { originalPhotoDate } from '../../lib/originalPhotoDate';
+import { photoFingerprint } from '../../lib/photoFingerprint';
 
 const HERO_HEIGHT = 310;
 
@@ -110,8 +112,9 @@ export default function PlantDetailScreen() {
   const [photos, setPhotos] = useState([]);
   const [bloomObservations, setBloomObservations] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [pendingPhotoUri, setPendingPhotoUri] = useState(null);
+  // Photos picked but not yet saved: [{ uri, date, unknown, fingerprint }].
+  // The date modal is open while this is non-empty.
+  const [pendingPhotos, setPendingPhotos] = useState([]);
   const [photoDate, setPhotoDate] = useState('');
   const [photoDateError, setPhotoDateError] = useState('');
   // Ticket 087: the lightbox pages through `photos`; the photo shown is
@@ -187,9 +190,9 @@ export default function PlantDetailScreen() {
         quality: 0.8,
       });
       if (!result.canceled) {
-        setPendingPhotoUri(result.assets[0].uri);
-        setPhotoDate(new Date().toISOString().slice(0, 10));
-        setShowDatePicker(true);
+        const today = new Date().toISOString().slice(0, 10);
+        setPendingPhotos([{ uri: result.assets[0].uri, date: today, unknown: false }]);
+        setPhotoDate(today);
       }
     } else {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -199,42 +202,69 @@ export default function PlantDetailScreen() {
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: 0,
+        exif: true,
         quality: 0.8,
       });
-      if (!result.canceled) {
-        setPendingPhotoUri(result.assets[0].uri);
-        setPhotoDate(new Date().toISOString().slice(0, 10));
-        setShowDatePicker(true);
+      if (!result.canceled && result.assets?.length) {
+        // Each photo keeps the day it was taken; the modal's date field is
+        // the one photo's date, or the fallback for those without one.
+        const picked = result.assets.map((asset) => ({
+          uri: asset.uri,
+          ...originalPhotoDate(asset),
+          fingerprint: photoFingerprint(asset),
+        }));
+        setPendingPhotos(picked);
+        setPhotoDate(picked.length === 1 ? picked[0].date : new Date().toISOString().slice(0, 10));
       }
     }
   };
 
   const confirmPhoto = async () => {
-    if (!pendingPhotoUri) return;
-    const { value, error } = parseISODate(photoDate);
-    if (error || value == null) {
-      setPhotoDateError(error || 'Date requise');
-      return;
+    if (pendingPhotos.length === 0) return;
+    const single = pendingPhotos.length === 1;
+    const needsDate = single || pendingPhotos.some((p) => p.unknown);
+    let fallbackDate = null;
+    if (needsDate) {
+      const { value, error } = parseISODate(photoDate);
+      if (error || value == null) {
+        setPhotoDateError(error || 'Date requise');
+        return;
+      }
+      fallbackDate = value;
     }
-    try {
-      await addPhoto({ plantId: id, uri: pendingPhotoUri, date: value });
-    } catch (e) {
-      showMessage('Erreur', `Impossible d'ajouter la photo : ${e.message}`);
-      return;
+    // Saved one by one: on a failure, drop the ones already saved from the
+    // pending list so a retry does not add them twice.
+    for (let i = 0; i < pendingPhotos.length; i++) {
+      const p = pendingPhotos[i];
+      try {
+        await addPhoto({
+          plantId: id,
+          uri: p.uri,
+          date: single || p.unknown ? fallbackDate : p.date,
+          fingerprint: p.fingerprint ?? null,
+        });
+      } catch (e) {
+        setPendingPhotos(pendingPhotos.slice(i));
+        await load();
+        showMessage('Erreur', `Impossible d'ajouter la photo : ${e.message}`);
+        return;
+      }
     }
-    setShowDatePicker(false);
-    setPendingPhotoUri(null);
+    setPendingPhotos([]);
     setPhotoDate('');
     setPhotoDateError('');
     await load();
   };
 
   const cancelPhoto = () => {
-    setShowDatePicker(false);
-    setPendingPhotoUri(null);
+    setPendingPhotos([]);
     setPhotoDate('');
     setPhotoDateError('');
   };
+
+  const unknownDateCount = pendingPhotos.filter((p) => p.unknown).length;
 
   const showAddPhotoOptions = async () => {
     const key = await choose({
@@ -548,22 +578,36 @@ export default function PlantDetailScreen() {
         </View>
       </View>
 
-      <Modal visible={showDatePicker} transparent animationType="fade">
+      <Modal visible={pendingPhotos.length > 0} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Date de la photo</Text>
-            <TextInput
-              style={styles.dateInput}
-              value={photoDate}
-              onChangeText={(v) => {
-                setPhotoDate(v);
-                setPhotoDateError('');
-              }}
-              placeholder="AAAA-MM-JJ"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numbers-and-punctuation"
-            />
-            <Text style={styles.dateHint}>Format: AAAA-MM-JJ (ex: 2024-05-15)</Text>
+            <Text style={styles.modalTitle}>
+              {pendingPhotos.length > 1 ? `${pendingPhotos.length} photos` : 'Date de la photo'}
+            </Text>
+            {pendingPhotos.length > 1 ? (
+              <Text style={styles.dateHint}>
+                Chaque photo garde sa date de prise de vue.
+                {unknownDateCount > 0
+                  ? ` Date pour ${unknownDateCount === 1 ? 'la photo' : `les ${unknownDateCount} photos`} sans date :`
+                  : ''}
+              </Text>
+            ) : null}
+            {pendingPhotos.length === 1 || unknownDateCount > 0 ? (
+              <TextInput
+                style={styles.dateInput}
+                value={photoDate}
+                onChangeText={(v) => {
+                  setPhotoDate(v);
+                  setPhotoDateError('');
+                }}
+                placeholder="AAAA-MM-JJ"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="numbers-and-punctuation"
+              />
+            ) : null}
+            {pendingPhotos.length === 1 || unknownDateCount > 0 ? (
+              <Text style={styles.dateHint}>Format: AAAA-MM-JJ (ex: 2024-05-15)</Text>
+            ) : null}
             {photoDateError ? <Text style={styles.fieldError}>{photoDateError}</Text> : null}
             <View style={styles.modalButtons}>
               <TouchableOpacity

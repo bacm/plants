@@ -300,7 +300,8 @@ test.describe('web smoke', () => {
     const fileChooser = await fileChooserPromise;
     await fileChooser.setFiles(path.join(__dirname, 'fixtures', 'test-photo.png'));
     await expect(visibleText(page, 'Date de la photo')).toBeVisible();
-    const photoDate = new Date().toISOString().slice(0, 10);
+    // Prefilled with the file's own date (lib/originalPhotoDate.js).
+    const photoDate = await page.getByPlaceholder('AAAA-MM-JJ').inputValue();
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click();
     // Wait for the photo to actually be persisted before exporting -- addPhoto
     // is async, and navigating away too soon would export a garden that
