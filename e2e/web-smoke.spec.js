@@ -242,6 +242,19 @@ test.describe('web smoke', () => {
     await expect(page.getByLabel(`Photo du ${newPhotoDate}`)).toBeVisible();
     await expect(page.getByLabel(`Photo du ${photoDate}`)).toHaveCount(0);
 
+    // --- Lightbox: add, show and clear a caption (ticket 133) ---
+    await page.getByLabel(`Photo du ${newPhotoDate}`).click();
+    const captionBox = page.getByRole('dialog');
+    await captionBox.getByRole('button', { name: 'Légende', exact: true }).click();
+    await captionBox.getByLabel('Légende de la photo', { exact: true }).fill('Premiere fleur');
+    await captionBox.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await expect(captionBox.getByText('Premiere fleur')).toBeVisible();
+    await captionBox.getByRole('button', { name: 'Légende', exact: true }).click();
+    await captionBox.getByLabel('Légende de la photo', { exact: true }).fill('');
+    await captionBox.getByRole('button', { name: 'Enregistrer', exact: true }).click();
+    await expect(captionBox.getByText('Premiere fleur')).toHaveCount(0);
+    await captionBox.getByRole('button', { name: 'Retour', exact: true }).click();
+
     // --- Reload: the photo (and its date) survived ---
     // plant/[id] is a full-screen route outside the (tabs) group (see the
     // comment on the first test above), so reloading lands back on this

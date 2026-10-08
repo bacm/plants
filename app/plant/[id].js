@@ -40,6 +40,7 @@ import {
   addPhoto,
   deletePhoto,
   updatePhotoDate,
+  setPhotoCaption,
   movePhoto,
   getZones,
   getPlantsByZoneWithImages,
@@ -126,6 +127,9 @@ export default function PlantDetailScreen() {
   const [editingPhotoDate, setEditingPhotoDate] = useState(false);
   const [photoDateEdit, setPhotoDateEdit] = useState('');
   const [photoDateEditError, setPhotoDateEditError] = useState('');
+  // Ticket 133: inline caption editor in the lightbox.
+  const [editingCaption, setEditingCaption] = useState(false);
+  const [captionEdit, setCaptionEdit] = useState('');
   // Ticket 082: the "Déplacer" sheet inside the lightbox.
   const [movingPhoto, setMovingPhoto] = useState(false);
   const [moveZoneId, setMoveZoneId] = useState(null);
@@ -315,6 +319,30 @@ export default function PlantDetailScreen() {
     setEditingPhotoDate(false);
     setPhotoDateEdit('');
     setPhotoDateEditError('');
+    setEditingCaption(false);
+    setCaptionEdit('');
+  };
+
+  const startEditCaption = () => {
+    setCaptionEdit(selectedPhoto.caption ?? '');
+    setEditingCaption(true);
+  };
+
+  const cancelEditCaption = () => {
+    setEditingCaption(false);
+    setCaptionEdit('');
+  };
+
+  const confirmEditCaption = async () => {
+    try {
+      setPhotoCaption(selectedPhoto.id, captionEdit);
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'enregistrer la légende : ${e.message}`);
+      return;
+    }
+    setEditingCaption(false);
+    setCaptionEdit('');
+    await load();
   };
 
   const startEditPhotoDate = () => {
@@ -696,13 +724,18 @@ export default function PlantDetailScreen() {
               />
             </View>
           )}
-          {selectedPhoto && !editingPhotoDate && (
+          {selectedPhoto && !editingPhotoDate && !editingCaption && (
             <View style={[styles.lightboxInfo, { paddingBottom: insets.bottom + 36 }]}>
               <View>
                 <Text style={styles.lightboxPlantName}>{plant?.name}</Text>
                 <Text style={styles.lightboxDate}>
                   {isoDateLabel(selectedPhoto.date)} · {selectedIndex + 1} / {photos.length}
                 </Text>
+                {selectedPhoto.caption ? (
+                  <Text style={styles.lightboxCaption} numberOfLines={3}>
+                    {selectedPhoto.caption}
+                  </Text>
+                ) : null}
               </View>
               <View style={styles.lightboxActions}>
                 <TouchableOpacity
@@ -712,6 +745,14 @@ export default function PlantDetailScreen() {
                   accessibilityLabel="Modifier la date">
                   <Icon name="calendar-blank-outline" size={18} color="#fff" />
                   <Text style={styles.lightboxPillOutlineText}>Modifier la date</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.lightboxPill, styles.lightboxPillOutline]}
+                  onPress={startEditCaption}
+                  accessibilityRole="button"
+                  accessibilityLabel="Légende">
+                  <Icon name="pencil-outline" size={18} color="#fff" />
+                  <Text style={styles.lightboxPillOutlineText}>Légende</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.lightboxPill, styles.lightboxPillFilled]}
@@ -747,6 +788,31 @@ export default function PlantDetailScreen() {
                 <TouchableOpacity
                   style={styles.modalConfirmBtn}
                   onPress={confirmEditPhotoDate}
+                  accessibilityRole="button">
+                  <Text style={styles.modalConfirmText}>Enregistrer</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          {selectedPhoto && editingCaption && (
+            <View style={styles.lightboxDateEditRow}>
+              <Field
+                value={captionEdit}
+                onChangeText={setCaptionEdit}
+                placeholder="Légende"
+                multiline
+                accessibilityLabel="Légende de la photo"
+              />
+              <View style={styles.modalButtons}>
+                <TouchableOpacity
+                  style={styles.modalCancelBtn}
+                  onPress={cancelEditCaption}
+                  accessibilityRole="button">
+                  <Text style={[styles.modalCancelText, styles.lightboxCancelText]}>Annuler</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.modalConfirmBtn}
+                  onPress={confirmEditCaption}
                   accessibilityRole="button">
                   <Text style={styles.modalConfirmText}>Enregistrer</Text>
                 </TouchableOpacity>
@@ -1035,9 +1101,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.onDarkMuted,
   },
-  lightboxActions: { flexDirection: 'row', gap: 12 },
+  lightboxCaption: {
+    fontFamily: 'InstrumentSans_400Regular',
+    fontSize: 14,
+    color: '#fff',
+    marginTop: 4,
+  },
+  lightboxActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
   lightboxPill: {
     flex: 1,
+    minWidth: 100,
+    paddingHorizontal: 12,
     height: 52,
     borderRadius: 26,
     flexDirection: 'row',
