@@ -1,7 +1,7 @@
 ---
 id: 127
 title: Flow 08 never finds the pruning task for the seeded Lavande
-status: open
+status: done
 priority: P2
 type: bug
 ---
@@ -23,6 +23,14 @@ monthly tasks would hide behind this known failure.
 
 ## Acceptance criteria
 
-- [ ] Root cause found: the seed, or the app
-- [ ] `npm run e2e:ios -- 08` passes
-- [ ] `npm run verify` passes
+- [x] Root cause found: the seed, or the app
+- [x] `npm run e2e:ios -- 08` passes
+- [x] `npm run verify` passes
+
+## Resolution
+
+The seed, not the app. `scrollUntilVisible` stopped with "Mois de taille" and
+its month row behind the sticky "Enregistrer" footer (Maestro counts an
+element under it as visible), so the month tap missed and Lavande was saved
+with no pruning month. Centring the picker (`centerElement: true`) puts the
+row in view; flow 08 passed on the simulator on 2026-10-08.

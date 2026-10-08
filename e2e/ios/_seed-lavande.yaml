@@ -36,10 +36,15 @@ appId: host.exp.Exponent
 # twelve months in one row -- no nested horizontal scroll needed any more,
 # just scroll the section into view and tap the month cell by its
 # accessibilityLabel (the full French month name).
+# Ticket 127: the sticky "Enregistrer" footer covers the bottom of the form,
+# and Maestro counts an element under it as visible -- without centring, the
+# label and its month row sat behind the footer and the month tap missed, so
+# Lavande was saved with no pruning month. Centre the picker instead.
 - scrollUntilVisible:
     element:
       text: "Mois de taille"
     direction: DOWN
+    centerElement: true
 # The bloom period above has the same twelve month labels, and a plain
 # tapOn picks its cell first (leaving an unfinished bloom range that blocks
 # the save) -- target the cell under "Mois de taille".
