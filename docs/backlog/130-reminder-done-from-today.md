@@ -1,7 +1,7 @@
 ---
 id: 130
 title: Mark a reminder done from today and always log it in the journal
-status: open
+status: done
 priority: P1
 type: bug
 ---
@@ -25,13 +25,13 @@ reminders screen.
 
 ## Acceptance criteria
 
-- [ ] An interval reminder done on day D is next due on D + frequency;
+- [x] An interval reminder done on day D is next due on D + frequency;
       `lastDoneDate` is D
-- [ ] A yearly reminder keeps its calendar date: it moves forward a year at a
+- [x] A yearly reminder keeps its calendar date: it moves forward a year at a
       time until it is after D
-- [ ] Every "Fait" (dashboard, plant sheet, reminders screen, "Tout faire")
+- [x] Every "Fait" (dashboard, plant sheet, reminders screen, "Tout faire")
       writes one journal entry dated D with the care type of the reminder kind
-- [ ] The kind → care type mapping is declared once, next to `REMINDER_KINDS`
+- [x] The kind → care type mapping is declared once, next to `REMINDER_KINDS`
       in `lib/enums.js`; the screens hold no map
-- [ ] The next-date rule is a pure, Jest-tested function; `npm run verify`
+- [x] The next-date rule is a pure, Jest-tested function; `npm run verify`
       and `npm run e2e:web` pass

@@ -44,7 +44,6 @@ import {
   getZones,
   getPlantsByZoneWithImages,
   markReminderDone,
-  createCareLog,
   deleteCareLog,
   updatePlant,
 } from '../../lib/db';
@@ -164,20 +163,7 @@ export default function PlantDetailScreen() {
   }, [load]);
 
   const handleReminderDone = async (reminder) => {
-    const kindMap = {
-      water: 'watered',
-      prune: 'pruned',
-      fertilize: 'fertilized',
-      deadhead: 'deadheaded',
-      winter_prep: 'treated',
-      custom: 'treated',
-    };
     await markReminderDone(reminder.id);
-    await createCareLog({
-      plantId: id,
-      type: kindMap[reminder.kind] || 'watered',
-      date: new Date().toISOString().slice(0, 10),
-    });
     await load();
   };
 

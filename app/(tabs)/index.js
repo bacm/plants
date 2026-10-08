@@ -59,15 +59,6 @@ function monthRangeISO(month, year) {
   };
 }
 
-const NON_SEASONAL_CARE_TYPE = { water: 'watered', fertilize: 'fertilized' };
-
-/** Marks one reminder done and logs the matching care entry (rule 1: caller awaits). */
-async function completeReminder(reminder, today) {
-  await markReminderDone(reminder.id);
-  const type = careTypeForKind(reminder.kind) || NON_SEASONAL_CARE_TYPE[reminder.kind] || 'treated';
-  await createCareLog({ plantId: reminder.plantId, type, date: today });
-}
-
 export default function Dashboard() {
   const router = useRouter();
   const [overdue, setOverdue] = useState([]);
@@ -125,7 +116,7 @@ export default function Dashboard() {
 
   const handleDone = async (reminder) => {
     try {
-      await completeReminder(reminder, new Date().toISOString().slice(0, 10));
+      await markReminderDone(reminder.id);
       await load();
     } catch (e) {
       showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
@@ -152,9 +143,8 @@ export default function Dashboard() {
     });
     if (!ok) return;
     try {
-      const today = new Date().toISOString().slice(0, 10);
       for (const reminder of reminders) {
-        await completeReminder(reminder, today);
+        await markReminderDone(reminder.id);
       }
       await load();
     } catch (e) {
