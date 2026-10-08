@@ -39,6 +39,7 @@
     "planX",
     "planY",
     "planSizeCm",
+    "goneAt",
     "updatedAt",
     "deletedAt"
   ],

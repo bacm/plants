@@ -52,7 +52,7 @@ import { pickCoverPhoto } from '../../lib/coverPhoto';
 import { PLANT_TYPES, isUnknown, labelFor, iconFor } from '../../lib/enums';
 import { parseISODate } from '../../lib/validation';
 import { isoDateLabel } from '../../lib/months';
-import { parseImageUrls } from '../../lib/plantFields';
+import { parseImageUrls, isPlantGone } from '../../lib/plantFields';
 import { originalPhotoDate } from '../../lib/originalPhotoDate';
 import { photoFingerprint } from '../../lib/photoFingerprint';
 
@@ -406,6 +406,18 @@ export default function PlantDetailScreen() {
     await load();
   };
 
+  // Ticket 134: marking a plant gone keeps its history; restoring brings it back.
+  const saveGoneAt = async (goneAt) => {
+    try {
+      await updatePlant(id, { goneAt });
+    } catch (e) {
+      showMessage('Erreur', `Impossible d’enregistrer : ${e.message}`);
+      return false;
+    }
+    await load();
+    return true;
+  };
+
   if (id === 'new') {
     router.replace('/plant/new');
     return null;
@@ -503,6 +515,8 @@ export default function PlantDetailScreen() {
               router.push({ pathname: '/plant/log', params: { plantId: id, logId: log.id } })
             }
             onDeletePlant={deletePlantWithConfirm}
+            gone={isPlantGone(plant)}
+            onMarkGone={saveGoneAt}
           />
         );
       default:
@@ -574,6 +588,19 @@ export default function PlantDetailScreen() {
         </View>
 
         <View style={styles.contentSheet}>
+          {isPlantGone(plant) ? (
+            <View style={styles.goneBanner} testID="gone-banner">
+              <Icon name="leaf-off" size={20} color={colors.terracotta} />
+              <Text style={styles.goneBannerText}>Disparue le {isoDateLabel(plant.goneAt)}</Text>
+              <TouchableOpacity
+                style={styles.goneRestore}
+                onPress={() => saveGoneAt(null)}
+                accessibilityRole="button"
+                accessibilityLabel="Restaurer">
+                <Text style={styles.goneRestoreText}>Restaurer</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           <View style={styles.nameBlock}>
             {eyebrow ? <Text style={styles.eyebrow}>{eyebrow}</Text> : null}
             <Text style={styles.plantName}>{plant.name}</Text>
@@ -908,6 +935,26 @@ const styles = StyleSheet.create({
     paddingBottom: 140,
     gap: 18,
   },
+  goneBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.blush,
+    borderRadius: radius.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  goneBannerText: { ...typography.label, flex: 1, color: colors.text },
+  goneRestore: {
+    height: 36,
+    paddingHorizontal: 14,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.terracotta,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  goneRestoreText: { ...typography.label, fontWeight: '600', color: colors.terracotta },
   nameBlock: { gap: 4 },
   eyebrow: {
     ...typography.caption,

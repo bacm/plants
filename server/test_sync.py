@@ -62,7 +62,7 @@ def test_garden_plan_data_round_trips(client):
     polygon = "[[0,0],[400,0],[400,300],[0,300]]"
     stamp = "2026-10-01T10:00:00.000Z"
     plan = {"id": "main", "widthCm": 1500, "lengthCm": 2500, "updatedAt": stamp, "deletedAt": None}
-    plant = {"id": "p1", "name": "Rose", "planX": 120, "planY": 80, "planSizeCm": 150, "updatedAt": stamp}
+    plant = {"id": "p1", "name": "Rose", "planX": 120, "planY": 80, "planSizeCm": 150, "goneAt": "2026-09-30", "updatedAt": stamp}
     response = push(
         client,
         {"garden_plan": [plan], "zones": [zone("z1", polygon=polygon)], "plants": [plant]},
@@ -75,6 +75,7 @@ def test_garden_plan_data_round_trips(client):
     assert changes["plants"][0]["planX"] == 120
     assert changes["plants"][0]["planY"] == 80
     assert changes["plants"][0]["planSizeCm"] == 150
+    assert changes["plants"][0]["goneAt"] == "2026-09-30"
 
 
 def test_plan_features_round_trip(client):

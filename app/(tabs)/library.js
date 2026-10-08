@@ -22,6 +22,8 @@ export default function LibraryScreen() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState(null);
+  // Ticket 134: show only the plants marked gone.
+  const [showGone, setShowGone] = useState(false);
   const [zones, setZones] = useState([]);
   // null = all zones, a zone id, or 'none' for plants without a zone
   const [zoneFilter, setZoneFilter] = useState(null);
@@ -41,6 +43,7 @@ export default function LibraryScreen() {
         type: typeFilter || undefined,
         zoneId: zoneFilter && zoneFilter !== 'none' ? zoneFilter : undefined,
         noZone: zoneFilter === 'none' || undefined,
+        gone: showGone || undefined,
       }),
       getZones(),
     ]);
@@ -50,7 +53,7 @@ export default function LibraryScreen() {
     setZones(z);
     // A deleted zone must not stay selected.
     setZoneFilter((cur) => (cur && cur !== 'none' && !z.some((x) => x.id === cur) ? null : cur));
-  }, [debouncedSearch, typeFilter, zoneFilter]);
+  }, [debouncedSearch, typeFilter, zoneFilter, showGone]);
 
   useFocusEffect(
     useCallback(() => {
@@ -126,6 +129,16 @@ export default function LibraryScreen() {
               </Text>
             </TouchableOpacity>
           ))}
+          <TouchableOpacity
+            onPress={() => setShowGone(!showGone)}
+            accessibilityRole="button"
+            accessibilityLabel="Disparues"
+            accessibilityState={{ selected: showGone }}
+            style={[styles.filterPill, showGone && styles.filterPillActive]}>
+            <Text style={[styles.filterPillText, showGone && styles.filterPillTextActive]}>
+              Disparues
+            </Text>
+          </TouchableOpacity>
         </ScrollView>
 
         {zones.length > 0 && (
@@ -161,7 +174,9 @@ export default function LibraryScreen() {
           <Text style={styles.emptyText}>
             {search || typeFilter || zoneFilter
               ? 'Aucun résultat. Modifiez les filtres.'
-              : 'Aucune plante. Ajoutez votre première plante.'}
+              : showGone
+                ? 'Aucune plante disparue.'
+                : 'Aucune plante. Ajoutez votre première plante.'}
           </Text>
         ) : (
           <View style={styles.grid}>

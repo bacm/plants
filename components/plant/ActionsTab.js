@@ -3,9 +3,11 @@
 // with its growth curve (ticket 115), and the 10 newest journal entries (care
 // and observations) as a vertical timeline. app/plant/[id].js owns data loading and every
 // handler passed in here.
+import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Svg, { Polyline, Circle, Text as SvgText } from 'react-native-svg';
 import Icon from '../Icon';
+import { Field } from '../form';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { REMINDER_KINDS, labelFor } from '../../lib/enums';
 import {
@@ -18,6 +20,7 @@ import {
   polylinePoints,
 } from '../../lib/journal';
 import { reminderDueText } from '../../lib/reminderDue';
+import { parseISODate } from '../../lib/validation';
 
 const CURVE_W = 150;
 const CURVE_H = 56;
@@ -82,6 +85,75 @@ function SizeCard({ careLogs }) {
   );
 }
 
+// "Marquer comme disparue" (ticket 134): a button that opens an inline date
+// (today by default); onConfirm(date) resolves true when the plant was saved.
+function MarkGoneAction({ onMarkGone }) {
+  const [asking, setAsking] = useState(false);
+  const [date, setDate] = useState('');
+  const [error, setError] = useState('');
+
+  const open = () => {
+    setDate(new Date().toISOString().slice(0, 10));
+    setError('');
+    setAsking(true);
+  };
+
+  const confirm = async () => {
+    const parsed = parseISODate(date);
+    if (!parsed.value) {
+      setError(parsed.error ?? 'Date au format AAAA-MM-JJ');
+      return;
+    }
+    const saved = await onMarkGone(parsed.value);
+    if (saved) setAsking(false);
+  };
+
+  if (!asking) {
+    return (
+      <TouchableOpacity
+        style={styles.goneBtn}
+        onPress={open}
+        accessibilityRole="button"
+        accessibilityLabel="Marquer comme disparue">
+        <Icon name="leaf-off" size={18} color={colors.text} />
+        <Text style={styles.goneBtnText}>Marquer comme disparue</Text>
+      </TouchableOpacity>
+    );
+  }
+  return (
+    <View style={styles.goneForm}>
+      <Field
+        label="Date de disparition"
+        value={date}
+        onChangeText={(v) => {
+          setDate(v);
+          setError('');
+        }}
+        placeholder="AAAA-MM-JJ"
+        keyboardType="numbers-and-punctuation"
+        accessibilityLabel="Date de disparition"
+        error={error}
+      />
+      <View style={styles.goneButtons}>
+        <TouchableOpacity
+          style={styles.goneCancel}
+          onPress={() => setAsking(false)}
+          accessibilityRole="button"
+          accessibilityLabel="Annuler">
+          <Text style={styles.goneCancelText}>Annuler</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.goneConfirm}
+          onPress={confirm}
+          accessibilityRole="button"
+          accessibilityLabel="Confirmer">
+          <Text style={styles.goneConfirmText}>Confirmer</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 export function ActionsTab({
   reminders,
   careLogs,
@@ -90,6 +162,8 @@ export function ActionsTab({
   onDeleteCareLog,
   onEditCareLog,
   onDeletePlant,
+  gone = false,
+  onMarkGone,
 }) {
   const activeReminders = reminders.filter((r) => r.enabled);
   const recentLogs = careLogs.slice(0, 10);
@@ -169,6 +243,8 @@ export function ActionsTab({
           </View>
         )}
       </View>
+
+      {gone ? null : <MarkGoneAction onMarkGone={onMarkGone} />}
 
       <TouchableOpacity onPress={onDeletePlant} style={styles.deleteBtn}>
         <Text style={styles.deleteBtnText}>Supprimer la plante</Text>
@@ -263,6 +339,37 @@ const styles = StyleSheet.create({
   logType: { ...typography.label, fontSize: 15, fontWeight: '600', color: colors.text },
   logMeta: { ...typography.bodySmall, color: colors.textSecondary },
   logDeleteText: { ...typography.caption, color: colors.textSecondary },
+
+  goneBtn: {
+    height: 48,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  goneBtnText: { ...typography.label, fontWeight: '600', color: colors.text },
+  goneForm: { gap: spacing.md },
+  goneButtons: { flexDirection: 'row', gap: spacing.sm },
+  goneCancel: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+  },
+  goneCancelText: { ...typography.label, color: colors.textSecondary },
+  goneConfirm: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: radius.sm,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+  },
+  goneConfirmText: { ...typography.label, color: '#fff' },
 
   deleteBtn: { paddingVertical: 12, alignItems: 'center' },
   deleteBtnText: { ...typography.caption, color: colors.textSecondary },
