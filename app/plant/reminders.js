@@ -13,7 +13,7 @@ import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import Icon from '../../components/Icon';
-import { Field, ChipGroup, FormSection } from '../../components/form';
+import { Field, ChipGroup, FormSection, PrimaryButton } from '../../components/form';
 import { colors, spacing, typography, radius, reminderTint } from '../../lib/theme';
 import {
   getPlantById,
@@ -21,10 +21,12 @@ import {
   createReminder,
   deleteReminder,
   markReminderDone,
+  updateReminder,
 } from '../../lib/db';
 import { REMINDER_KINDS, labelFor, iconFor } from '../../lib/enums';
 import { monthName } from '../../lib/months';
-import { reminderDueText } from '../../lib/reminderDue';
+import { reminderDueText, postponedDueDate } from '../../lib/reminderDue';
+import { parseISODate } from '../../lib/validation';
 import {
   seasonalRemindersFor,
   wateringSuggestionFor,
@@ -39,6 +41,11 @@ export default function RemindersScreen() {
   const [kind, setKind] = useState('water');
   const [frequencyDays, setFrequencyDays] = useState('7');
   const [nextDueDate, setNextDueDate] = useState(() => new Date().toISOString().slice(0, 10));
+
+  // Ticket 131: the reminder being edited inline, with its draft fields.
+  const [editingId, setEditingId] = useState(null);
+  const [editFrequency, setEditFrequency] = useState('');
+  const [editDue, setEditDue] = useState('');
 
   const load = useCallback(async () => {
     if (!plantId) return;
@@ -75,6 +82,52 @@ export default function RemindersScreen() {
       await load();
     } catch (e) {
       showMessage('Erreur', `Impossible de supprimer : ${e.message}`);
+    }
+  };
+
+  const openEditor = (r) => {
+    if (editingId === r.id) {
+      setEditingId(null);
+      return;
+    }
+    setEditingId(r.id);
+    setEditFrequency(String(r.frequencyDays ?? ''));
+    setEditDue(r.nextDueDate);
+  };
+
+  const saveEdit = async (r) => {
+    const changes = {};
+    if (r.repeatRule !== 'yearly') {
+      const days = Number(editFrequency.trim());
+      if (!Number.isInteger(days) || days < 1) {
+        showMessage('Erreur', 'La fréquence doit être un nombre de jours entier, au moins 1.');
+        return;
+      }
+      changes.frequencyDays = days;
+    }
+    const due = parseISODate(editDue);
+    if (due.error || !due.value) {
+      showMessage('Erreur', due.error || 'Indiquez la prochaine échéance (AAAA-MM-JJ).');
+      return;
+    }
+    changes.nextDueDate = due.value;
+    try {
+      updateReminder(r.id, changes);
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'enregistrer : ${e.message}`);
+    }
+  };
+
+  const postpone = async (r, days) => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      updateReminder(r.id, { nextDueDate: postponedDueDate(r.nextDueDate, days, today) });
+      setEditingId(null);
+      await load();
+    } catch (e) {
+      showMessage('Erreur', `Impossible de reporter : ${e.message}`);
     }
   };
 
@@ -225,36 +278,107 @@ export default function RemindersScreen() {
                     : `Tous les ${r.frequencyDays} j`;
                 const kindLabel = labelFor(REMINDER_KINDS, r.kind);
                 return (
-                  <View
-                    key={r.id}
-                    style={[styles.reminderRow, index > 0 && styles.reminderRowDivider]}>
-                    <View style={[styles.reminderIcon, { backgroundColor: reminderTint(r.kind) }]}>
-                      <Icon name={iconFor(REMINDER_KINDS, r.kind)} size={18} color={colors.text} />
+                  <View key={r.id} style={index > 0 && styles.reminderRowDivider}>
+                    <View style={styles.reminderRow}>
+                      <View
+                        style={[styles.reminderIcon, { backgroundColor: reminderTint(r.kind) }]}>
+                        <Icon
+                          name={iconFor(REMINDER_KINDS, r.kind)}
+                          size={18}
+                          color={colors.text}
+                        />
+                      </View>
+                      <TouchableOpacity
+                        style={styles.reminderTextCol}
+                        onPress={() => openEditor(r)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Modifier le rappel ${kindLabel}`}>
+                        <Text style={styles.reminderLabel} numberOfLines={1}>
+                          {kindLabel}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.reminderDetail,
+                            due.overdue && styles.reminderDetailOverdue,
+                          ]}
+                          numberOfLines={1}>
+                          {frequency} · {due.text}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.doneBtn}
+                        onPress={() => doNow(r)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Fait">
+                        <Text style={styles.doneBtnText}>Fait</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.deleteBtn}
+                        onPress={() => removeReminder(r.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Supprimer le rappel ${kindLabel}`}>
+                        <Icon name="trash-can-outline" size={18} color={colors.danger} />
+                      </TouchableOpacity>
                     </View>
-                    <View style={styles.reminderTextCol}>
-                      <Text style={styles.reminderLabel} numberOfLines={1}>
-                        {kindLabel}
-                      </Text>
-                      <Text
-                        style={[styles.reminderDetail, due.overdue && styles.reminderDetailOverdue]}
-                        numberOfLines={1}>
-                        {frequency} · {due.text}
-                      </Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.doneBtn}
-                      onPress={() => doNow(r)}
-                      accessibilityRole="button"
-                      accessibilityLabel="Fait">
-                      <Text style={styles.doneBtnText}>Fait</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteBtn}
-                      onPress={() => removeReminder(r.id)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Supprimer le rappel ${kindLabel}`}>
-                      <Icon name="trash-can-outline" size={18} color={colors.danger} />
-                    </TouchableOpacity>
+                    {editingId === r.id && (
+                      <View style={styles.editor}>
+                        {r.repeatRule !== 'yearly' && (
+                          <Field
+                            label="Fréquence"
+                            keyboardType="number-pad"
+                            value={editFrequency}
+                            onChangeText={setEditFrequency}
+                            accessibilityLabel="Fréquence du rappel"
+                            leading={
+                              <Text style={styles.freqAffix} numberOfLines={1}>
+                                Tous les
+                              </Text>
+                            }
+                            trailing={<Text style={styles.freqAffix}>jours</Text>}
+                            style={styles.freqInput}
+                          />
+                        )}
+                        <Field
+                          label="Prochaine échéance"
+                          placeholder="AAAA-MM-JJ"
+                          value={editDue}
+                          onChangeText={setEditDue}
+                          accessibilityLabel="Échéance du rappel"
+                          leading={
+                            <Icon
+                              name="calendar-blank-outline"
+                              size={18}
+                              color={colors.textSecondary}
+                            />
+                          }
+                        />
+                        <Text style={styles.eyebrow}>Reporter</Text>
+                        <View style={styles.postponeRow}>
+                          {[1, 3, 7].map((n) => (
+                            <TouchableOpacity
+                              key={n}
+                              style={styles.postponeBtn}
+                              onPress={() => postpone(r, n)}
+                              accessibilityRole="button"
+                              accessibilityLabel={`Reporter de ${n} jour${n > 1 ? 's' : ''}`}>
+                              <Text style={styles.postponeBtnText}>+{n} j</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                        <View style={styles.editorActions}>
+                          <TouchableOpacity
+                            style={styles.cancelBtn}
+                            onPress={() => setEditingId(null)}
+                            accessibilityRole="button"
+                            accessibilityLabel="Annuler la modification">
+                            <Text style={styles.cancelBtnText}>Annuler</Text>
+                          </TouchableOpacity>
+                          <View style={styles.saveWrap}>
+                            <PrimaryButton label="Enregistrer" onPress={() => saveEdit(r)} />
+                          </View>
+                        </View>
+                      </View>
+                    )}
                   </View>
                 );
               })
@@ -337,6 +461,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  editor: { gap: spacing.sm, paddingBottom: spacing.md },
+  postponeRow: { flexDirection: 'row', gap: spacing.sm },
+  postponeBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: radius.full,
+    backgroundColor: colors.softGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  postponeBtnText: { ...typography.label, fontWeight: '600', color: colors.accent },
+  editorActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  cancelBtn: {
+    height: 56,
+    paddingHorizontal: 20,
+    borderRadius: radius.full,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnText: { ...typography.label, fontWeight: '600', color: colors.text },
+  saveWrap: { flex: 1 },
   reminderRowDivider: {
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.divider,

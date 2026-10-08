@@ -1,7 +1,7 @@
 ---
 id: 131
 title: Edit a reminder and postpone it by a few days
-status: open
+status: done
 priority: P2
 type: feature
 ---
@@ -20,12 +20,12 @@ last-done date.
 
 ## Acceptance criteria
 
-- [ ] Tapping a reminder on the "Rappels" screen opens it for editing:
+- [x] Tapping a reminder on the "Rappels" screen opens it for editing:
       frequency (interval reminders) and next due date, validated with
       `lib/validation.js`; save errors show an alert and keep the form open
-- [ ] The same edit offers "Reporter" with +1, +3 and +7 days, counted from
+- [x] The same edit offers "Reporter" with +1, +3 and +7 days, counted from
       the later of today and the due date
-- [ ] `updateReminder` exists in `lib/db.js` and `lib/db.web.js`, only
+- [x] `updateReminder` exists in `lib/db.js` and `lib/db.web.js`, only
       writes an allowlist of columns, bumps `updatedAt` and syncs
-- [ ] The postpone rule is a pure, Jest-tested function; `npm run verify` and
+- [x] The postpone rule is a pure, Jest-tested function; `npm run verify` and
       `npm run e2e:web` pass
