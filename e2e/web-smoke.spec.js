@@ -476,6 +476,60 @@ test.describe('web smoke', () => {
     ).toBeVisible();
   });
 
+  // Ticket 135: the library filters by zone.
+  test('filter the library by zone', async ({ page }) => {
+    const stamp = Date.now();
+    const zoneA = `E2E ZA ${stamp}`;
+    const zoneB = `E2E ZB ${stamp}`;
+    const plantA = `E2E PA ${stamp}`;
+    const plantB = `E2E PB ${stamp}`;
+    const plantC = `E2E PC ${stamp}`;
+
+    await page.goto('/');
+    await expect(visibleText(page, 'Votre jardin')).toBeVisible();
+
+    for (const [zone, plant] of [
+      [zoneA, plantA],
+      [zoneB, plantB],
+    ]) {
+      await page.goto('/');
+      await tabButton(page, 'Zones').click();
+      await visibleText(page, 'Nouvelle zone').click();
+      await page.getByPlaceholder('ex. Massif nord, Balcon').fill(zone);
+      await visibleText(page, 'Créer la zone').click();
+      await expect(visibleText(page, zone)).toBeVisible();
+      await tabButton(page, 'Bibliothèque').click();
+      await page.getByLabel('Ajouter une plante', { exact: true }).click();
+      await page.getByLabel('Nom de la plante', { exact: true }).fill(plant);
+      await visibleText(page, zone).click();
+      await visibleText(page, 'Enregistrer').click();
+      await expect(visibleText(page, plant)).toBeVisible();
+    }
+    await page.goto('/');
+    await tabButton(page, 'Bibliothèque').click();
+    await page.getByLabel('Ajouter une plante', { exact: true }).click();
+    await page.getByLabel('Nom de la plante', { exact: true }).fill(plantC);
+    await visibleText(page, 'Enregistrer').click();
+    await expect(visibleText(page, plantC)).toBeVisible();
+
+    await page.goto('/');
+    await tabButton(page, 'Bibliothèque').click();
+    await expect(screenTitle(page, 'Bibliothèque')).toBeVisible();
+    await page.getByLabel(`Zone : ${zoneA}`, { exact: true }).click();
+    await expect(visibleText(page, plantA)).toBeVisible();
+    await expect(visibleText(page, plantB)).toHaveCount(0);
+    await expect(visibleText(page, plantC)).toHaveCount(0);
+
+    await page.getByLabel('Zone : Sans zone', { exact: true }).click();
+    await expect(visibleText(page, plantC)).toBeVisible();
+    await expect(visibleText(page, plantA)).toHaveCount(0);
+
+    await page.getByLabel('Zone : Toutes zones', { exact: true }).click();
+    await expect(visibleText(page, plantA)).toBeVisible();
+    await expect(visibleText(page, plantB)).toBeVisible();
+    await expect(visibleText(page, plantC)).toBeVisible();
+  });
+
   // Ticket 077: "Supprimer la plante" used to be findable only as a text
   // link at the bottom of the detail screen's Actions tab. Check the new
   // destructive button at the end of the edit screen deletes the plant too.

@@ -1,7 +1,7 @@
 ---
 id: 135
 title: Filter the plant library by zone
-status: open
+status: done
 priority: P3
 type: feature
 ---
@@ -17,7 +17,7 @@ is already on.
 
 ## Acceptance criteria
 
-- [ ] A second row of pills lists "Toutes zones", each zone and "Sans zone";
+- [x] A second row of pills lists "Toutes zones", each zone and "Sans zone";
       it combines with the type filter and the search
-- [ ] The empty-state message accounts for the zone filter
-- [ ] `npm run verify` and `npm run e2e:web` pass
+- [x] The empty-state message accounts for the zone filter
+- [x] `npm run verify` and `npm run e2e:web` pass

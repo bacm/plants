@@ -12,7 +12,7 @@ import {
 import { useRouter, useFocusEffect } from 'expo-router';
 import Icon from '../../components/Icon';
 import { colors, spacing, typography, radius, colorHex } from '../../lib/theme';
-import { getPlants } from '../../lib/db';
+import { getPlants, getZones } from '../../lib/db';
 import { PLANT_TYPES, choices, isUnknown, labelFor } from '../../lib/enums';
 import { plural } from '../../lib/text';
 
@@ -22,6 +22,9 @@ export default function LibraryScreen() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState(null);
+  const [zones, setZones] = useState([]);
+  // null = all zones, a zone id, or 'none' for plants without a zone
+  const [zoneFilter, setZoneFilter] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const latestRequestId = useRef(0);
 
@@ -32,14 +35,22 @@ export default function LibraryScreen() {
 
   const load = useCallback(async () => {
     const requestId = ++latestRequestId.current;
-    const p = await getPlants({
-      search: debouncedSearch || undefined,
-      type: typeFilter || undefined,
-    });
+    const [p, z] = await Promise.all([
+      getPlants({
+        search: debouncedSearch || undefined,
+        type: typeFilter || undefined,
+        zoneId: zoneFilter && zoneFilter !== 'none' ? zoneFilter : undefined,
+        noZone: zoneFilter === 'none' || undefined,
+      }),
+      getZones(),
+    ]);
     // Ignore a response that arrives after a newer request has been made.
     if (requestId !== latestRequestId.current) return;
     setPlants(p);
-  }, [debouncedSearch, typeFilter]);
+    setZones(z);
+    // A deleted zone must not stay selected.
+    setZoneFilter((cur) => (cur && cur !== 'none' && !z.some((x) => x.id === cur) ? null : cur));
+  }, [debouncedSearch, typeFilter, zoneFilter]);
 
   useFocusEffect(
     useCallback(() => {
@@ -117,9 +128,38 @@ export default function LibraryScreen() {
           ))}
         </ScrollView>
 
+        {zones.length > 0 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filters}
+            contentContainerStyle={styles.filtersContent}>
+            {[
+              { key: null, label: 'Toutes zones' },
+              ...zones.map((z) => ({ key: z.id, label: z.name })),
+              { key: 'none', label: 'Sans zone' },
+            ].map(({ key, label }) => {
+              const active = zoneFilter === key;
+              return (
+                <TouchableOpacity
+                  key={String(key)}
+                  onPress={() => setZoneFilter(active ? null : key)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Zone : ${label}`}
+                  accessibilityState={{ selected: active }}
+                  style={[styles.filterPill, active && styles.filterPillActive]}>
+                  <Text style={[styles.filterPillText, active && styles.filterPillTextActive]}>
+                    {label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
+
         {plants.length === 0 ? (
           <Text style={styles.emptyText}>
-            {search || typeFilter
+            {search || typeFilter || zoneFilter
               ? 'Aucun résultat. Modifiez les filtres.'
               : 'Aucune plante. Ajoutez votre première plante.'}
           </Text>
