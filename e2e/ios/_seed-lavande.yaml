@@ -40,7 +40,12 @@ appId: host.exp.Exponent
     element:
       text: "Mois de taille"
     direction: DOWN
-- tapOn: "${MONTH_NAME}"
+# The bloom period above has the same twelve month labels, and a plain
+# tapOn picks its cell first (leaving an unfinished bloom range that blocks
+# the save) -- target the cell under "Mois de taille".
+- tapOn:
+    text: "${MONTH_NAME}"
+    below: "Mois de taille"
 - scrollUntilVisible:
     element:
       text: "Enregistrer"

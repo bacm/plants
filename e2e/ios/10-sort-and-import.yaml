@@ -33,16 +33,6 @@ appId: host.exp.Exponent
 
 # openGallery (app/capture.js) navigates to /sort?autoImport=1, which runs
 # the picker only once app/sort.js has mounted (no camera).
-#
-# KNOWN ISSUE, not introduced by this ticket: on this iOS simulator setup,
-# app/capture.js does not reliably navigate away at all -- neither this
-# button nor the pre-existing "✕" close button (plain router.replace, no
-# picker involved) was observed to land on the next screen, reproduced with
-# capture.js reverted to its pre-061 state too. web (e2e/sort.spec.js) and
-# the underlying navigation code are unaffected; this looks like a
-# CameraView/react-native-screens interaction specific to this simulator
-# environment and deserves its own investigation outside 061's scope. If
-# this step hangs, that pre-existing defect is why -- not a regression here.
 - tapOn: "Importer de la galerie"
 - extendedWaitUntil:
     visible: "Photo, 30 March 2018, 21:14"

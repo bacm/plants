@@ -13,6 +13,4 @@ flows:
   - "07-delete-zone-keeps-plants.yaml"
   - "08-monthly-task.yaml"
   - "09-capture-screen.yaml"
-  # Disabled until 062 is fixed: the camera screen cannot be left on iOS, and
-  # this flow reaches the import through it. Re-enable with 062.
-  # - "10-sort-and-import.yaml"
+  - "10-sort-and-import.yaml"

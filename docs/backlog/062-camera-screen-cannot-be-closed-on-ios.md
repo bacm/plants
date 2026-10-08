@@ -1,7 +1,7 @@
 ---
 id: 062
 title: The camera screen cannot be closed on iOS
-status: open
+status: in-progress
 priority: P1
 type: bug
 ---
@@ -24,9 +24,9 @@ app — on the feature meant to be used daily.
 ## Acceptance criteria
 
 - [ ] Reproduced (or ruled out) on a real iPhone (040)
-- [ ] Root cause identified and fixed; "✕" returns to the previous screen and
+- [x] Root cause identified and fixed; "✕" returns to the previous screen and
       "Galerie" opens "À trier"
-- [ ] Flow 09 asserts the screen after closing; flow 10 is re-enabled in
+- [x] Flow 09 asserts the screen after closing; flow 10 is re-enabled in
       `e2e/ios/config.yaml` and passes
 
 ## Notes
@@ -34,3 +34,15 @@ app — on the feature meant to be used daily.
 Found by 061. Try: unmounting the `CameraView` before navigating, a plain stack
 screen instead of `fullScreenModal`, and checking `react-native-screens` issues
 for SDK 55.
+
+## Resolution
+
+Not a navigation bug: the top bar sat at a fixed `paddingTop: 32`, under the
+iOS status bar (about 62 pt on an iPhone 17), and taps there never reached
+"✕" or "Galerie". The bar is now offset by the safe-area inset. "✕" lands
+on the dashboard, by design (see `close()` in `app/capture.js`).
+
+Flow 09 also needed its seed fixed: `_seed-lavande.yaml` tapped the bloom
+period's month cell instead of "Mois de taille", so Lavande was never saved.
+Flow 08, which shares that seed, still fails on "Tailler · Lavande": see 127.
+Flows 09 and 10 pass on the iPhone 17 simulator (iOS 26).

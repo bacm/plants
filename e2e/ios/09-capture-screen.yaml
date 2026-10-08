@@ -54,11 +54,16 @@ appId: host.exp.Exponent
 # it as accessibilityState.checked (role switch); asserting on that is left
 # for the next simulator run, which can confirm Maestro reads it.
 - tapOn: ".*Lavande.*"
-- assertVisible: "En fleur"
-- tapOn: "En fleur"
-- assertVisible: "En fleur"
+- assertVisible: ".*En fleur.*"
+- tapOn: ".*En fleur.*"
+- assertVisible: ".*En fleur.*"
 
 - tapOn: "Fermer l’appareil photo"
+# 062: closing must actually leave the camera and land on the dashboard.
+- extendedWaitUntil:
+    notVisible: "Fermer l’appareil photo"
+    timeout: 5000
+- assertVisible: "Accueil, tab.*"
 
 # Relaunch (without clearState, so the seeded garden and the bloom
 # observation just recorded survive) rather than reopening the camera
@@ -80,6 +85,6 @@ appId: host.exp.Exponent
     visible: ".*Lavande.*"
     timeout: 10000
 - tapOn: ".*Lavande.*"
-- assertVisible: "En fleur"
+- assertVisible: ".*En fleur.*"
 
 - tapOn: "Fermer l’appareil photo"

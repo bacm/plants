@@ -14,6 +14,7 @@ import {
   Linking,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import Icon from '../components/Icon';
 import { Stack, useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
@@ -57,6 +58,7 @@ export default function CaptureScreen() {
   const { selectPlantId } = useLocalSearchParams();
   const [permission, requestPermission] = useCameraPermissions();
   const cameraRef = useRef(null);
+  const insets = useSafeAreaInsets();
 
   const [zones, setZones] = useState([]);
   // undefined = not loaded yet, null = "Sans zone".
@@ -237,13 +239,9 @@ export default function CaptureScreen() {
   // first-ever import needs its own entry point.
   //
   // Navigates to app/sort.js with autoImport=1 rather than running the
-  // picker from here: launching it while this screen's CameraView is still
-  // mounted never showed a picker in the iOS simulator (see
-  // e2e/ios/10-sort-and-import.yaml's notes on a pre-existing defect, not
-  // introduced by this ticket, where this screen doesn't navigate away
-  // reliably on iOS at all -- same close() is affected). Once app/sort.js
-  // has mounted (no camera), it runs the exact same lib/libraryImport.js
-  // import on its own.
+  // picker from here, so the picker never opens over a mounted CameraView.
+  // Once app/sort.js has mounted (no camera), it runs the exact same
+  // lib/libraryImport.js import on its own.
   const openGallery = () => {
     router.replace('/sort?autoImport=1');
   };
@@ -302,7 +300,10 @@ export default function CaptureScreen() {
       {SCREEN_OPTIONS}
       <CameraView ref={cameraRef} style={StyleSheet.absoluteFill} facing="back" />
 
-      <View style={styles.topBar}>
+      {/* Below the safe area: under the status bar (iOS), a tap on "✕" or
+          "Galerie" never reached the button, so the camera could not be
+          left (ticket 062). */}
+      <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity
           onPress={() => close()}
           accessibilityLabel="Fermer l’appareil photo"
@@ -441,7 +442,6 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: spacing.xl,
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
   },
