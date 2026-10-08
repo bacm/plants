@@ -1,7 +1,7 @@
 ---
 id: 132
 title: Edit a journal entry after saving it
-status: open
+status: done
 priority: P2
 type: feature
 ---
@@ -19,11 +19,17 @@ should be a quick fix.
 
 ## Acceptance criteria
 
-- [ ] Tapping a journal entry on the plant sheet opens the entry screen
+- [x] Tapping a journal entry on the plant sheet opens the entry screen
       prefilled (type, date, notes, measurement), titled "Modifier l'entrée"
-- [ ] Saving updates that entry; nothing new is created; errors show an alert
+- [x] Saving updates that entry; nothing new is created; errors show an alert
       and keep the form open
-- [ ] `updateCareLog` exists in `lib/db.js` and `lib/db.web.js`, goes through
+- [x] `updateCareLog` exists in `lib/db.js` and `lib/db.web.js`, goes through
       the same normalisation as `createCareLog`, bumps `updatedAt` and syncs;
       a new width clears a manual plan size as on creation
-- [ ] `npm run verify` and `npm run e2e:web` pass
+- [x] `npm run verify` and `npm run e2e:web` pass
+
+## Notes
+
+Editing an "En fleur" entry, or changing an entry to or from "En fleur",
+does not touch the bloom observation recorded at creation; only the journal
+entry changes.

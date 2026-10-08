@@ -88,6 +88,7 @@ export function ActionsTab({
   onReminderDone,
   onManageReminders,
   onDeleteCareLog,
+  onEditCareLog,
   onDeletePlant,
 }) {
   const activeReminders = reminders.filter((r) => r.enabled);
@@ -150,10 +151,14 @@ export function ActionsTab({
                     {index < recentLogs.length - 1 ? <View style={styles.timelineLine} /> : null}
                   </View>
                   <View style={styles.timelineContent}>
-                    <View style={styles.timelineTextCol}>
+                    <TouchableOpacity
+                      style={styles.timelineTextCol}
+                      onPress={() => onEditCareLog(log)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Modifier l’entrée ${entry.title}`}>
                       <Text style={styles.logType}>{entry.title}</Text>
                       <Text style={styles.logMeta}>{entry.meta}</Text>
-                    </View>
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => onDeleteCareLog(log)}>
                       <Text style={styles.logDeleteText}>Supprimer</Text>
                     </TouchableOpacity>

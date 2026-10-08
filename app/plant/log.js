@@ -25,8 +25,15 @@ import {
 } from '../../components/form';
 import { colors, spacing, typography, radius } from '../../lib/theme';
 import { showMessage } from '../../lib/dialogs';
-import { getPlantById, createCareLog, addPhoto, addBloomObservation } from '../../lib/db';
-import { CARE_TYPES, OBSERVATION_CHOICES } from '../../lib/enums';
+import {
+  getPlantById,
+  getCareLogById,
+  createCareLog,
+  updateCareLog,
+  addPhoto,
+  addBloomObservation,
+} from '../../lib/db';
+import { CARE_TYPES, OBSERVATION_CHOICES, isCareType, isObservationType } from '../../lib/enums';
 import { parseISODate } from '../../lib/validation';
 import { addDaysISO } from '../../lib/dates';
 
@@ -40,7 +47,8 @@ const digitsOnly = (text) => text.replace(/\D/g, '');
 
 export default function LogCareScreen() {
   const insets = useSafeAreaInsets();
-  const { plantId } = useLocalSearchParams();
+  const { plantId, logId: editLogId } = useLocalSearchParams();
+  const editing = !!editLogId;
   const router = useRouter();
   const [plant, setPlant] = useState(null);
   const [kind, setKind] = useState('care');
@@ -60,6 +68,27 @@ export default function LogCareScreen() {
     useCallback(() => {
       if (plantId) getPlantById(plantId).then(setPlant);
     }, [plantId])
+  );
+
+  // Edit mode: prefill the form from the saved entry.
+  useFocusEffect(
+    useCallback(() => {
+      if (!editLogId) return;
+      getCareLogById(editLogId).then((log) => {
+        if (!log) return;
+        if (isObservationType(log.type)) {
+          setKind('observation');
+          setObservation(log.type);
+        } else if (isCareType(log.type)) {
+          setKind('care');
+          setType(log.type);
+        }
+        setDate(log.date);
+        setNotes(log.notes || '');
+        setWidthCm(log.widthCm != null ? String(log.widthCm) : '');
+        setHeightCm(log.heightCm != null ? String(log.heightCm) : '');
+      });
+    }, [editLogId])
   );
 
   const pickImage = async () => {
@@ -96,18 +125,23 @@ export default function LogCareScreen() {
     try {
       const isCare = kind === 'care';
       const entryType = isCare ? type : observation;
-      // "En fleur" is also a bloom observation, like the capture screen's.
-      if (entryType === 'bloom') await addBloomObservation({ plantId, date: value });
-      const logId = createCareLog({
-        plantId,
+      const fields = {
         type: entryType,
         date: value,
         notes: notes.trim() || null,
         widthCm: entryType === 'measured' ? widthCm : null,
         heightCm: entryType === 'measured' ? heightCm : null,
-      });
-      if (photoUri) {
-        await addPhoto({ plantId, careLogId: logId, uri: photoUri, date: value });
+      };
+      if (editing) {
+        // Editing never touches photos or the bloom observation.
+        updateCareLog(editLogId, fields);
+      } else {
+        // "En fleur" is also a bloom observation, like the capture screen's.
+        if (entryType === 'bloom') await addBloomObservation({ plantId, date: value });
+        const logId = createCareLog({ plantId, ...fields });
+        if (photoUri) {
+          await addPhoto({ plantId, careLogId: logId, uri: photoUri, date: value });
+        }
       }
       router.back();
     } catch (e) {
@@ -132,7 +166,10 @@ export default function LogCareScreen() {
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12 }]}
         keyboardShouldPersistTaps="handled">
-        <ScreenHeader title="Nouvelle entrée" subtitle={plant.name} />
+        <ScreenHeader
+          title={editing ? 'Modifier l’entrée' : 'Nouvelle entrée'}
+          subtitle={plant.name}
+        />
 
         <Segmented
           accessibilityLabel="Type d’entrée"
@@ -229,29 +266,31 @@ export default function LogCareScreen() {
               onChangeText={setNotes}
             />
           </View>
-          <View style={styles.photoCol}>
-            <Text style={styles.label}>Photo</Text>
-            {photoUri ? (
-              <View style={styles.photoTile}>
-                <Image source={{ uri: photoUri }} style={styles.photoImage} />
+          {editing ? null : (
+            <View style={styles.photoCol}>
+              <Text style={styles.label}>Photo</Text>
+              {photoUri ? (
+                <View style={styles.photoTile}>
+                  <Image source={{ uri: photoUri }} style={styles.photoImage} />
+                  <TouchableOpacity
+                    style={styles.removePhotoBtn}
+                    onPress={() => setPhotoUri(null)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Retirer la photo">
+                    <Icon name="close" size={14} color={colors.text} />
+                  </TouchableOpacity>
+                </View>
+              ) : (
                 <TouchableOpacity
-                  style={styles.removePhotoBtn}
-                  onPress={() => setPhotoUri(null)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Retirer la photo">
-                  <Icon name="close" size={14} color={colors.text} />
+                  style={styles.photoPlaceholder}
+                  onPress={pickImage}
+                  accessibilityRole="button">
+                  <Icon name="camera-outline" size={22} color={colors.textSecondary} />
+                  <Text style={styles.photoPlaceholderText}>Ajouter une photo</Text>
                 </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.photoPlaceholder}
-                onPress={pickImage}
-                accessibilityRole="button">
-                <Icon name="camera-outline" size={22} color={colors.textSecondary} />
-                <Text style={styles.photoPlaceholderText}>Ajouter une photo</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
 

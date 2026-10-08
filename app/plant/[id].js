@@ -499,6 +499,9 @@ export default function PlantDetailScreen() {
               router.push({ pathname: '/plant/reminders', params: { plantId: id } })
             }
             onDeleteCareLog={handleDeleteCareLog}
+            onEditCareLog={(log) =>
+              router.push({ pathname: '/plant/log', params: { plantId: id, logId: log.id } })
+            }
             onDeletePlant={deletePlantWithConfirm}
           />
         );

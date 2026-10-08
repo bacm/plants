@@ -175,4 +175,32 @@ test.describe('plant journal (ticket 115)', () => {
     await expect(page.getByTestId('size-card')).toHaveCount(0);
     expect(message).toContain('Cette entrée sera supprimée.');
   });
+
+  test('tapping an entry opens it for editing and saves in place', async ({ context, page }) => {
+    const api = await mockAuthApi(context);
+    seedGarden(api);
+    await page.goto('/plan');
+    await page.getByLabel('Plante Rosier').click();
+    await page.getByRole('button', { name: /Ouvrir la fiche/ }).click();
+    await visibleText(page, 'Actions').click();
+    await visibleText(page, 'Ajouter au journal').click();
+    await page.getByRole('radio', { name: 'Observation' }).click();
+    await page.getByRole('button', { name: 'Note' }).click();
+    await page.getByLabel('Notes').fill('Premier texte');
+    await page.getByLabel('Date', { exact: true }).fill('2026-03-01');
+    await visibleText(page, 'Enregistrer').click();
+    await visibleText(page, 'Actions').click();
+    await expect(page.getByText(/· Premier texte$/)).toBeVisible();
+
+    await page.getByRole('button', { name: /Modifier l’entrée/ }).click();
+    await expect(visibleText(page, 'Modifier l’entrée')).toBeVisible();
+    await expect(page.getByLabel('Notes')).toHaveValue('Premier texte');
+    await page.getByLabel('Notes').fill('Texte corrigé');
+    await page.getByLabel('Date', { exact: true }).fill('2026-03-05');
+    await visibleText(page, 'Enregistrer').click();
+    await visibleText(page, 'Actions').click();
+    await expect(page.getByText('5 mars · Texte corrigé')).toBeVisible();
+    await expect(page.getByText(/Premier texte/)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Modifier l’entrée/ })).toHaveCount(1);
+  });
 });
