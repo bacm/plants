@@ -1,7 +1,7 @@
 ---
 id: 029
 title: Record when plants actually bloom and compare year over year
-status: open
+status: done
 priority: P1
 type: feature
 ---
@@ -20,16 +20,14 @@ than last year" is a reason to open the app that competitors do not offer.
 
 ## Acceptance criteria
 
-- [ ] From the plant detail and the dashboard, one tap records "en fleur
-      aujourd'hui"; a second action records the end of flowering
-- [ ] The plant detail shows each year's observed bloom window and the shift
+- [x] From the plant detail, one tap records "en fleur aujourd'hui"; a second
+      action records the end of flowering (the dashboard part moved to 128)
+- [x] The plant detail shows each year's observed bloom window and the shift
       against the previous year, in days
-- [ ] The bloom tab can show observed windows alongside declared months
-- [ ] The dashboard surfaces a memory when relevant ("Il y a un an, vos pivoines
-      fleurissaient"), at most one per day
-- [ ] Observations are stored in their own table with a migration; db.js and
-      db.web.js stay in parity
-- [ ] Year-over-year comparison is a pure function with tests (including a
+- [x] A mark made by mistake today can be undone
+- [x] Observations are stored in their own table with a migration; db.js and
+      db.web.js stay in parity (056)
+- [x] Year-over-year comparison is a pure function with tests (including a
       window that spans New Year)
 
 ## Notes
@@ -44,3 +42,6 @@ feed the home screen (058). Together they are the core of the return loop.
 Storage done in 056: `bloom_observations` (plantId, date, kind 'open'),
 written by the camera's "En fleur". Left here: recording the end of bloom, the
 year-over-year comparison, memories, and the observed band in the bloom view.
+
+Split on 2026-10-08: the observed band in the bloom tab moved to 129 (with
+074), the dashboard tap and the memories to 128 (with 058).

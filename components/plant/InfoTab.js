@@ -6,6 +6,7 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Icon from '../Icon';
 import { FormSection } from '../form';
+import { ObservedBloom } from './ObservedBloom';
 import { colors, spacing, typography, colorHex } from '../../lib/theme';
 import { isUnknown, labelFor, BLOOM_ABUNDANCE, PROPAGATION, TOXICITY } from '../../lib/enums';
 import { monthShort, monthName, MONTH_LETTERS, isMonthInRange } from '../../lib/months';
@@ -21,7 +22,14 @@ import {
 // ficheTechniqueMissing()'s unfiltered "À compléter" list below.
 const DEDICATED_TILE_KEYS = new Set(['bloom', 'sun', 'water']);
 
-export function InfoTab({ plant, onEdit }) {
+export function InfoTab({
+  plant,
+  onEdit,
+  bloomObservations,
+  onBloomStart,
+  onBloomEnd,
+  onBloomUndo,
+}) {
   const allFicheTiles = ficheTechniqueTiles(plant);
   const ficheTiles = allFicheTiles.filter((t) => !DEDICATED_TILE_KEYS.has(t.key));
   const ficheMissing = ficheTechniqueMissing(plant);
@@ -70,6 +78,14 @@ export function InfoTab({ plant, onEdit }) {
           </View>
         </FormSection>
       ) : null}
+
+      <ObservedBloom
+        observations={bloomObservations}
+        todayISO={new Date().toISOString().slice(0, 10)}
+        onBloomStart={onBloomStart}
+        onBloomEnd={onBloomEnd}
+        onBloomUndo={onBloomUndo}
+      />
 
       {sunTile || waterTile ? (
         <View style={styles.tileRow}>

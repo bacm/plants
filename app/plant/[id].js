@@ -35,6 +35,8 @@ import {
   getRemindersByPlantId,
   getPhotosByPlantId,
   getBloomObservations,
+  addBloomObservation,
+  deleteBloomObservation,
   addPhoto,
   deletePhoto,
   updatePhotoDate,
@@ -418,6 +420,28 @@ export default function PlantDetailScreen() {
     }
     await load();
   }
+  async function recordBloom(kind) {
+    try {
+      await addBloomObservation({
+        plantId: id,
+        date: new Date().toISOString().slice(0, 10),
+        kind,
+      });
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'enregistrer la floraison : ${e.message}`);
+      return;
+    }
+    await load();
+  }
+  async function undoBloom(observationId) {
+    try {
+      await deleteBloomObservation(observationId);
+    } catch (e) {
+      showMessage('Erreur', `Impossible d'annuler l'observation : ${e.message}`);
+      return;
+    }
+    await load();
+  }
   const remoteImageUrl =
     !coverPhoto && !remoteImageError ? parseImageUrls(plant.imageUrls)[0] : null;
   const hasHeroImage = Boolean(coverPhoto || remoteImageUrl);
@@ -434,6 +458,10 @@ export default function PlantDetailScreen() {
           <InfoTab
             plant={plant}
             onEdit={() => router.push({ pathname: '/plant/edit', params: { id } })}
+            bloomObservations={bloomObservations}
+            onBloomStart={() => recordBloom('open')}
+            onBloomEnd={() => recordBloom('end')}
+            onBloomUndo={undoBloom}
           />
         );
       case 'photos':
